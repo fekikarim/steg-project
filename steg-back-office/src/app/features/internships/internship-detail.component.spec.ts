@@ -199,7 +199,8 @@ describe('InternshipDetailComponent', () => {
         },
       ],
     }).compileComponents();
-    signInDemo(TestBed.inject(AuthService), 
+    signInDemo(
+      TestBed.inject(AuthService),
       role === 'ADMIN' ? 'admin@steg.tn' : 'sup@steg.tn',
       role,
     );

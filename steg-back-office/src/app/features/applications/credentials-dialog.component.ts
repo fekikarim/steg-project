@@ -16,11 +16,7 @@ import { I18nService } from '../../core/i18n.service';
   standalone: true,
   imports: [DialogComponent],
   template: `
-    <st-dialog
-      [open]="open"
-      [title]="i18n.t('credentials.title')"
-      (close)="closed.emit()"
-    >
+    <st-dialog [open]="open" [title]="i18n.t('credentials.title')" (close)="closed.emit()">
       <p class="st-hint">{{ i18n.t('credentials.shownOnce') }}</p>
 
       <dl class="st-defs">

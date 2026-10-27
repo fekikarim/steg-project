@@ -77,17 +77,30 @@ export function EducationStep({
             autoComplete="off"
           />
 
-          {/* University Input */}
-          <Input
-            id="university"
-            label={t('university')}
-            type="text"
-            value={data.universityId}
-            onChange={(e) => onChange({universityId: e.target.value})}
-            placeholder={t('university')}
-            required
-            autoComplete="off"
-          />
+          {/* University — stores the backend reference id, not free text */}
+          <div className="flex flex-col gap-1">
+            <label htmlFor="university" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+              {t('university')} <span className="text-accent-600">*</span>
+            </label>
+            <select
+              id="university"
+              value={data.universityId}
+              onChange={(e) => onChange({universityId: e.target.value})}
+              className="h-10 rounded-lg border border-zinc-300 bg-white px-3 text-sm text-zinc-900 focus:border-brand-500 focus:outline-none dark:border-zinc-700 dark:bg-navy-900 dark:text-zinc-100"
+              required
+            >
+              <option value="" disabled>
+                {t('university')}
+              </option>
+              {universities
+                .filter((u) => u.active || u.id === data.universityId)
+                .map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name}
+                  </option>
+                ))}
+            </select>
+          </div>
         </div>
 
         {errorKey && <FieldError message={errorKey} />}

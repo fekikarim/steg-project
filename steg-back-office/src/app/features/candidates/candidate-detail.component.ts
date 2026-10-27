@@ -146,7 +146,8 @@ import type { CandidateDetail, CandidateOverview, University } from '../../core/
                   }}</span>
                 </a>
               </li>
-            }          </ul>
+            }
+          </ul>
         }
       </section>
 
@@ -178,13 +179,19 @@ import type { CandidateDetail, CandidateOverview, University } from '../../core/
           </div>
           <h2 class="st-card__title">{{ i18n.t('candidateDetail.certificate') }}</h2>
           @if (overview()?.certificate; as cert) {
-            <p><span dir="ltr">{{ cert.reference }}</span> <st-badge [label]="cert.status" tone="success" /></p>
+            <p>
+              <span dir="ltr">{{ cert.reference }}</span>
+              <st-badge [label]="cert.status" tone="success" />
+            </p>
           } @else {
             <p class="st-hint">—</p>
           }
           <h2 class="st-card__title">{{ i18n.t('candidateDetail.receipt') }}</h2>
           @if (overview()?.receipt; as receipt) {
-            <p><span dir="ltr">{{ receipt.reference }}</span> <st-badge [label]="receipt.status" tone="success" /></p>
+            <p>
+              <span dir="ltr">{{ receipt.reference }}</span>
+              <st-badge [label]="receipt.status" tone="success" />
+            </p>
           } @else {
             <p class="st-hint">—</p>
           }
@@ -201,7 +208,10 @@ import type { CandidateDetail, CandidateOverview, University } from '../../core/
               <li>
                 <span class="st-app">
                   <strong dir="auto">{{ d.reference }}</strong>
-                  <st-badge [label]="d.type" [tone]="d.restrictedAccess ? 'restricted' : 'neutral'" />
+                  <st-badge
+                    [label]="d.type"
+                    [tone]="d.restrictedAccess ? 'restricted' : 'neutral'"
+                  />
                   <span class="st-hint">{{ d.source }}</span>
                 </span>
               </li>

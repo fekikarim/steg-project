@@ -46,7 +46,10 @@ const STATUS_TONE: Record<string, BadgeTone> = {
     ConfirmDialogComponent,
   ],
   template: `
-    <st-page-header [title]="i18n.t('certificates.title')" [subtitle]="i18n.t('certificates.subtitle')">
+    <st-page-header
+      [title]="i18n.t('certificates.title')"
+      [subtitle]="i18n.t('certificates.subtitle')"
+    >
       <st-live-status />
       <button type="button" class="st-btn st-btn--primary" (click)="openGenerate()">
         {{ i18n.t('certificates.generate') }}
@@ -127,8 +130,15 @@ const STATUS_TONE: Record<string, BadgeTone> = {
         <st-alert tone="error">{{ formError() }}</st-alert>
       }
       <div class="st-dialog__actions">
-        <button type="button" class="st-btn" (click)="generateOpen.set(false)">{{ i18n.t('common.cancel') }}</button>
-        <button type="button" class="st-btn st-btn--primary" [disabled]="saving()" (click)="confirmGenerate()">
+        <button type="button" class="st-btn" (click)="generateOpen.set(false)">
+          {{ i18n.t('common.cancel') }}
+        </button>
+        <button
+          type="button"
+          class="st-btn st-btn--primary"
+          [disabled]="saving()"
+          (click)="confirmGenerate()"
+        >
           {{ i18n.t('certificates.generate') }}
         </button>
       </div>
@@ -213,7 +223,9 @@ export class CertificateListComponent implements OnInit {
   readonly generateOpen = signal(false);
   readonly formError = signal<string | null>(null);
   generateInternship = '';
-  readonly eligible = signal<{ internshipId: string; reference: string; candidateName: string }[]>([]);
+  readonly eligible = signal<{ internshipId: string; reference: string; candidateName: string }[]>(
+    [],
+  );
 
   readonly deleteOpen = signal(false);
   private deleteTarget: CertificateRow | null = null;

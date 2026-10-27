@@ -1,10 +1,7 @@
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
-import {
-  HttpTestingController,
-  provideHttpClientTesting,
-} from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import type { TestRequest } from '@angular/common/http/testing';
 import { AuthService, isTerminalRefreshFailure } from './auth.service';
@@ -64,9 +61,7 @@ describe('S1 session longevity (AuthService)', () => {
     const enc = (o: unknown) =>
       btoa(JSON.stringify(o)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
     const exp = Math.floor(Date.now() / 1000) + ttlSeconds;
-    return `${enc({ alg: 'none' })}.${enc(
-      { sub: 'u1', exp, email: 'admin@steg.tn', roles },
-    )}.sig`;
+    return `${enc({ alg: 'none' })}.${enc({ sub: 'u1', exp, email: 'admin@steg.tn', roles })}.sig`;
   }
 
   function primeSession(accessTtl = 900): void {
@@ -118,9 +113,7 @@ describe('S1 session longevity (AuthService)', () => {
     let failed = false;
     auth.refresh().subscribe({ error: () => (failed = true) });
 
-    httpMock
-      .expectOne(URL_REFRESH)
-      .flush('boom', { status: 500, statusText: 'Server Error' });
+    httpMock.expectOne(URL_REFRESH).flush('boom', { status: 500, statusText: 'Server Error' });
 
     expect(failed).toBe(true);
     // The session survives a server hiccup — this was the logout bug.
@@ -132,9 +125,7 @@ describe('S1 session longevity (AuthService)', () => {
     primeSession();
     auth.refresh().subscribe({ error: () => undefined });
 
-    httpMock
-      .expectOne(URL_REFRESH)
-      .error(new ProgressEvent('network error'));
+    httpMock.expectOne(URL_REFRESH).error(new ProgressEvent('network error'));
 
     expect(auth.getRefreshToken()).toBe('refresh-1');
   });
@@ -143,9 +134,7 @@ describe('S1 session longevity (AuthService)', () => {
     primeSession();
     auth.refresh().subscribe({ error: () => undefined });
 
-    httpMock
-      .expectOne(URL_REFRESH)
-      .flush('conflict', { status: 409, statusText: 'Conflict' });
+    httpMock.expectOne(URL_REFRESH).flush('conflict', { status: 409, statusText: 'Conflict' });
 
     expect(auth.getRefreshToken()).toBe('refresh-1');
   });
@@ -154,9 +143,7 @@ describe('S1 session longevity (AuthService)', () => {
     primeSession();
     auth.refresh().subscribe({ error: () => undefined });
 
-    httpMock
-      .expectOne(URL_REFRESH)
-      .flush('', { status: 401, statusText: 'Unauthorized' });
+    httpMock.expectOne(URL_REFRESH).flush('', { status: 401, statusText: 'Unauthorized' });
 
     expect(auth.getRefreshToken()).toBeNull();
     expect(auth.getAccessToken()).toBeNull();
@@ -166,10 +153,9 @@ describe('S1 session longevity (AuthService)', () => {
     primeSession();
     auth.refresh().subscribe({ error: () => undefined });
 
-    httpMock.expectOne(URL_REFRESH).flush(
-      { error: 'INVALID_REFRESH_TOKEN' },
-      { status: 422, statusText: 'Unprocessable' },
-    );
+    httpMock
+      .expectOne(URL_REFRESH)
+      .flush({ error: 'INVALID_REFRESH_TOKEN' }, { status: 422, statusText: 'Unprocessable' });
 
     expect(auth.getRefreshToken()).toBeNull();
   });
@@ -178,10 +164,9 @@ describe('S1 session longevity (AuthService)', () => {
     primeSession();
     auth.refresh().subscribe({ error: () => undefined });
 
-    httpMock.expectOne(URL_REFRESH).flush(
-      { error: 'POST_TOO_LONG' },
-      { status: 422, statusText: 'Unprocessable' },
-    );
+    httpMock
+      .expectOne(URL_REFRESH)
+      .flush({ error: 'POST_TOO_LONG' }, { status: 422, statusText: 'Unprocessable' });
 
     expect(auth.getRefreshToken()).toBe('refresh-1');
   });

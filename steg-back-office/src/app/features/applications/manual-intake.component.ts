@@ -66,7 +66,9 @@ function actionErrorMessage(error: unknown, i18n: I18nService): string {
 
     @if (done(); as result) {
       <st-alert tone="success" [title]="i18n.t('intake.successTitle')">
-        <span dir="ltr"><strong>{{ result.reference }}</strong></span>
+        <span dir="ltr"
+          ><strong>{{ result.reference }}</strong></span
+        >
       </st-alert>
       <section class="st-card" aria-label="tracking token">
         <h2 class="st-card__title">{{ i18n.t('intake.tokenTitle') }}</h2>
@@ -87,15 +89,34 @@ function actionErrorMessage(error: unknown, i18n: I18nService): string {
         <div class="st-grid2">
           <label class="st-field">
             <span class="st-field__label">{{ i18n.t('intake.firstName') }} *</span>
-            <input class="st-input" name="firstName" required [(ngModel)]="fields.firstName" dir="auto" />
+            <input
+              class="st-input"
+              name="firstName"
+              required
+              [(ngModel)]="fields.firstName"
+              dir="auto"
+            />
           </label>
           <label class="st-field">
             <span class="st-field__label">{{ i18n.t('intake.lastName') }} *</span>
-            <input class="st-input" name="lastName" required [(ngModel)]="fields.lastName" dir="auto" />
+            <input
+              class="st-input"
+              name="lastName"
+              required
+              [(ngModel)]="fields.lastName"
+              dir="auto"
+            />
           </label>
           <label class="st-field">
             <span class="st-field__label">{{ i18n.t('intake.email') }} *</span>
-            <input class="st-input" name="email" type="email" required [(ngModel)]="fields.email" dir="ltr" />
+            <input
+              class="st-input"
+              name="email"
+              type="email"
+              required
+              [(ngModel)]="fields.email"
+              dir="ltr"
+            />
           </label>
           <label class="st-field">
             <span class="st-field__label">{{ i18n.t('intake.phone') }}</span>
@@ -107,11 +128,25 @@ function actionErrorMessage(error: unknown, i18n: I18nService): string {
           </label>
           <label class="st-field">
             <span class="st-field__label">{{ i18n.t('intake.nationalId') }} *</span>
-            <input class="st-input" name="nationalId" required [(ngModel)]="fields.nationalId" dir="ltr" autocomplete="off" />
+            <input
+              class="st-input"
+              name="nationalId"
+              required
+              [(ngModel)]="fields.nationalId"
+              dir="ltr"
+              autocomplete="off"
+            />
           </label>
           <label class="st-field">
             <span class="st-field__label">{{ i18n.t('intake.university') }} *</span>
-            <input class="st-input" name="universityId" required [(ngModel)]="fields.universityId" dir="auto" [placeholder]="i18n.t('intake.university')" />
+            <input
+              class="st-input"
+              name="universityId"
+              required
+              [(ngModel)]="fields.universityId"
+              dir="auto"
+              [placeholder]="i18n.t('intake.university')"
+            />
           </label>
           <label class="st-field">
             <span class="st-field__label">{{ i18n.t('intake.speciality') }}</span>
@@ -128,11 +163,23 @@ function actionErrorMessage(error: unknown, i18n: I18nService): string {
         <div class="st-grid2">
           <label class="st-field">
             <span class="st-field__label">{{ i18n.t('intake.startDate') }} *</span>
-            <input class="st-input" name="startDate" type="date" required [(ngModel)]="fields.desiredStartDate" />
+            <input
+              class="st-input"
+              name="startDate"
+              type="date"
+              required
+              [(ngModel)]="fields.desiredStartDate"
+            />
           </label>
           <label class="st-field">
             <span class="st-field__label">{{ i18n.t('intake.endDate') }} *</span>
-            <input class="st-input" name="endDate" type="date" required [(ngModel)]="fields.desiredEndDate" />
+            <input
+              class="st-input"
+              name="endDate"
+              type="date"
+              required
+              [(ngModel)]="fields.desiredEndDate"
+            />
           </label>
         </div>
         <p class="st-hint">{{ i18n.t('intake.classificationHint') }}</p>
@@ -151,8 +198,12 @@ function actionErrorMessage(error: unknown, i18n: I18nService): string {
               }
             </div>
             <div class="st-doc-slot__info">
-              <span class="st-doc-slot__label">Internship Application Letter <span class="st-doc-slot__required">*</span></span>
-              <span class="st-doc-slot__desc">Official letter from the university requesting the internship</span>
+              <span class="st-doc-slot__label"
+                >Internship Application Letter <span class="st-doc-slot__required">*</span></span
+              >
+              <span class="st-doc-slot__desc"
+                >Official letter from the university requesting the internship</span
+              >
             </div>
             @if (applicationLetterFile()) {
               <button type="button" class="st-doc-slot__clear" (click)="clearFile('application')">
@@ -168,16 +219,22 @@ function actionErrorMessage(error: unknown, i18n: I18nService): string {
             </div>
           } @else {
             <label class="st-doc-slot__drop">
-              <input type="file" class="st-file-hidden" accept=".pdf,.png,.jpg,.jpeg,.webp"
+              <input
+                type="file"
+                class="st-file-hidden"
+                accept=".pdf,.png,.jpg,.jpeg,.webp"
                 (change)="onFile($event, 'application')"
-                [attr.aria-describedby]="applicationLetterError() ? 'app-letter-error' : null" />
+                [attr.aria-describedby]="applicationLetterError() ? 'app-letter-error' : null"
+              />
               <st-icon name="upload-cloud" [size]="20" />
               <span>Click to browse or drop file here</span>
               <span class="st-doc-slot__accept">PDF, PNG, JPG, WEBP · max 10 MB</span>
             </label>
           }
           @if (applicationLetterError()) {
-            <span class="st-field__error" role="alert" id="app-letter-error">{{ applicationLetterError() }}</span>
+            <span class="st-field__error" role="alert" id="app-letter-error">{{
+              applicationLetterError()
+            }}</span>
           }
         </div>
 
@@ -192,8 +249,12 @@ function actionErrorMessage(error: unknown, i18n: I18nService): string {
               }
             </div>
             <div class="st-doc-slot__info">
-              <span class="st-doc-slot__label">Assignment Letter <span class="st-doc-slot__required">*</span></span>
-              <span class="st-doc-slot__desc">STEG assignment letter confirming the internship placement</span>
+              <span class="st-doc-slot__label"
+                >Assignment Letter <span class="st-doc-slot__required">*</span></span
+              >
+              <span class="st-doc-slot__desc"
+                >STEG assignment letter confirming the internship placement</span
+              >
             </div>
             @if (assignmentLetterFile()) {
               <button type="button" class="st-doc-slot__clear" (click)="clearFile('assignment')">
@@ -209,16 +270,22 @@ function actionErrorMessage(error: unknown, i18n: I18nService): string {
             </div>
           } @else {
             <label class="st-doc-slot__drop">
-              <input type="file" class="st-file-hidden" accept=".pdf,.png,.jpg,.jpeg,.webp"
+              <input
+                type="file"
+                class="st-file-hidden"
+                accept=".pdf,.png,.jpg,.jpeg,.webp"
                 (change)="onFile($event, 'assignment')"
-                [attr.aria-describedby]="assignmentLetterError() ? 'assign-letter-error' : null" />
+                [attr.aria-describedby]="assignmentLetterError() ? 'assign-letter-error' : null"
+              />
               <st-icon name="upload-cloud" [size]="20" />
               <span>Click to browse or drop file here</span>
               <span class="st-doc-slot__accept">PDF, PNG, JPG, WEBP · max 10 MB</span>
             </label>
           }
           @if (assignmentLetterError()) {
-            <span class="st-field__error" role="alert" id="assign-letter-error">{{ assignmentLetterError() }}</span>
+            <span class="st-field__error" role="alert" id="assign-letter-error">{{
+              assignmentLetterError()
+            }}</span>
           }
         </div>
 
@@ -247,7 +314,11 @@ function actionErrorMessage(error: unknown, i18n: I18nService): string {
         }
 
         <p class="st-actions">
-          <button type="submit" class="st-btn st-btn--primary" [disabled]="busy() || !form.valid || !docsComplete()">
+          <button
+            type="submit"
+            class="st-btn st-btn--primary"
+            [disabled]="busy() || !form.valid || !docsComplete()"
+          >
             <st-icon name="check" [size]="15" /> {{ i18n.t('intake.submit') }}
           </button>
         </p>
@@ -276,94 +347,210 @@ function actionErrorMessage(error: unknown, i18n: I18nService): string {
       />
     }
   `,
-  styles: [`
-    .st-card {
-      background: var(--bg-surface);
-      border: 1px solid var(--border-subtle);
-      border-radius: 0.7rem;
-      padding: 1.2rem;
-      margin-block-end: 0.8rem;
-    }
-    .st-card__title { margin: 0.4rem 0 0.8rem; font-size: 1rem; font-weight: 600; }
-    .st-form { display: grid; gap: 0.7rem; }
-    .st-grid2 { display: grid; gap: 0.6rem; grid-template-columns: 1fr 1fr; }
-    .st-hint { font-size: 0.78rem; color: var(--text-secondary); margin: 0; }
-    .st-hint--docs { margin-bottom: 0.5rem; }
-    .st-field-errors {
-      margin: 0; padding: 0.6rem 0.8rem; padding-inline-start: 1.6rem;
-      border: 1px solid var(--border-default);
-      border-inline-start: 3px solid var(--status-error);
-      border-radius: 0.5rem; font-size: 0.82rem;
-    }
-    .st-actions { display: flex; gap: 0.5rem; margin: 0.4rem 0 0; }
-    .st-token {
-      font-size: 1.1rem; font-weight: 700; letter-spacing: 0.04em;
-      background: var(--bg-page); border: 1px dashed var(--border-default);
-      border-radius: 0.55rem; padding: 0.7rem 0.9rem; overflow-wrap: anywhere;
-    }
-    .st-doc-slot {
-      border: 2px dashed var(--border-default); border-radius: 0.75rem;
-      padding: 1rem; background: var(--bg-page);
-      transition: border-color 0.15s, background 0.15s;
-    }
-    .st-doc-slot--filled {
-      border-color: var(--status-success, #22c55e); border-style: solid;
-      background: color-mix(in srgb, var(--status-success, #22c55e) 5%, transparent);
-    }
-    .st-doc-slot__header { display: flex; align-items: flex-start; gap: 0.75rem; }
-    .st-doc-slot__icon-wrap {
-      flex: none; width: 2.2rem; height: 2.2rem; border-radius: 0.5rem;
-      background: var(--bg-surface); border: 1px solid var(--border-subtle);
-      display: grid; place-items: center; color: var(--text-muted);
-    }
-    .st-doc-slot--filled .st-doc-slot__icon-wrap {
-      background: var(--status-success, #22c55e);
-      border-color: var(--status-success, #22c55e); color: white;
-    }
-    .st-doc-slot__info { flex: 1; display: grid; gap: 0.15rem; }
-    .st-doc-slot__label { font-size: 0.88rem; font-weight: 600; color: var(--text-primary); }
-    .st-doc-slot__required { color: var(--status-error, #ef4444); margin-inline-start: 0.15rem; }
-    .st-doc-slot__desc { font-size: 0.75rem; color: var(--text-muted); }
-    .st-doc-slot__clear {
-      flex: none; background: none; border: 1px solid var(--border-subtle);
-      border-radius: 0.4rem; padding: 0.25rem 0.35rem; color: var(--text-muted);
-      cursor: pointer; display: grid; place-items: center;
-      transition: background 0.12s, color 0.12s;
-    }
-    .st-doc-slot__clear:hover {
-      background: var(--status-error-muted, #fee2e2);
-      color: var(--status-error, #ef4444); border-color: var(--status-error, #ef4444);
-    }
-    .st-doc-slot__drop {
-      display: flex; flex-direction: column; align-items: center; gap: 0.3rem;
-      margin-top: 0.75rem; padding: 1rem; border-radius: 0.5rem;
-      background: var(--bg-surface); cursor: pointer; text-align: center;
-      font-size: 0.83rem; color: var(--text-secondary); transition: background 0.12s;
-    }
-    .st-doc-slot__drop:hover {
-      background: color-mix(in srgb, var(--color-primary, #3b82f6) 8%, transparent);
-    }
-    .st-doc-slot__accept { font-size: 0.72rem; color: var(--text-muted); }
-    .st-doc-slot__preview {
-      display: flex; align-items: center; gap: 0.4rem; margin-top: 0.6rem;
-      padding: 0.5rem 0.75rem; background: var(--bg-surface); border-radius: 0.5rem;
-      font-size: 0.83rem; color: var(--text-secondary); overflow-wrap: anywhere;
-    }
-    .st-doc-slot__size {
-      font-size: 0.72rem; color: var(--text-muted); margin-inline-start: auto; white-space: nowrap;
-    }
-    .st-file-hidden { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
-    .st-docs-status {
-      display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0.75rem;
-      background: var(--bg-page); border-radius: 0.5rem; font-size: 0.8rem;
-    }
-    .st-docs-status__count {
-      display: flex; align-items: center; gap: 0.35rem; color: var(--text-muted); font-weight: 500;
-    }
-    .st-docs-status__count--done { color: var(--status-success, #22c55e); }
-    .st-docs-status__hint { color: var(--text-muted); font-size: 0.75rem; }
-    @media (max-width: 700px) { .st-grid2 { grid-template-columns: 1fr; } }
-  `],
+  styles: [
+    `
+      .st-card {
+        background: var(--bg-surface);
+        border: 1px solid var(--border-subtle);
+        border-radius: 0.7rem;
+        padding: 1.2rem;
+        margin-block-end: 0.8rem;
+      }
+      .st-card__title {
+        margin: 0.4rem 0 0.8rem;
+        font-size: 1rem;
+        font-weight: 600;
+      }
+      .st-form {
+        display: grid;
+        gap: 0.7rem;
+      }
+      .st-grid2 {
+        display: grid;
+        gap: 0.6rem;
+        grid-template-columns: 1fr 1fr;
+      }
+      .st-hint {
+        font-size: 0.78rem;
+        color: var(--text-secondary);
+        margin: 0;
+      }
+      .st-hint--docs {
+        margin-bottom: 0.5rem;
+      }
+      .st-field-errors {
+        margin: 0;
+        padding: 0.6rem 0.8rem;
+        padding-inline-start: 1.6rem;
+        border: 1px solid var(--border-default);
+        border-inline-start: 3px solid var(--status-error);
+        border-radius: 0.5rem;
+        font-size: 0.82rem;
+      }
+      .st-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin: 0.4rem 0 0;
+      }
+      .st-token {
+        font-size: 1.1rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        background: var(--bg-page);
+        border: 1px dashed var(--border-default);
+        border-radius: 0.55rem;
+        padding: 0.7rem 0.9rem;
+        overflow-wrap: anywhere;
+      }
+      .st-doc-slot {
+        border: 2px dashed var(--border-default);
+        border-radius: 0.75rem;
+        padding: 1rem;
+        background: var(--bg-page);
+        transition:
+          border-color 0.15s,
+          background 0.15s;
+      }
+      .st-doc-slot--filled {
+        border-color: var(--status-success, #22c55e);
+        border-style: solid;
+        background: color-mix(in srgb, var(--status-success, #22c55e) 5%, transparent);
+      }
+      .st-doc-slot__header {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+      }
+      .st-doc-slot__icon-wrap {
+        flex: none;
+        width: 2.2rem;
+        height: 2.2rem;
+        border-radius: 0.5rem;
+        background: var(--bg-surface);
+        border: 1px solid var(--border-subtle);
+        display: grid;
+        place-items: center;
+        color: var(--text-muted);
+      }
+      .st-doc-slot--filled .st-doc-slot__icon-wrap {
+        background: var(--status-success, #22c55e);
+        border-color: var(--status-success, #22c55e);
+        color: white;
+      }
+      .st-doc-slot__info {
+        flex: 1;
+        display: grid;
+        gap: 0.15rem;
+      }
+      .st-doc-slot__label {
+        font-size: 0.88rem;
+        font-weight: 600;
+        color: var(--text-primary);
+      }
+      .st-doc-slot__required {
+        color: var(--status-error, #ef4444);
+        margin-inline-start: 0.15rem;
+      }
+      .st-doc-slot__desc {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+      }
+      .st-doc-slot__clear {
+        flex: none;
+        background: none;
+        border: 1px solid var(--border-subtle);
+        border-radius: 0.4rem;
+        padding: 0.25rem 0.35rem;
+        color: var(--text-muted);
+        cursor: pointer;
+        display: grid;
+        place-items: center;
+        transition:
+          background 0.12s,
+          color 0.12s;
+      }
+      .st-doc-slot__clear:hover {
+        background: var(--status-error-muted, #fee2e2);
+        color: var(--status-error, #ef4444);
+        border-color: var(--status-error, #ef4444);
+      }
+      .st-doc-slot__drop {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.3rem;
+        margin-top: 0.75rem;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        background: var(--bg-surface);
+        cursor: pointer;
+        text-align: center;
+        font-size: 0.83rem;
+        color: var(--text-secondary);
+        transition: background 0.12s;
+      }
+      .st-doc-slot__drop:hover {
+        background: color-mix(in srgb, var(--color-primary, #3b82f6) 8%, transparent);
+      }
+      .st-doc-slot__accept {
+        font-size: 0.72rem;
+        color: var(--text-muted);
+      }
+      .st-doc-slot__preview {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        margin-top: 0.6rem;
+        padding: 0.5rem 0.75rem;
+        background: var(--bg-surface);
+        border-radius: 0.5rem;
+        font-size: 0.83rem;
+        color: var(--text-secondary);
+        overflow-wrap: anywhere;
+      }
+      .st-doc-slot__size {
+        font-size: 0.72rem;
+        color: var(--text-muted);
+        margin-inline-start: auto;
+        white-space: nowrap;
+      }
+      .st-file-hidden {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        opacity: 0;
+        pointer-events: none;
+      }
+      .st-docs-status {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.5rem 0.75rem;
+        background: var(--bg-page);
+        border-radius: 0.5rem;
+        font-size: 0.8rem;
+      }
+      .st-docs-status__count {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        color: var(--text-muted);
+        font-weight: 500;
+      }
+      .st-docs-status__count--done {
+        color: var(--status-success, #22c55e);
+      }
+      .st-docs-status__hint {
+        color: var(--text-muted);
+        font-size: 0.75rem;
+      }
+      @media (max-width: 700px) {
+        .st-grid2 {
+          grid-template-columns: 1fr;
+        }
+      }
+    `,
+  ],
 })
 export class ManualIntakeComponent implements OnInit {
   readonly i18n = inject(I18nService);
@@ -373,9 +560,17 @@ export class ManualIntakeComponent implements OnInit {
   private readonly toast = inject(ToastService);
 
   readonly fields = {
-    firstName: '', lastName: '', email: '', phone: '', birthDate: '',
-    nationalId: '', universityId: '', speciality: '', diploma: '',
-    desiredStartDate: '', desiredEndDate: '',
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    birthDate: '',
+    nationalId: '',
+    universityId: '',
+    speciality: '',
+    diploma: '',
+    desiredStartDate: '',
+    desiredEndDate: '',
   };
 
   readonly busy = signal(false);
@@ -396,7 +591,9 @@ export class ManualIntakeComponent implements OnInit {
   readonly approvalBusy = signal(false);
   readonly pendingApplicationId = signal<string | null>(null);
   readonly pendingResult = signal<ManualApplicationResult | null>(null);
-  readonly credentials = signal<{ email: string; password: string; emailSent: boolean } | null>(null);
+  readonly credentials = signal<{ email: string; password: string; emailSent: boolean } | null>(
+    null,
+  );
 
   readonly docsComplete = () =>
     this.applicationLetterFile() !== null && this.assignmentLetterFile() !== null;
@@ -410,33 +607,53 @@ export class ManualIntakeComponent implements OnInit {
       { labelKey: 'intake.title', labelFallback: 'Manual intake' },
     ]);
     if (this.api.listSupervisors) {
-      this.api.listSupervisors().pipe(catchError(() => of([]))).subscribe((list) => this.supervisors.set(list));
+      this.api
+        .listSupervisors()
+        .pipe(catchError(() => of([])))
+        .subscribe((list) => this.supervisors.set(list));
     }
     if (this.api.listDepartments) {
-      this.api.listDepartments().pipe(catchError(() => of([]))).subscribe((list) => this.departments.set(list));
+      this.api
+        .listDepartments()
+        .pipe(catchError(() => of([])))
+        .subscribe((list) => this.departments.set(list));
     }
   }
 
   onFile(event: Event, slot: 'application' | 'assignment'): void {
     const input = event.target as HTMLInputElement | null;
     const file = input?.files?.[0] ?? null;
-    const errSignal = slot === 'application' ? this.applicationLetterError : this.assignmentLetterError;
-    const fileSignal = slot === 'application' ? this.applicationLetterFile : this.assignmentLetterFile;
+    const errSignal =
+      slot === 'application' ? this.applicationLetterError : this.assignmentLetterError;
+    const fileSignal =
+      slot === 'application' ? this.applicationLetterFile : this.assignmentLetterFile;
     errSignal.set('');
     if (!file) return;
-    if (!ALLOWED_MIME.includes(file.type) && file.size > 0) { errSignal.set(this.i18n.t('intake.fileTypeError')); return; }
-    if (file.size > MAX_FILE_BYTES) { errSignal.set(this.i18n.t('intake.fileSizeError')); return; }
+    if (!ALLOWED_MIME.includes(file.type) && file.size > 0) {
+      errSignal.set(this.i18n.t('intake.fileTypeError'));
+      return;
+    }
+    if (file.size > MAX_FILE_BYTES) {
+      errSignal.set(this.i18n.t('intake.fileSizeError'));
+      return;
+    }
     fileSignal.set(file);
     if (input) input.value = '';
   }
 
   clearFile(slot: 'application' | 'assignment'): void {
-    if (slot === 'application') { this.applicationLetterFile.set(null); this.applicationLetterError.set(''); }
-    else { this.assignmentLetterFile.set(null); this.assignmentLetterError.set(''); }
+    if (slot === 'application') {
+      this.applicationLetterFile.set(null);
+      this.applicationLetterError.set('');
+    } else {
+      this.assignmentLetterFile.set(null);
+      this.assignmentLetterError.set('');
+    }
   }
 
   submit(): void {
-    if (!this.fields.firstName.trim() || !this.fields.lastName.trim() || !this.fields.email.trim()) return;
+    if (!this.fields.firstName.trim() || !this.fields.lastName.trim() || !this.fields.email.trim())
+      return;
     if (!this.fields.nationalId.trim() || !this.fields.universityId.trim()) return;
     if (!this.fields.desiredStartDate || !this.fields.desiredEndDate) return;
     this.busy.set(true);
@@ -481,7 +698,8 @@ export class ManualIntakeComponent implements OnInit {
       .pipe(
         catchError((): Observable<Page<ApplicationQueueRow>> => of(fallbackPage)),
         switchMap((queue: Page<ApplicationQueueRow>): Observable<{ appId: string | null }> => {
-          const app = queue.content.find((a) => a.reference === result.reference) || queue.content[0];
+          const app =
+            queue.content.find((a) => a.reference === result.reference) || queue.content[0];
           if (!app?.id) {
             return of({ appId: null });
           }
@@ -522,7 +740,10 @@ export class ManualIntakeComponent implements OnInit {
           this.busy.set(false);
           this.busyStatus.set('');
           if (appId) {
-            this.toast.show('success', 'Documents verified automatically. Please assign a supervisor.');
+            this.toast.show(
+              'success',
+              'Documents verified automatically. Please assign a supervisor.',
+            );
             this.approvalOpen.set(true);
           } else {
             this.done.set(result);
@@ -598,7 +819,6 @@ export class ManualIntakeComponent implements OnInit {
       )
       .subscribe();
   }
-
 
   onApprovalCancelled(): void {
     const appId = this.pendingApplicationId();

@@ -28,7 +28,10 @@ export class InternAccountsService {
   }
 
   /** Create an account; the one-time password is returned once and never stored. */
-  create(email: string, role: CreateInternAccountBody['role']): Observable<ResetAccountPasswordResult> {
+  create(
+    email: string,
+    role: CreateInternAccountBody['role'],
+  ): Observable<ResetAccountPasswordResult> {
     const body: CreateInternAccountBody = { email: email.trim(), role };
     return this.api.createInternAccount(body);
   }

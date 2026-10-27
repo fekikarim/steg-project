@@ -52,7 +52,9 @@ describe('TasksService', () => {
   });
 
   it('reads the backend error code and message', () => {
-    expect(TasksService.codeOf({ error: { error: 'BULK_TASK_INVALID' } })).toBe('BULK_TASK_INVALID');
+    expect(TasksService.codeOf({ error: { error: 'BULK_TASK_INVALID' } })).toBe(
+      'BULK_TASK_INVALID',
+    );
     expect(TasksService.codeOf({})).toBeNull();
     expect(TasksService.messageOf({ error: { message: 'Boom' } }, 'fb')).toBe('Boom');
     expect(TasksService.messageOf({}, 'fb')).toBe('fb');

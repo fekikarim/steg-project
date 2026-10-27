@@ -658,7 +658,10 @@ import { INTERNSHIP_UPLOAD_TYPES, REQUIRED_DOSSIER_TYPES } from '../../core/api-
         <section class="st-card" [attr.aria-label]="i18n.t('validation.statusTitle')">
           <h2 class="st-card__title">{{ i18n.t('validation.statusTitle') }}</h2>
           <p>
-            <st-badge [label]="dossier.internship.status" [tone]="statusTone(dossier.internship.status)" />
+            <st-badge
+              [label]="dossier.internship.status"
+              [tone]="statusTone(dossier.internship.status)"
+            />
           </p>
           <st-alert tone="info">{{ i18n.t('validation.awaiting') }}</st-alert>
         </section>
@@ -1458,13 +1461,11 @@ export class InternshipDetailComponent implements OnInit {
         label: this.i18n.t('internshipDetail.tabValidation'),
       });
     }
-    tabs.push(
-      {
-        id: 'documents',
-        label: this.i18n.t('internshipDetail.tabDocuments'),
-        count: bundle?.documents.length,
-      },
-    );
+    tabs.push({
+      id: 'documents',
+      label: this.i18n.t('internshipDetail.tabDocuments'),
+      count: bundle?.documents.length,
+    });
     return tabs;
   }
 

@@ -85,12 +85,10 @@ describe('ApiClient intern accounts', () => {
   it('POSTs the new account with its role and returns the one-time credentials', () => {
     const bodies: unknown[] = [];
     const passwords: string[] = [];
-    api
-      .createInternAccount({ email: 'intern@steg.tn', role: 'INTERN' })
-      .subscribe((r) => {
-        bodies.push(r.email);
-        passwords.push(r.temporaryPassword);
-      });
+    api.createInternAccount({ email: 'intern@steg.tn', role: 'INTERN' }).subscribe((r) => {
+      bodies.push(r.email);
+      passwords.push(r.temporaryPassword);
+    });
 
     const req = http.expectOne(`${environment.apiBaseUrl}/api/intern-accounts`);
     expect(req.request.method).toBe('POST');
@@ -129,7 +127,11 @@ describe('ApiClient intern accounts', () => {
 
     const req = http.expectOne(`${environment.apiBaseUrl}/api/intern-accounts/u1/reset-password`);
     expect(req.request.method).toBe('POST');
-    req.flush({ email: 'intern@steg.tn', temporaryPassword: 'Zz9!rewrittenSecret', emailSent: false });
+    req.flush({
+      email: 'intern@steg.tn',
+      temporaryPassword: 'Zz9!rewrittenSecret',
+      emailSent: false,
+    });
 
     expect(passwords).toEqual(['Zz9!rewrittenSecret']);
     http.verify();

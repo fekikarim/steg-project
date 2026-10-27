@@ -124,7 +124,10 @@ describe('AuthService', () => {
     });
 
     const req = http.expectOne('http://localhost:8080/api/auth/back-office-login');
-    req.flush({ message: 'Back-office access requires an ADMIN or SUPERVISOR account.' }, { status: 403, statusText: 'Forbidden' });
+    req.flush(
+      { message: 'Back-office access requires an ADMIN or SUPERVISOR account.' },
+      { status: 403, statusText: 'Forbidden' },
+    );
 
     expect(status).toBe(403);
     expect(service.isAuthenticated()).toBe(false);

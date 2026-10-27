@@ -34,7 +34,9 @@ const DEPARTMENTS: readonly Department[] = [
 
 describe('ApprovalDialogComponent', () => {
   async function setup(): Promise<ApprovalDialogComponent> {
-    await TestBed.configureTestingModule({ imports: [ApprovalDialogComponent] }).compileComponents();
+    await TestBed.configureTestingModule({
+      imports: [ApprovalDialogComponent],
+    }).compileComponents();
     return TestBed.createComponent(ApprovalDialogComponent).componentInstance;
   }
 

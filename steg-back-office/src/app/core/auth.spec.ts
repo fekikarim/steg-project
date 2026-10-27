@@ -1,6 +1,12 @@
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter, Router, type ActivatedRouteSnapshot, type RouterStateSnapshot, UrlTree } from '@angular/router';
+import {
+  provideRouter,
+  Router,
+  type ActivatedRouteSnapshot,
+  type RouterStateSnapshot,
+  UrlTree,
+} from '@angular/router';
 import { AuthService } from './auth.service';
 import { permissionGuard } from './guards';
 import { permissionsFor, visibleNav, isBackOfficeRole } from './roles';

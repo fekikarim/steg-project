@@ -42,8 +42,7 @@ function fakeSearch(query: InternAccountQueueQuery) {
   if (query.q) {
     const q = query.q.toLowerCase();
     content = content.filter(
-      (r) =>
-        r.email.toLowerCase().includes(q) || (r.fullName ?? '').toLowerCase().includes(q),
+      (r) => r.email.toLowerCase().includes(q) || (r.fullName ?? '').toLowerCase().includes(q),
     );
   }
   return {

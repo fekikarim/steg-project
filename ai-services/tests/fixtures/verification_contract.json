@@ -1,0 +1,110 @@
+{
+  "report": {
+    "request": {
+      "candidateName": "Sana Ben Ammar",
+      "supervisorName": "Karim Feki",
+      "internshipType": "PFE",
+      "startDate": "2026-01-15",
+      "endDate": "2026-04-15",
+      "universityName": "INSAT Tunis"
+    },
+    "response": {
+      "overall": "PASS",
+      "checks": [
+        {
+          "key": "candidate_name",
+          "label": "Candidate name",
+          "status": "PASSED",
+          "expected": "Sana Ben Ammar",
+          "found": "STEG Rapport de stage PFE. Stagiaire Sana Ben Ammar, ecole INSAT Tunis. Encadrant Karim Feki. Periode du 15/01/2026 au 15/04/2026. Introduction.\nChapitre 1 : analyse de l existant a la Societe Tunisienne de l Electricite et du Gaz.\nChapitre 2 : conception et realisation. Conclusion et remerciements.\nAnnexes et glossaire. Fin du rapport de stage.",
+          "evidence": "Name found after normalization (order-tolerant)."
+        },
+        {
+          "key": "supervisor_name",
+          "label": "Supervisor name",
+          "status": "PASSED",
+          "expected": "Karim Feki",
+          "found": "STEG Rapport de stage PFE. Stagiaire Sana Ben Ammar, ecole INSAT Tunis. Encadrant Karim Feki. Periode du 15/01/2026 au 15/04/2026. Introduction.\nChapitre 1 : analyse de l existant a la Societe Tunisienne de l Electricite et du Gaz.\nChapitre 2 : conception et realisation. Conclusion et remerciements.\nAnnexes et glossaire. Fin du rapport de stage.",
+          "evidence": "Name found after normalization (order-tolerant)."
+        },
+        {
+          "key": "internship_type",
+          "label": "Internship type",
+          "status": "PASSED",
+          "expected": "PFE",
+          "found": "STEG Rapport de stage PFE. Stagiaire Sana Ben Ammar, ecole INSAT Tunis. Encadrant Karim Feki. Periode du 15/01/2026 au 15/04/2026. Introduction.\nChapitre 1 : analyse de l existant a la Societe Tunisienne de l Electricite et du Gaz.\nChapitre 2 : conception et realisation. Conclusion et remerciements.\nAnnexes et glossaire. Fin du rapport de stage.",
+          "evidence": "Expected value found after normalization."
+        },
+        {
+          "key": "university_name",
+          "label": "University name",
+          "status": "PASSED",
+          "expected": "INSAT Tunis",
+          "found": "STEG Rapport de stage PFE. Stagiaire Sana Ben Ammar, ecole INSAT Tunis. Encadrant Karim Feki. Periode du 15/01/2026 au 15/04/2026. Introduction.\nChapitre 1 : analyse de l existant a la Societe Tunisienne de l Electricite et du Gaz.\nChapitre 2 : conception et realisation. Conclusion et remerciements.\nAnnexes et glossaire. Fin du rapport de stage.",
+          "evidence": "Expected value found after normalization."
+        },
+        {
+          "key": "internship_period",
+          "label": "Internship period",
+          "status": "PASSED",
+          "expected": "2026-01-15 - 2026-04-15",
+          "found": "STEG Rapport de stage PFE. Stagiaire Sana Ben Ammar, ecole INSAT Tunis. Encadrant Karim Feki. Periode du 15/01/2026 au 15/04/2026. Introduction.\nChapitre 1 : analyse de l existant a la Societe Tunisienne de l Electricite et du Gaz.\nChapitre 2 : conception et realisation. Conclusion et remerciements.\nAnnexes et glossaire. Fin du rapport de stage.",
+          "evidence": "Period found as 'du 15/01/2026 au 15/04/2026' after normalization."
+        },
+        {
+          "key": "steg_name",
+          "label": "STEG company name",
+          "status": "PASSED",
+          "expected": "STEG",
+          "found": "STEG Rapport de stage PFE. Stagiaire Sana Ben Ammar, ecole INSAT Tunis. Encadrant Karim Feki. Periode du 15/01/2026 au 15/04/2026. Introduction.\nChapitre 1 : analyse de l existant a la Societe Tunisienne de l Electricite et du Gaz.\nChapitre 2 : conception et realisation. Conclusion et remerciements.\nAnnexes et glossaire. Fin du rapport de stage.",
+          "evidence": "STEG marker found."
+        },
+        {
+          "key": "page_count",
+          "label": "Page count",
+          "status": "PASSED",
+          "expected": ">= 4",
+          "found": "4",
+          "evidence": "Report has at least four pages."
+        }
+      ]
+    }
+  },
+  "journal": {
+    "request": {
+      "startDate": "2026-01-15",
+      "endDate": "2026-04-15",
+      "completedApprovedTasks": 3,
+      "totalTasks": 4
+    },
+    "response": {
+      "overall": "PASS",
+      "checks": [
+        {
+          "key": "task_completion",
+          "label": "Task completion",
+          "status": "PASSED",
+          "expected": ">= 75%",
+          "found": "3/4 (75%)",
+          "evidence": "Completed and approved task ratio."
+        },
+        {
+          "key": "internship_period",
+          "label": "Internship period",
+          "status": "PASSED",
+          "expected": "2026-01-15 - 2026-04-15",
+          "found": "Journal de stage. Periode 2026-01-15 - 2026-04-15. Semaine 1 : taches d analyse et reunion de cadrage.\nSemaine 2 : tableau des taches, developpement et tests.\nSemaine 3 : activites de deploiement et documentation.\nBilan de periode et signature de l encadrant.",
+          "evidence": "Period found as '2026-01-15 - 2026-04-15' after normalization."
+        },
+        {
+          "key": "structure",
+          "label": "Journal structure",
+          "status": "PASSED",
+          "expected": "period section and task table",
+          "found": "Journal de stage. Periode 2026-01-15 - 2026-04-15. Semaine 1 : taches d analyse et reunion de cadrage.\nSemaine 2 : tableau des taches, developpement et tests.\nSemaine 3 : activites de deploiement et documentation.\nBilan de periode et signature de l encadrant.",
+          "evidence": "Period and task markers found."
+        }
+      ]
+    }
+  }
+}

@@ -492,7 +492,9 @@ export class ApiClient {
     if (body.status) p = p.set('status', body.status);
     if (body.enabled !== undefined) p = p.set('enabled', String(body.enabled));
     return this.http
-      .patch<InternAccountRow>(`${this.baseUrl}/api/intern-accounts/${id}/status`, null, { params: p })
+      .patch<InternAccountRow>(`${this.baseUrl}/api/intern-accounts/${id}/status`, null, {
+        params: p,
+      })
       .pipe(catchError((e) => throwError(() => e)));
   }
 
@@ -515,7 +517,10 @@ export class ApiClient {
   /** Reset a mobile account password: new random password returned once, emailed (AGENTS.md §5.4). */
   resetInternAccountPassword(id: string): Observable<ResetAccountPasswordResult> {
     return this.http
-      .post<ResetAccountPasswordResult>(`${this.baseUrl}/api/intern-accounts/${id}/reset-password`, {})
+      .post<ResetAccountPasswordResult>(
+        `${this.baseUrl}/api/intern-accounts/${id}/reset-password`,
+        {},
+      )
       .pipe(catchError((e) => throwError(() => e)));
   }
 
@@ -603,9 +608,7 @@ export class ApiClient {
    * `CANDIDATE_MANAGER_INVALID`). The response redacts the CIN for a
    * supervisor, exactly like a supervisor edit.
    */
-  createCandidateByStaff(
-    body: StaffCandidateCreateBody,
-  ): Observable<CandidateDetail> {
+  createCandidateByStaff(body: StaffCandidateCreateBody): Observable<CandidateDetail> {
     return this.http
       .post<CandidateDetail>(`${this.baseUrl}/api/candidates/manage`, body)
       .pipe(catchError((e) => throwError(() => e)));
@@ -766,10 +769,13 @@ export class ApiClient {
     comment?: string,
   ): Observable<InternshipDetail> {
     return this.http
-      .post<InternshipDetail>(`${this.baseUrl}/api/internships/${internshipId}/status-transitions`, {
-        targetStatus,
-        comment: comment?.trim() ? comment.trim() : null,
-      })
+      .post<InternshipDetail>(
+        `${this.baseUrl}/api/internships/${internshipId}/status-transitions`,
+        {
+          targetStatus,
+          comment: comment?.trim() ? comment.trim() : null,
+        },
+      )
       .pipe(catchError((e) => throwError(() => e)));
   }
 
@@ -840,10 +846,7 @@ export class ApiClient {
 
   /** Download one version of a certificate PDF (null = latest issued). */
   downloadCertificateVersion(certificateId: string, version?: number): Observable<Blob> {
-    const suffix =
-      version != null
-        ? `/versions/${version}/download`
-        : '';
+    const suffix = version != null ? `/versions/${version}/download` : '';
     return this.http
       .get(`${this.baseUrl}/api/certificates/${certificateId}${suffix}`, { responseType: 'blob' })
       .pipe(catchError((e) => throwError(() => e)));
@@ -1318,11 +1321,17 @@ export class ApiClient {
   }
 
   /** Run advisory AI verification on one document (never moves a status). */
-  runVerification(internshipId: string, documentType: ValidationDocumentType): Observable<VerificationResult> {
+  runVerification(
+    internshipId: string,
+    documentType: ValidationDocumentType,
+  ): Observable<VerificationResult> {
     return this.http
-      .post<VerificationResult>(`${this.baseUrl}/api/internship-validation/${internshipId}/verify`, {
-        documentType,
-      })
+      .post<VerificationResult>(
+        `${this.baseUrl}/api/internship-validation/${internshipId}/verify`,
+        {
+          documentType,
+        },
+      )
       .pipe(catchError((e) => throwError(() => e)));
   }
 
@@ -1334,27 +1343,39 @@ export class ApiClient {
     comment?: string,
   ): Observable<ValidationDetail> {
     return this.http
-      .post<ValidationDetail>(`${this.baseUrl}/api/internship-validation/${internshipId}/decisions`, {
-        documentType,
-        decision,
-        comment: comment?.trim() ? comment.trim() : null,
-      })
+      .post<ValidationDetail>(
+        `${this.baseUrl}/api/internship-validation/${internshipId}/decisions`,
+        {
+          documentType,
+          decision,
+          comment: comment?.trim() ? comment.trim() : null,
+        },
+      )
       .pipe(catchError((e) => throwError(() => e)));
   }
 
   /** Generate the payment receipt PDF (idempotent; moves to RECEIPT_ISSUED). */
   generateReceipt(internshipId: string): Observable<ValidationReceipt> {
     return this.http
-      .post<ValidationReceipt>(`${this.baseUrl}/api/internship-validation/${internshipId}/receipt`, {})
+      .post<ValidationReceipt>(
+        `${this.baseUrl}/api/internship-validation/${internshipId}/receipt`,
+        {},
+      )
       .pipe(catchError((e) => throwError(() => e)));
   }
 
   /** Download a validation document (report/journal PDF) as a blob. */
-  downloadValidationDocument(internshipId: string, documentType: ValidationDocumentType): Observable<Blob> {
+  downloadValidationDocument(
+    internshipId: string,
+    documentType: ValidationDocumentType,
+  ): Observable<Blob> {
     return this.http
-      .get(`${this.baseUrl}/api/internship-validation/${internshipId}/documents/${documentType}/download`, {
-        responseType: 'blob',
-      })
+      .get(
+        `${this.baseUrl}/api/internship-validation/${internshipId}/documents/${documentType}/download`,
+        {
+          responseType: 'blob',
+        },
+      )
       .pipe(catchError((e) => throwError(() => e)));
   }
 

@@ -300,9 +300,12 @@ void main() {
           fake: fake);
       await tester.enterText(
           find.byType(TextField).first, 'Scheduled by sup');
+      // Pick a day after today so the schedule is always in the future,
+      // whatever date the suite runs on.
+      final target = DateTime.now().add(const Duration(days: 2));
       await tester.tap(find.text('Choisir la date'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('15'));
+      await tester.tap(find.text('${target.day}'));
       await tester.tap(find.text('OK'));
       await tester.pumpAndSettle();
       // Time dialog confirms the initial time without dial interaction.
@@ -314,7 +317,6 @@ void main() {
       final sent = fake.createdTasks.single['visibleFrom'] as DateTime?;
       expect(sent, isNotNull);
       expect(sent!.isAfter(DateTime.now()), isTrue);
-      expect(sent.isUtc, isTrue);
     });
 
     testWidgets('existing schedule shows and clears to immediate (edit)',

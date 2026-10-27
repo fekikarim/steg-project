@@ -58,7 +58,11 @@ const [CANDIDATE_ROW] = ROWS as [CandidateQueueRow, CandidateQueueRow];
 describe('CandidateListComponent (workspace)', () => {
   async function setup(
     overrides: Record<string, unknown> = {},
-    options: { canManage?: boolean; role?: 'ADMIN' | 'SUPERVISOR'; routeParams?: Record<string, string> } = {},
+    options: {
+      canManage?: boolean;
+      role?: 'ADMIN' | 'SUPERVISOR';
+      routeParams?: Record<string, string>;
+    } = {},
   ) {
     const canManage = options.canManage ?? true;
     const queries: CandidateQueueQuery[] = [];
@@ -121,7 +125,7 @@ describe('CandidateListComponent (workspace)', () => {
           provide: AuthService,
           useValue: {
             hasPermission: (p: string) => canManage && p === 'USER_MANAGE',
-            role: () => (options.role ?? (canManage ? 'ADMIN' : 'SUPERVISOR')),
+            role: () => options.role ?? (canManage ? 'ADMIN' : 'SUPERVISOR'),
             // The real RealtimeService watches auth; unauthenticated keeps it
             // disconnected so `candidateUpdates$` stays a quiet subject.
             isAuthenticated: () => false,
@@ -175,8 +179,7 @@ describe('CandidateListComponent (workspace)', () => {
     const { fixture, calls } = await setup();
     expect(calls.supervisors).toBe(1);
     expect(fixture.nativeElement.textContent).toContain('sup@steg.tn');
-    const selects: NodeListOf<HTMLSelectElement> =
-      fixture.nativeElement.querySelectorAll('select');
+    const selects: NodeListOf<HTMLSelectElement> = fixture.nativeElement.querySelectorAll('select');
     expect([...selects].length).toBeGreaterThan(0);
   });
 
@@ -269,7 +272,9 @@ describe('CandidateListComponent (workspace)', () => {
 
   it('links to /applications/new to add candidate with manual intake application', async () => {
     const { fixture } = await setup();
-    const link = fixture.nativeElement.querySelector('a[routerLink="/applications/new"]') as HTMLAnchorElement;
+    const link = fixture.nativeElement.querySelector(
+      'a[routerLink="/applications/new"]',
+    ) as HTMLAnchorElement;
     expect(link).toBeTruthy();
     expect(link.getAttribute('routerLink')).toBe('/applications/new');
   });

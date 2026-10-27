@@ -20,7 +20,15 @@ describe('ApiClient certificates workspace', () => {
   });
 
   it('GETs the workspace list with page, size, search and status', () => {
-    api.searchCertificates({ page: 1, size: 25, sort: 'reference,asc', q: 'amine', status: 'GENERATED' }).subscribe();
+    api
+      .searchCertificates({
+        page: 1,
+        size: 25,
+        sort: 'reference,asc',
+        q: 'amine',
+        status: 'GENERATED',
+      })
+      .subscribe();
     const req = http.expectOne((r) => r.url.endsWith('/api/certificates'));
     expect(req.request.method).toBe('GET');
     expect(req.request.params.get('page')).toBe('1');
@@ -70,7 +78,9 @@ describe('ApiClient certificates workspace', () => {
     api.downloadCertificateVersion('cert-1').subscribe();
     http.expectOne((r) => r.url.endsWith('/api/certificates/cert-1')).flush(new Blob());
     api.downloadCertificateVersion('cert-1', 1).subscribe();
-    const req = http.expectOne((r) => r.url.endsWith('/api/certificates/cert-1/versions/1/download'));
+    const req = http.expectOne((r) =>
+      r.url.endsWith('/api/certificates/cert-1/versions/1/download'),
+    );
     expect(req.request.method).toBe('GET');
     req.flush(new Blob());
     http.verify();

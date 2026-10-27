@@ -189,7 +189,9 @@ export class AiAssistantService {
     const pending = data.applications.filter(
       (a) => a.status === 'SUBMITTED' || a.status === 'UNDER_REVIEW',
     ).length;
-    const corrections = data.applications.filter((a) => a.status === 'MODIFICATION_REQUESTED').length;
+    const corrections = data.applications.filter(
+      (a) => a.status === 'MODIFICATION_REQUESTED',
+    ).length;
     const scoped = this.scopedInternships(data);
     const active = scoped.filter((i) => i.status === 'IN_PROGRESS').length;
     const completed = scoped.filter((i) => i.status === 'VALIDATED').length;
@@ -246,7 +248,9 @@ export class AiAssistantService {
       return { key: 'assistant.answer.pendingApplications', params: { n: String(n) } };
     }
     if (/(end|fin|se termine|ينتهي|month|mois|شهر)/.test(q)) {
-      const rows = scoped.filter((i) => i.status === 'IN_PROGRESS' && endsWithinDays(i.endDate, 31));
+      const rows = scoped.filter(
+        (i) => i.status === 'IN_PROGRESS' && endsWithinDays(i.endDate, 31),
+      );
       const names = rows
         .slice(0, 5)
         .map((i) => `${i.candidateFullName} (${i.endDate})`)

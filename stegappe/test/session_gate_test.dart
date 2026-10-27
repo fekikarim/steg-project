@@ -91,7 +91,21 @@ void main() {
     expect(find.text('Accueil'), findsWidgets);
     expect(auth.loggedOut, isFalse);
 
-    await tester.tap(find.byTooltip('Déconnexion'));
+    // Logout lives in the More tab behind a confirmation dialog.
+    await tester.tap(find.byIcon(Icons.more_horiz).last);
+    await tester.pumpAndSettle();
+    // The More list is lazy: scroll the logout card into the viewport first.
+    await tester.scrollUntilVisible(
+      find.text('Déconnexion'),
+      300,
+      scrollable: find.ancestor(
+        of: find.text('Changer le mot de passe'),
+        matching: find.byType(Scrollable),
+      ),
+    );
+    await tester.tap(find.text('Déconnexion').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Déconnexion').last);
     await tester.pumpAndSettle();
 
     expect(auth.loggedOut, isTrue);

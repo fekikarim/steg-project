@@ -66,9 +66,7 @@ describe('ApiClient — C3 internship lifecycle', () => {
     client.cancelInternship('i1').subscribe();
     http.expectOne(`${base}/api/internships/i1/cancel`).flush({});
 
-    client
-      .transitionInternshipStatus('i1', 'IN_PROGRESS', 'starting')
-      .subscribe();
+    client.transitionInternshipStatus('i1', 'IN_PROGRESS', 'starting').subscribe();
     const transition = http.expectOne(`${base}/api/internships/i1/status-transitions`);
     expect(transition.request.method).toBe('POST');
     expect(transition.request.body).toEqual({

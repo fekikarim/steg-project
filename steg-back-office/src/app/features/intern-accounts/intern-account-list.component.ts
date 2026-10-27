@@ -117,7 +117,10 @@ interface CredentialsView {
     } @else if (loading()) {
       <st-skeleton [rows]="6" />
     } @else if (rows().length === 0) {
-      <st-empty-state [title]="i18n.t('common.empty.title')" [body]="i18n.t('internAccounts.empty')" />
+      <st-empty-state
+        [title]="i18n.t('common.empty.title')"
+        [body]="i18n.t('internAccounts.empty')"
+      />
     } @else {
       <st-data-table
         [columns]="columns"
@@ -184,11 +187,7 @@ interface CredentialsView {
     }
 
     <!-- Create account -->
-    <st-dialog
-      [open]="createOpen()"
-      [title]="i18n.t('internAccounts.new')"
-      (close)="closeCreate()"
-    >
+    <st-dialog [open]="createOpen()" [title]="i18n.t('internAccounts.new')" (close)="closeCreate()">
       <label class="st-field">
         <span class="st-field__label">{{ i18n.t('internAccounts.email') }} *</span>
         <input type="email" class="st-input" dir="ltr" [(ngModel)]="createEmail" />
@@ -245,7 +244,12 @@ interface CredentialsView {
         <button type="button" class="st-btn st-btn--secondary" (click)="editing.set(null)">
           {{ i18n.t('common.cancel') }}
         </button>
-        <button type="button" class="st-btn st-btn--primary" [disabled]="busy()" (click)="submitEdit()">
+        <button
+          type="button"
+          class="st-btn st-btn--primary"
+          [disabled]="busy()"
+          (click)="submitEdit()"
+        >
           {{ i18n.t('common.save') }}
         </button>
       </div>
@@ -506,18 +510,22 @@ export class InternAccountListComponent implements OnInit {
     const target = this.editing();
     if (!target) return;
     this.busy.set(true);
-    this.service.update(target.id, { status: this.editStatus, enabled: this.editEnabled }).subscribe({
-      next: () => {
-        this.busy.set(false);
-        this.editing.set(null);
-        this.toast.show('success', this.i18n.t('internAccounts.updated'));
-        this.load();
-      },
-      error: (e: unknown) => {
-        this.busy.set(false);
-        this.actionError.set(InternAccountsService.messageOf(e, this.i18n.t('common.error.body')));
-      },
-    });
+    this.service
+      .update(target.id, { status: this.editStatus, enabled: this.editEnabled })
+      .subscribe({
+        next: () => {
+          this.busy.set(false);
+          this.editing.set(null);
+          this.toast.show('success', this.i18n.t('internAccounts.updated'));
+          this.load();
+        },
+        error: (e: unknown) => {
+          this.busy.set(false);
+          this.actionError.set(
+            InternAccountsService.messageOf(e, this.i18n.t('common.error.body')),
+          );
+        },
+      });
   }
 
   /* ---------------- reset password (§5.4 one-time secret) ---------------- */
@@ -549,7 +557,10 @@ export class InternAccountListComponent implements OnInit {
       error: (e: unknown) => {
         this.busy.set(false);
         this.resetting.set(null);
-        this.toast.show('error', InternAccountsService.messageOf(e, this.i18n.t('common.error.body')));
+        this.toast.show(
+          'error',
+          InternAccountsService.messageOf(e, this.i18n.t('common.error.body')),
+        );
       },
     });
   }
@@ -563,7 +574,10 @@ export class InternAccountListComponent implements OnInit {
         this.load();
       },
       error: (e: unknown) => {
-        this.toast.show('error', InternAccountsService.messageOf(e, this.i18n.t('common.error.body')));
+        this.toast.show(
+          'error',
+          InternAccountsService.messageOf(e, this.i18n.t('common.error.body')),
+        );
       },
     });
   }
@@ -575,7 +589,10 @@ export class InternAccountListComponent implements OnInit {
         this.load();
       },
       error: (e: unknown) => {
-        this.toast.show('error', InternAccountsService.messageOf(e, this.i18n.t('common.error.body')));
+        this.toast.show(
+          'error',
+          InternAccountsService.messageOf(e, this.i18n.t('common.error.body')),
+        );
       },
     });
   }

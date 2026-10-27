@@ -19,7 +19,11 @@ import { SkeletonComponent } from '../../shared/ui/skeleton.component';
 import { EmptyStateComponent, ErrorStateComponent } from '../../shared/ui/states.component';
 import { AlertComponent } from '../../shared/ui/alert.component';
 import { StIconComponent } from '../../shared/ui/icon.component';
-import type { InternshipDetail, InternshipAssignment, InternshipStatus } from '../../core/api-models';
+import type {
+  InternshipDetail,
+  InternshipAssignment,
+  InternshipStatus,
+} from '../../core/api-models';
 
 interface InternshipRow extends InternshipDetail {
   supervisorName: string;
@@ -216,7 +220,16 @@ export class InternshipListComponent implements OnInit, OnDestroy {
     { key: 'supervisorName', label: 'Supervisor', sortable: true, priority: 'medium' as const },
     { key: 'departmentName', label: 'Department', sortable: false, priority: 'low' as const },
   ];
-  readonly statuses: readonly InternshipStatus[] = ['APPROVED', 'IN_PROGRESS', 'REPORT_SUBMITTED', 'UNDER_VALIDATION', 'VALIDATED', 'RECEIPT_ISSUED', 'CANCELLED', 'ARCHIVED'];
+  readonly statuses: readonly InternshipStatus[] = [
+    'APPROVED',
+    'IN_PROGRESS',
+    'REPORT_SUBMITTED',
+    'UNDER_VALIDATION',
+    'VALIDATED',
+    'RECEIPT_ISSUED',
+    'CANCELLED',
+    'ARCHIVED',
+  ];
   readonly types = ['OBSERVATION', 'PERFECTIONNEMENT', 'PFE'];
 
   readonly loading = signal(true);

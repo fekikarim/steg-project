@@ -1,0 +1,11 @@
+fastapi>=0.141.0
+uvicorn[standard]>=0.30.0
+pypdf>=6.19.0
+# Deterministic PDF layout for the internship journal (Platypus tables,
+# repeating header rows, page numbers). No model is involved in rendering.
+reportlab>=4.2.0
+pydantic>=2.10.0
+pytest>=9.0.0
+httpx>=0.28.0
+# OCR is optional at runtime (fallback only when text layer is empty):
+# pip install pytesseract pillow pdf2image  (+ system tesseract + poppler)

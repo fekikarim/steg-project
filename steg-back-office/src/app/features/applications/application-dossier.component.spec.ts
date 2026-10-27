@@ -151,13 +151,15 @@ describe('ApplicationDossierComponent', () => {
           useValue: {
             listDepartments: () => of([{ id: 'dept-1', code: 'IT', name: 'Informatique' }]),
             listInternAccounts: () => of([]),
-            resetInternAccountPassword: () => of({ email: '', temporaryPassword: '', emailSent: false }),
+            resetInternAccountPassword: () =>
+              of({ email: '', temporaryPassword: '', emailSent: false }),
             ...apiOverrides,
           },
         },
       ],
     }).compileComponents();
-    signInDemo(TestBed.inject(AuthService), 
+    signInDemo(
+      TestBed.inject(AuthService),
       role === 'ADMIN' ? 'admin@steg.tn' : 'sup@steg.tn',
       role,
     );
@@ -219,9 +221,7 @@ describe('ApplicationDossierComponent', () => {
     const { fixture } = await setup('ADMIN', bundle(), {
       listInternAccounts: (search: string) => {
         searchCalls.push(search);
-        return of([
-          { id: 'acc-1', email: 'intern@steg.tn', role: 'INTERN', status: 'ACTIVE' },
-        ]);
+        return of([{ id: 'acc-1', email: 'intern@steg.tn', role: 'INTERN', status: 'ACTIVE' }]);
       },
       resetInternAccountPassword: (id: string) => {
         resetCalls.push(id);

@@ -134,7 +134,7 @@ describe('CertificateListComponent (workspace)', () => {
     const { fixture } = await setup({
       search: () => throwError(() => ({ error: { message: 'Down' } })),
     });
-    expect((fixture.nativeElement.textContent as string)).toContain('Down');
+    expect(fixture.nativeElement.textContent as string).toContain('Down');
   });
 
   it('applies the dashboard drill-down preset as a server-side status filter', async () => {

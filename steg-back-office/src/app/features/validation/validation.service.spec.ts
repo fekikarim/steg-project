@@ -23,7 +23,13 @@ describe('ValidationService', () => {
 
   it('queues one server page through the client', () => {
     const spy = vi.spyOn(api, 'searchValidationQueue').mockReturnValue(
-      of({ content: [], totalElements: 0, totalPages: 1, number: 0, size: 20 } as unknown as Page<never>),
+      of({
+        content: [],
+        totalElements: 0,
+        totalPages: 1,
+        number: 0,
+        size: 20,
+      } as unknown as Page<never>),
     );
     service.queue({ page: 0, size: 20, q: 'x' }).subscribe();
     expect(spy).toHaveBeenCalledWith({ page: 0, size: 20, q: 'x' });
@@ -38,7 +44,9 @@ describe('ValidationService', () => {
   });
 
   it('reads the backend error code and message', () => {
-    expect(ValidationService.codeOf({ error: { error: 'DOCUMENT_MISSING' } })).toBe('DOCUMENT_MISSING');
+    expect(ValidationService.codeOf({ error: { error: 'DOCUMENT_MISSING' } })).toBe(
+      'DOCUMENT_MISSING',
+    );
     expect(ValidationService.codeOf({})).toBeNull();
     expect(ValidationService.messageOf({ error: { message: 'Boom' } }, 'fb')).toBe('Boom');
     expect(ValidationService.messageOf({}, 'fb')).toBe('fb');
@@ -46,7 +54,10 @@ describe('ValidationService', () => {
 
   it('surfaces backend failures unchanged', () => {
     vi.spyOn(api, 'generateReceipt').mockReturnValue(
-      throwError(() => ({ status: 409, error: { error: 'INTERNSHIP_NOT_VALIDATED', message: 'nope' } })),
+      throwError(() => ({
+        status: 409,
+        error: { error: 'INTERNSHIP_NOT_VALIDATED', message: 'nope' },
+      })),
     );
     let seen = '';
     service.receipt('i').subscribe({ error: (e) => (seen = ValidationService.messageOf(e, 'fb')) });

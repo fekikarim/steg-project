@@ -89,9 +89,7 @@ describe('CandidateDetailComponent (§5.1 aggregate)', () => {
       overview: (id: string) => {
         calls.overview.push(id);
         return overrides['overview']
-          ? (overrides['overview'] as (id: string) => ReturnType<CandidatesService['overview']>)(
-              id,
-            )
+          ? (overrides['overview'] as (id: string) => ReturnType<CandidatesService['overview']>)(id)
           : of(overview);
       },
       update: (id: string, body: Record<string, unknown>) => {
@@ -185,6 +183,6 @@ describe('CandidateDetailComponent (§5.1 aggregate)', () => {
       overview: () => throwError(() => ({ status: 404 })),
     });
     expect(fixture.componentInstance.error()).toBe(true);
-    expect((fixture.nativeElement.textContent as string)).not.toContain('sup@steg.tn');
+    expect(fixture.nativeElement.textContent as string).not.toContain('sup@steg.tn');
   });
 });

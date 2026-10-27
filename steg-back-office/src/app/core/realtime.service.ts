@@ -267,7 +267,8 @@ export class RealtimeService implements OnDestroy {
         }
         this.reconnectAttempts++;
         // update delay for next auto-reconnect attempt
-        if (this.client) this.client.reconnectDelay = computeReconnectDelay(this.reconnectAttempts, Math.random());
+        if (this.client)
+          this.client.reconnectDelay = computeReconnectDelay(this.reconnectAttempts, Math.random());
       },
       onWebSocketError: (evt: Event) => {
         this._state.set('error');

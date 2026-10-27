@@ -22,9 +22,15 @@ describe('CertificatesService', () => {
   });
 
   it('searches one server page through the client', () => {
-    const spy = vi
-      .spyOn(api, 'searchCertificates')
-      .mockReturnValue(of({ content: [], totalElements: 0, totalPages: 1, number: 0, size: 20 } as unknown as Page<never>));
+    const spy = vi.spyOn(api, 'searchCertificates').mockReturnValue(
+      of({
+        content: [],
+        totalElements: 0,
+        totalPages: 1,
+        number: 0,
+        size: 20,
+      } as unknown as Page<never>),
+    );
     service.search({ page: 0, size: 20, q: 'x' }).subscribe();
     expect(spy).toHaveBeenCalledWith({ page: 0, size: 20, q: 'x' });
   });
@@ -48,10 +54,15 @@ describe('CertificatesService', () => {
 
   it('surfaces backend failures unchanged', () => {
     vi.spyOn(api, 'revokeCertificate').mockReturnValue(
-      throwError(() => ({ status: 409, error: { error: 'CERTIFICATE_ALREADY_REVOKED', message: 'gone' } })),
+      throwError(() => ({
+        status: 409,
+        error: { error: 'CERTIFICATE_ALREADY_REVOKED', message: 'gone' },
+      })),
     );
     let seen = '';
-    service.remove('c').subscribe({ error: (e) => (seen = CertificatesService.messageOf(e, 'fb')) });
+    service
+      .remove('c')
+      .subscribe({ error: (e) => (seen = CertificatesService.messageOf(e, 'fb')) });
     expect(seen).toBe('gone');
   });
 });

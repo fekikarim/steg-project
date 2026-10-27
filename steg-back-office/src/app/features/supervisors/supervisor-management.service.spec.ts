@@ -14,7 +14,11 @@ const ROW: SupervisorRow = {
   createdAt: '2026-06-01T00:00:00Z',
 };
 
-function internship(id: string, reference: string, status: InternshipDetail['status']): InternshipDetail {
+function internship(
+  id: string,
+  reference: string,
+  status: InternshipDetail['status'],
+): InternshipDetail {
   return {
     id,
     reference,
@@ -89,8 +93,16 @@ describe('SupervisorManagementService', () => {
 
   it('passes the search query through untouched (server-side filtering)', () => {
     const { service, calls } = setup();
-    service.search({ page: 2, size: 10, q: 'sup', status: 'LOCKED', sort: 'email,asc' }).subscribe();
-    expect(calls.search[0]).toEqual({ page: 2, size: 10, q: 'sup', status: 'LOCKED', sort: 'email,asc' });
+    service
+      .search({ page: 2, size: 10, q: 'sup', status: 'LOCKED', sort: 'email,asc' })
+      .subscribe();
+    expect(calls.search[0]).toEqual({
+      page: 2,
+      size: 10,
+      q: 'sup',
+      status: 'LOCKED',
+      sort: 'email,asc',
+    });
   });
 
   it('never offers a cancelled or archived internship for assignment', () => {
@@ -125,7 +137,10 @@ describe('SupervisorManagementService', () => {
   });
 
   it('propagates the 409 delete guard unchanged', () => {
-    const conflict = { status: 409, error: { errorCode: 'SUPERVISOR_HAS_ACTIVE_ASSIGNMENTS', message: 'busy' } };
+    const conflict = {
+      status: 409,
+      error: { errorCode: 'SUPERVISOR_HAS_ACTIVE_ASSIGNMENTS', message: 'busy' },
+    };
     const { service } = setup({ deleteSupervisor: () => throwError(() => conflict) });
     let seen: unknown = null;
     service.remove('u1').subscribe({ error: (e: unknown) => (seen = e) });
@@ -149,9 +164,9 @@ describe('SupervisorManagementService', () => {
   });
 
   it('extracts the backend envelope message and falls back when absent', () => {
-    expect(
-      SupervisorManagementService.messageOf({ error: { message: 'nope' } }, 'fallback'),
-    ).toBe('nope');
+    expect(SupervisorManagementService.messageOf({ error: { message: 'nope' } }, 'fallback')).toBe(
+      'nope',
+    );
     expect(SupervisorManagementService.messageOf({}, 'fallback')).toBe('fallback');
   });
 });

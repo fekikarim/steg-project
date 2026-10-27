@@ -96,7 +96,9 @@ describe('InternshipService', () => {
   it('isolates per-internship assignment failures in the map', () => {
     const service = setup({
       listAssignments: (id: unknown) =>
-        id === 'bad' ? throwError(() => httpError(403)) : of([{ id: 'as-1', status: 'IN_PROGRESS' }]),
+        id === 'bad'
+          ? throwError(() => httpError(403))
+          : of([{ id: 'as-1', status: 'IN_PROGRESS' }]),
     });
     let map!: Map<string, unknown[]>;
     service.loadAssignmentMap(['ok', 'bad']).subscribe((m) => (map = m));

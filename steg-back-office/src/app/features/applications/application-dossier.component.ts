@@ -336,7 +336,9 @@ export interface OneTimeCredentials {
                       title="Analyser la conformité par IA"
                     >
                       <st-icon name="sparkles" [size]="14" />
-                      {{ docAiLoading()[item.document.id] ? i18n.t('common.loading') : 'Analyse IA' }}
+                      {{
+                        docAiLoading()[item.document.id] ? i18n.t('common.loading') : 'Analyse IA'
+                      }}
                     </button>
                     @if (canAct()) {
                       <button
@@ -355,7 +357,8 @@ export interface OneTimeCredentials {
                         [disabled]="busy()"
                         title="Demander une correction au candidat"
                       >
-                        <st-icon name="alert" [size]="14" /> {{ i18n.t('dossier.requestCorrection') }}
+                        <st-icon name="alert" [size]="14" />
+                        {{ i18n.t('dossier.requestCorrection') }}
                       </button>
                     }
                   </div>
@@ -380,7 +383,8 @@ export interface OneTimeCredentials {
                   Validation IA des documents (Intelligence documentaire)
                 </h3>
                 <p class="st-hint" style="margin: 0.2rem 0 0;">
-                  Vérification automatique (Demande de stage & Lettre d'affectation) : conformité du type et identité du candidat
+                  Vérification automatique (Demande de stage & Lettre d'affectation) : conformité du
+                  type et identité du candidat
                 </p>
               </div>
             </div>
@@ -433,7 +437,9 @@ export interface OneTimeCredentials {
                           [class.st-ai-badge--invalid]="!aiVal.valid"
                         >
                           {{ aiVal.valid ? '✓ Conforme' : '⚠ Non conforme' }}
-                          <span class="st-ai-badge__score">{{ formatConfidence(aiVal.confidence) }}</span>
+                          <span class="st-ai-badge__score">{{
+                            formatConfidence(aiVal.confidence)
+                          }}</span>
                         </span>
                       } @else if (aiErr) {
                         <span class="st-ai-badge st-ai-badge--error">Échec analyse</span>
@@ -457,7 +463,9 @@ export interface OneTimeCredentials {
                           <strong>Type de document :</strong>
                           {{
                             aiVal.documentTypeValid
-                              ? 'Mots-clés requis (' + getExpectedDocLabel(item.document.type) + ') confirmés'
+                              ? 'Mots-clés requis (' +
+                                getExpectedDocLabel(item.document.type) +
+                                ') confirmés'
                               : 'Mots-clés attendus non détectés'
                           }}
                         </span>
@@ -480,9 +488,7 @@ export interface OneTimeCredentials {
                         </span>
                       </div>
                       @if (aiVal.reason) {
-                        <p class="st-ai-reason" dir="auto">
-                          <em>Raison :</em> {{ aiVal.reason }}
-                        </p>
+                        <p class="st-ai-reason" dir="auto"><em>Raison :</em> {{ aiVal.reason }}</p>
                       }
                     </div>
                   } @else if (aiErr) {
@@ -552,8 +558,6 @@ export interface OneTimeCredentials {
           }
         </section>
       }
-
-
 
       <!-- Reason dialog (reject / correction / accept note / doc verification) -->
       <st-dialog [open]="reasonKind() !== null" [title]="reasonTitle()" (close)="closeReason()">
@@ -1047,9 +1051,9 @@ export class ApplicationDossierComponent implements OnInit {
         this.docAiValidations.update((m) => ({ ...m, [docId]: res }));
         this.docAiLoading.update((m) => ({ ...m, [docId]: false }));
         if (res.valid) {
-          this.toast.show('success', 'Document vérifié par l\'IA : Conforme (Type et Nom validés)');
+          this.toast.show('success', "Document vérifié par l'IA : Conforme (Type et Nom validés)");
         } else {
-          this.toast.show('warning', 'Document vérifié par l\'IA : Incohérence détectée');
+          this.toast.show('warning', "Document vérifié par l'IA : Incohérence détectée");
         }
       },
       error: (e: unknown) => {
@@ -1074,10 +1078,11 @@ export class ApplicationDossierComponent implements OnInit {
 
   getExpectedDocLabel(type: string): string {
     if (type === 'INTERNSHIP_APPLICATION') return 'Demande de stage';
-    if (type === 'ASSIGNMENT_LETTER') return 'Lettre d\'affectation';
+    if (type === 'ASSIGNMENT_LETTER') return "Lettre d'affectation";
     if (type === 'CV') return 'Curriculum Vitae (CV)';
     if (type === 'CIN_COPY') return 'Copie CIN';
-    if (type === 'UNIVERSITY_CONVENTION' || type === 'INTERNSHIP_CONVENTION') return 'Convention de stage';
+    if (type === 'UNIVERSITY_CONVENTION' || type === 'INTERNSHIP_CONVENTION')
+      return 'Convention de stage';
     return type || 'Document';
   }
 
@@ -1122,28 +1127,26 @@ export class ApplicationDossierComponent implements OnInit {
     const id = this.bundle()?.application.id;
     if (!id) return;
     this.approvalBusy.set(true);
-    this.service
-      .approve(id, selection.supervisorUserId, selection.departmentId)
-      .subscribe({
-        next: (result) => {
-          this.approvalBusy.set(false);
-          this.approvalOpen.set(false);
-          if (result.temporaryPassword && result.credentialEmail) {
-            // Shown once: held only while the dialog is open (AGENTS.md §5.3).
-            this.credentials.set({
-              email: result.credentialEmail,
-              password: result.temporaryPassword,
-              emailSent: result.credentialEmailSent,
-            });
-          }
-          this.toast.show('success', this.i18n.t('dossier.actionDone'));
-          this.load();
-        },
-        error: (e: unknown) => {
-          this.approvalBusy.set(false);
-          this.toast.show('error', actionErrorMessage(e, this.i18n));
-        },
-      });
+    this.service.approve(id, selection.supervisorUserId, selection.departmentId).subscribe({
+      next: (result) => {
+        this.approvalBusy.set(false);
+        this.approvalOpen.set(false);
+        if (result.temporaryPassword && result.credentialEmail) {
+          // Shown once: held only while the dialog is open (AGENTS.md §5.3).
+          this.credentials.set({
+            email: result.credentialEmail,
+            password: result.temporaryPassword,
+            emailSent: result.credentialEmailSent,
+          });
+        }
+        this.toast.show('success', this.i18n.t('dossier.actionDone'));
+        this.load();
+      },
+      error: (e: unknown) => {
+        this.approvalBusy.set(false);
+        this.toast.show('error', actionErrorMessage(e, this.i18n));
+      },
+    });
   }
 
   cancelApproval(): void {
@@ -1360,9 +1363,7 @@ export class ApplicationDossierComponent implements OnInit {
     this.resendBusy.set(true);
     this.api.listInternAccounts(current.email).subscribe({
       next: (accounts) => {
-        const account = accounts.find(
-          (a) => a.email.toLowerCase() === current.email.toLowerCase(),
-        );
+        const account = accounts.find((a) => a.email.toLowerCase() === current.email.toLowerCase());
         if (!account) {
           this.resendBusy.set(false);
           this.toast.show('error', this.i18n.t('credentials.resendFailed'));

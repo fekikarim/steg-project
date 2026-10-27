@@ -577,7 +577,9 @@ export class SupervisorDashboardComponent implements OnInit {
   readonly size = signal(20);
   readonly sort = signal<SortState | null>({ key: 'flag', direction: 'desc' });
   readonly view = signal<'all' | 'attention'>('all');
-  readonly activeCount = computed(() => this.rows().filter((r) => r.status === 'IN_PROGRESS').length);
+  readonly activeCount = computed(
+    () => this.rows().filter((r) => r.status === 'IN_PROGRESS').length,
+  );
   readonly pendingTasks = computed(() => this.rows().reduce((n, r) => n + r.tasksPending, 0));
   readonly pendingJournal = computed(() => this.rows().reduce((n, r) => n + r.journalPending, 0));
   readonly awaitingEvaluation = computed(
@@ -677,7 +679,8 @@ export class SupervisorDashboardComponent implements OnInit {
       parts.push(this.i18n.t('supervisor.reasonJournal', { n: String(row.journalPending) }));
     if (row.status === 'VALIDATED' && !row.hasFinalEvaluation)
       parts.push(this.i18n.t('supervisor.reasonEvaluation'));
-    if (row.endsSoon && row.status === 'IN_PROGRESS') parts.push(this.i18n.t('supervisor.reasonEnding'));
+    if (row.endsSoon && row.status === 'IN_PROGRESS')
+      parts.push(this.i18n.t('supervisor.reasonEnding'));
     if (row.tasksPending > 0 && row.status === 'IN_PROGRESS')
       parts.push(this.i18n.t('supervisor.reasonTasks', { n: String(row.tasksPending) }));
     return parts.join(' · ') || row.status;

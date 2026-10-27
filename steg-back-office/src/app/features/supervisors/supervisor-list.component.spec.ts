@@ -106,7 +106,10 @@ describe('SupervisorListComponent (management workspace)', () => {
         return of(undefined as void);
       },
       assignableInternships: () =>
-        of([internship('i1', 'STG-2026-0001', 'IN_PROGRESS'), internship('i2', 'STG-2026-0002', 'CANCELLED')]),
+        of([
+          internship('i1', 'STG-2026-0001', 'IN_PROGRESS'),
+          internship('i2', 'STG-2026-0002', 'CANCELLED'),
+        ]),
       directory: () => of([{ userId: 'u1', email: 'admin@steg.tn', role: 'ADMIN' }]),
       ...overrides,
     };
@@ -125,7 +128,13 @@ describe('SupervisorListComponent (management workspace)', () => {
     const text = fixture.nativeElement.textContent as string;
     expect(text).toContain('amina@steg.tn');
     expect(text).toContain('bilel@steg.tn');
-    expect(queries[0]).toEqual({ page: 0, size: 20, sort: 'email,asc', q: undefined, status: undefined });
+    expect(queries[0]).toEqual({
+      page: 0,
+      size: 20,
+      sort: 'email,asc',
+      q: undefined,
+      status: undefined,
+    });
   });
 
   it('sends search and status filters to the server and resets the page', async () => {
@@ -269,7 +278,9 @@ describe('SupervisorListComponent (management workspace)', () => {
   });
 
   it('shows the empty state when the server returns no supervisors', async () => {
-    const { fixture } = await setup({ search: () => of({ content: [], totalElements: 0, totalPages: 0, number: 0, size: 20 }) });
+    const { fixture } = await setup({
+      search: () => of({ content: [], totalElements: 0, totalPages: 0, number: 0, size: 20 }),
+    });
     fixture.detectChanges();
     await fixture.whenStable();
     expect(fixture.nativeElement.textContent).toContain(

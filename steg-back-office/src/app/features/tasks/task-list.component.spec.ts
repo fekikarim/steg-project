@@ -286,9 +286,14 @@ describe('TaskListComponent (workspace)', () => {
     component.toggleCandidateSelect('int-B');
     component.saveForm();
     expect(calls.bulk.length).toBe(1);
-    const [mutations, key] = calls.bulk[0] as [{ action: string; internshipId: string; task: { title: string } }[], string];
+    const [mutations, key] = calls.bulk[0] as [
+      { action: string; internshipId: string; task: { title: string } }[],
+      string,
+    ];
     expect(mutations).toHaveLength(2);
-    expect(mutations.every((m) => m.action === 'CREATE' && m.task.title === 'Global onboarding task')).toBe(true);
+    expect(
+      mutations.every((m) => m.action === 'CREATE' && m.task.title === 'Global onboarding task'),
+    ).toBe(true);
     expect(new Set(mutations.map((m) => m.internshipId))).toEqual(new Set(['int-A', 'int-B']));
     expect(key).toBeTruthy();
   });

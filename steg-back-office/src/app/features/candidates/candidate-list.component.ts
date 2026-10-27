@@ -1,12 +1,4 @@
-import {
-  Component,
-  inject,
-  signal,
-  computed,
-  OnInit,
-  OnDestroy,
-  DestroyRef,
-} from '@angular/core';
+import { Component, inject, signal, computed, OnInit, OnDestroy, DestroyRef } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -211,7 +203,6 @@ const SORT_PROPERTY: Record<string, string> = {
         (sizeChange)="size.set($event); setPage(0)"
       />
     }
-
 
     <!-- Soft delete: confirmation first (§5 list rule), backend guard second. -->
     <st-confirm-dialog
@@ -431,7 +422,6 @@ export class CandidateListComponent implements OnInit, OnDestroy {
         return 'neutral';
     }
   }
-
 
   /* ---------------- delete (§5.1 soft delete + confirmation) ---------------- */
 

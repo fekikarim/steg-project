@@ -21,11 +21,7 @@ export interface ApprovalSelection {
   standalone: true,
   imports: [DialogComponent],
   template: `
-    <st-dialog
-      [open]="open"
-      [title]="i18n.t('approval.title')"
-      (close)="cancelled.emit()"
-    >
+    <st-dialog [open]="open" [title]="i18n.t('approval.title')" (close)="cancelled.emit()">
       <p class="st-hint">{{ i18n.t('approval.hint') }}</p>
 
       <label class="st-field">
@@ -103,13 +99,9 @@ export class ApprovalDialogComponent implements OnChanges {
 
   ngOnChanges(): void {
     if (!this.open) return;
-    if (
-      !this.supervisorId() ||
-      !this.supervisors.some((s) => s.userId === this.supervisorId())
-    ) {
+    if (!this.supervisorId() || !this.supervisors.some((s) => s.userId === this.supervisorId())) {
       const preferred =
-        this.preselectedUserId &&
-        this.supervisors.some((s) => s.userId === this.preselectedUserId)
+        this.preselectedUserId && this.supervisors.some((s) => s.userId === this.preselectedUserId)
           ? this.preselectedUserId
           : (this.supervisors[0]?.userId ?? '');
       this.supervisorId.set(preferred);

@@ -81,16 +81,14 @@ describe('ApiClient candidates workspace', () => {
 
   it('normalizes the Spring 4 instance-model envelope into a flat Page', () => {
     const captured: { t: number; tp: number; n: number; c: number }[] = [];
-    api
-      .searchCandidates({ page: 2, size: 10 })
-      .subscribe((p) =>
-        captured.push({
-          t: p.totalElements,
-          tp: p.totalPages,
-          n: p.number,
-          c: p.content.length,
-        }),
-      );
+    api.searchCandidates({ page: 2, size: 10 }).subscribe((p) =>
+      captured.push({
+        t: p.totalElements,
+        tp: p.totalPages,
+        n: p.number,
+        c: p.content.length,
+      }),
+    );
 
     const req = http.expectOne((r) => r.url.endsWith('/api/candidates/manage'));
     req.flush({

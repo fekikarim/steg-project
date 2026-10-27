@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({message, duplicateFields, valid: false}, {status: res.status});
     }
     return NextResponse.json(data, {status: 200});
-  } catch (err) {
+  } catch {
     return NextResponse.json({message: 'Cannot reach the server.'}, {status: 502});
   } finally {
     clearTimeout(timer);

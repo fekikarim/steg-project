@@ -1,6 +1,11 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { HttpClient, HttpInterceptorFn, provideHttpClient, withInterceptors } from '@angular/common/http';
+import {
+  HttpClient,
+  HttpInterceptorFn,
+  provideHttpClient,
+  withInterceptors,
+} from '@angular/common/http';
 import { Router } from '@angular/router';
 import { errorInterceptor } from './error.interceptor';
 import { ToastService } from '../shared/ui/toast.service';
@@ -27,8 +32,8 @@ describe('errorInterceptor', () => {
         { provide: ToastService, useValue: mockToast },
         { provide: AuthService, useValue: mockAuthService },
         provideHttpClient(withInterceptors([errorInterceptor])),
-        provideHttpClientTesting()
-      ]
+        provideHttpClientTesting(),
+      ],
     });
 
     httpMock = TestBed.inject(HttpTestingController);
@@ -44,13 +49,16 @@ describe('errorInterceptor', () => {
       next: () => expect.fail('should have failed with 403 error'),
       error: (error) => {
         expect(error.status).toBe(403);
-      }
+      },
     });
 
     const req = httpMock.expectOne('/api/test');
     req.flush({ message: 'PASSWORD_CHANGE_REQUIRED' }, { status: 403, statusText: 'Forbidden' });
 
-    expect(mockToast.show).toHaveBeenCalledWith('warning', 'Vous devez modifier votre mot de passe.');
+    expect(mockToast.show).toHaveBeenCalledWith(
+      'warning',
+      'Vous devez modifier votre mot de passe.',
+    );
     expect(mockRouter.navigate).toHaveBeenCalledWith(['/change-password']);
   });
 
@@ -66,7 +74,7 @@ describe('errorInterceptor', () => {
       next: () => expect.fail('should have failed with 403 error'),
       error: (error) => {
         expect(error.status).toBe(403);
-      }
+      },
     });
 
     const req = httpMock.expectOne('/api/auth/change-password');

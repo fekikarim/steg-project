@@ -43,7 +43,16 @@ const DETAIL = {
   latestReportRun: {
     overall: 'PASS',
     degraded: false,
-    checks: [{ key: 'candidate_name', label: 'Candidate name', status: 'PASSED', expected: 'x', found: 'x', evidence: 'e' }],
+    checks: [
+      {
+        key: 'candidate_name',
+        label: 'Candidate name',
+        status: 'PASSED',
+        expected: 'x',
+        found: 'x',
+        evidence: 'e',
+      },
+    ],
     runBy: 'u1',
     runAt: '2026-05-02T00:00:00Z',
   },
@@ -59,7 +68,10 @@ const DETAIL = {
  * comments client-side, gates the receipt CTA on both manual validations.
  */
 describe('ValidationDetailComponent', () => {
-  async function setup(detail: ValidationDetail | null = DETAIL, overrides: Record<string, unknown> = {}) {
+  async function setup(
+    detail: ValidationDetail | null = DETAIL,
+    overrides: Record<string, unknown> = {},
+  ) {
     const calls: { decided: unknown[]; verified: unknown[]; receipts: number } = {
       decided: [],
       verified: [],
@@ -87,7 +99,10 @@ describe('ValidationDetailComponent', () => {
       imports: [ValidationDetailComponent],
       providers: [
         provideRouter([{ path: 'validation', component: StubComponent }]),
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: new Map([['id', 'int-1']]) } } },
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: new Map([['id', 'int-1']]) } },
+        },
         { provide: ValidationService, useValue: service },
         { provide: ToastService, useValue: { show: (...a: unknown[]) => toasts.push(a) } },
       ],
@@ -117,7 +132,7 @@ describe('ValidationDetailComponent', () => {
       latestReportRun: { ...DETAIL.latestReportRun!, degraded: true, overall: 'INCONCLUSIVE' },
     } as ValidationDetail;
     const { fixture } = await setup(degraded);
-    expect((fixture.nativeElement.textContent as string)).toContain('IA indisponible');
+    expect(fixture.nativeElement.textContent as string).toContain('IA indisponible');
   });
 
   it('refuses a blank rejection comment before any HTTP', async () => {
@@ -150,6 +165,6 @@ describe('ValidationDetailComponent', () => {
 
   it('surfaces load failures with a retry', async () => {
     const { fixture } = await setup(null);
-    expect((fixture.nativeElement.textContent as string)).toContain('Down');
+    expect(fixture.nativeElement.textContent as string).toContain('Down');
   });
 });

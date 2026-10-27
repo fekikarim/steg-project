@@ -94,7 +94,10 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
           ) as Observable<never>;
         }
       } else if (err.status === 403) {
-        if (err.error?.message === 'PASSWORD_CHANGE_REQUIRED' || err.error?.error === 'PASSWORD_CHANGE_REQUIRED') {
+        if (
+          err.error?.message === 'PASSWORD_CHANGE_REQUIRED' ||
+          err.error?.error === 'PASSWORD_CHANGE_REQUIRED'
+        ) {
           if (!router.url.startsWith('/change-password') && !throttled) {
             toast.show('warning', 'Vous devez modifier votre mot de passe.');
             lastNavigationAt = now;

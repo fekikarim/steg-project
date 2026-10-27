@@ -157,11 +157,7 @@ interface CredentialsView {
     }
 
     <!-- Create supervisor -->
-    <st-dialog
-      [open]="createOpen()"
-      [title]="i18n.t('supervisors.new')"
-      (close)="closeCreate()"
-    >
+    <st-dialog [open]="createOpen()" [title]="i18n.t('supervisors.new')" (close)="closeCreate()">
       <label class="st-field">
         <span class="st-field__label">{{ i18n.t('supervisors.email') }} *</span>
         <input type="email" class="st-input" dir="ltr" [(ngModel)]="createEmail" />
@@ -279,9 +275,7 @@ interface CredentialsView {
         <select class="st-input" [(ngModel)]="reassignSupervisorId">
           <option value="">{{ i18n.t('supervisors.pickSupervisor') }}</option>
           @for (s of directory(); track s.userId) {
-            <option [value]="s.userId">
-              {{ s.email }} ({{ s.role }})
-            </option>
+            <option [value]="s.userId">{{ s.email }} ({{ s.role }})</option>
           }
         </select>
       </label>
@@ -549,20 +543,22 @@ export class SupervisorListComponent implements OnInit {
     const target = this.editing();
     if (!target) return;
     this.busy.set(true);
-    this.service.update(target.id, { status: this.editStatus, enabled: this.editEnabled }).subscribe({
-      next: () => {
-        this.busy.set(false);
-        this.editing.set(null);
-        this.toast.show('success', this.i18n.t('supervisors.updated'));
-        this.load();
-      },
-      error: (e: unknown) => {
-        this.busy.set(false);
-        this.actionError.set(
-          SupervisorManagementService.messageOf(e, this.i18n.t('common.error.body')),
-        );
-      },
-    });
+    this.service
+      .update(target.id, { status: this.editStatus, enabled: this.editEnabled })
+      .subscribe({
+        next: () => {
+          this.busy.set(false);
+          this.editing.set(null);
+          this.toast.show('success', this.i18n.t('supervisors.updated'));
+          this.load();
+        },
+        error: (e: unknown) => {
+          this.busy.set(false);
+          this.actionError.set(
+            SupervisorManagementService.messageOf(e, this.i18n.t('common.error.body')),
+          );
+        },
+      });
   }
 
   /* ---------------- delete (§5.6 guard) ---------------- */

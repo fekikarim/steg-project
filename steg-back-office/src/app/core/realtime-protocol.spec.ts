@@ -9,7 +9,9 @@ import {
 } from './realtime-protocol';
 import type { RealtimeNotificationPayload } from './realtime.service';
 
-const payload = (overrides: Partial<RealtimeNotificationPayload> = {}): RealtimeNotificationPayload => ({
+const payload = (
+  overrides: Partial<RealtimeNotificationPayload> = {},
+): RealtimeNotificationPayload => ({
   notificationId: 'n1',
   title: 'T',
   message: 'M',

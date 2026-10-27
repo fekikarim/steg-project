@@ -50,7 +50,10 @@ const CHECK_TONE: Record<string, BadgeTone> = {
     DialogComponent,
   ],
   template: `
-    <st-page-header [title]="i18n.t('validation.detailTitle')" [subtitle]="detail()?.reference ?? ''">
+    <st-page-header
+      [title]="i18n.t('validation.detailTitle')"
+      [subtitle]="detail()?.reference ?? ''"
+    >
       <st-live-status />
       <a class="st-btn" routerLink="/validation">{{ i18n.t('validation.backToQueue') }}</a>
     </st-page-header>
@@ -70,11 +73,10 @@ const CHECK_TONE: Record<string, BadgeTone> = {
         <p>{{ d.candidate.email }} · {{ d.candidate.universityName }}</p>
         <p>
           {{ d.type }} · {{ d.requirement }} · {{ d.startDate }} → {{ d.endDate }} ·
-          {{ i18n.t('validation.supervisor') }}: {{ d.supervisor.displayName ?? d.supervisor.email }}
+          {{ i18n.t('validation.supervisor') }}:
+          {{ d.supervisor.displayName ?? d.supervisor.email }}
         </p>
-        <p>
-          {{ i18n.t('validation.tasksDone') }}: {{ d.tasks.done }}/{{ d.tasks.total }}
-        </p>
+        <p>{{ i18n.t('validation.tasksDone') }}: {{ d.tasks.done }}/{{ d.tasks.total }}</p>
         <ul class="st-tasks">
           @for (t of d.tasks.items; track t.id) {
             <li>{{ t.title }} — {{ t.status }}</li>
@@ -84,7 +86,11 @@ const CHECK_TONE: Record<string, BadgeTone> = {
 
       @for (doc of docs(d); track doc.key) {
         <section class="st-card" [attr.aria-label]="doc.key">
-          <h2>{{ i18n.t(doc.key === 'REPORT' ? 'validation.reportTitle' : 'validation.journalTitle') }}</h2>
+          <h2>
+            {{
+              i18n.t(doc.key === 'REPORT' ? 'validation.reportTitle' : 'validation.journalTitle')
+            }}
+          </h2>
           @if (doc.ref) {
             <p>{{ doc.ref.title }} · v{{ doc.ref.version }} · {{ doc.ref.submittedAt }}</p>
             <div class="st-actions">
@@ -102,7 +108,11 @@ const CHECK_TONE: Record<string, BadgeTone> = {
               >
                 {{ i18n.t('validation.runAi') }}
               </button>
-              <button type="button" class="st-btn st-btn--sm st-btn--primary" (click)="openDecide(doc.key, true)">
+              <button
+                type="button"
+                class="st-btn st-btn--sm st-btn--primary"
+                (click)="openDecide(doc.key, true)"
+              >
                 {{ i18n.t('validation.validate') }}
               </button>
               <button type="button" class="st-btn st-btn--sm" (click)="openDecide(doc.key, false)">
@@ -177,7 +187,11 @@ const CHECK_TONE: Record<string, BadgeTone> = {
       </section>
     }
 
-    <st-dialog [open]="decideOpen()" [title]="i18n.t('validation.decideTitle')" (close)="decideOpen.set(false)">
+    <st-dialog
+      [open]="decideOpen()"
+      [title]="i18n.t('validation.decideTitle')"
+      (close)="decideOpen.set(false)"
+    >
       <p>{{ i18n.t('validation.decideHint') }}</p>
       <label class="st-field">
         <span>{{ i18n.t('validation.commentLabel') }}</span>
@@ -187,8 +201,15 @@ const CHECK_TONE: Record<string, BadgeTone> = {
         <st-alert tone="error">{{ decideError() }}</st-alert>
       }
       <div class="st-dialog__actions">
-        <button type="button" class="st-btn" (click)="decideOpen.set(false)">{{ i18n.t('common.cancel') }}</button>
-        <button type="button" class="st-btn st-btn--primary" [disabled]="saving()" (click)="confirmDecide()">
+        <button type="button" class="st-btn" (click)="decideOpen.set(false)">
+          {{ i18n.t('common.cancel') }}
+        </button>
+        <button
+          type="button"
+          class="st-btn st-btn--primary"
+          [disabled]="saving()"
+          (click)="confirmDecide()"
+        >
           {{ i18n.t('common.save') }}
         </button>
       </div>
@@ -357,18 +378,20 @@ export class ValidationDetailComponent implements OnInit {
       return;
     }
     this.saving.set(true);
-    this.service.decide(this.id(), doc, approve ? 'VALIDATED' : 'REJECTED', this.decideComment).subscribe({
-      next: (d) => {
-        this.detail.set(d);
-        this.saving.set(false);
-        this.decideOpen.set(false);
-        this.toast.show('success', this.i18n.t('validation.decisionSaved'));
-      },
-      error: (e) => {
-        this.decideError.set(ValidationService.messageOf(e, 'Decision failed'));
-        this.saving.set(false);
-      },
-    });
+    this.service
+      .decide(this.id(), doc, approve ? 'VALIDATED' : 'REJECTED', this.decideComment)
+      .subscribe({
+        next: (d) => {
+          this.detail.set(d);
+          this.saving.set(false);
+          this.decideOpen.set(false);
+          this.toast.show('success', this.i18n.t('validation.decisionSaved'));
+        },
+        error: (e) => {
+          this.decideError.set(ValidationService.messageOf(e, 'Decision failed'));
+          this.saving.set(false);
+        },
+      });
   }
 
   preview(ref: ValidationDocumentRef): void {

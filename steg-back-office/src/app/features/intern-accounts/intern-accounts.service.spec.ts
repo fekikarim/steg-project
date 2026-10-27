@@ -102,7 +102,10 @@ describe('InternAccountsService', () => {
   });
 
   it('propagates the 409 delete guard unchanged', () => {
-    const conflict = { status: 409, error: { errorCode: 'SUPERVISOR_HAS_ACTIVE_ASSIGNMENTS', message: 'busy' } };
+    const conflict = {
+      status: 409,
+      error: { errorCode: 'SUPERVISOR_HAS_ACTIVE_ASSIGNMENTS', message: 'busy' },
+    };
     const { service } = setup({ deleteInternAccount: () => throwError(() => conflict) });
     let seen: unknown = null;
     service.remove('u1').subscribe({ error: (e: unknown) => (seen = e) });
@@ -117,13 +120,18 @@ describe('InternAccountsService', () => {
       }),
     ).toBe(true);
     expect(
-      InternAccountsService.isActiveAssignmentsConflict({ status: 409, error: { errorCode: 'INVALID_ROLE' } }),
+      InternAccountsService.isActiveAssignmentsConflict({
+        status: 409,
+        error: { errorCode: 'INVALID_ROLE' },
+      }),
     ).toBe(false);
     expect(InternAccountsService.isActiveAssignmentsConflict({ status: 500 })).toBe(false);
   });
 
   it('extracts the backend envelope message and falls back when absent', () => {
-    expect(InternAccountsService.messageOf({ error: { message: 'nope' } }, 'fallback')).toBe('nope');
+    expect(InternAccountsService.messageOf({ error: { message: 'nope' } }, 'fallback')).toBe(
+      'nope',
+    );
     expect(InternAccountsService.messageOf({}, 'fallback')).toBe('fallback');
   });
 });

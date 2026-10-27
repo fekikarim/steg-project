@@ -638,7 +638,8 @@ export const DICTIONARIES: Record<SupportedLocale, Record<string, string>> = {
     'certificates.generated': 'Attestation générée.',
     'certificates.delete': 'Supprimer',
     'certificates.deleteTitle': 'Révoquer l’attestation ?',
-    'certificates.deleteHint': 'La ligne est conservée pour l’audit ; la référence n’est jamais réutilisée.',
+    'certificates.deleteHint':
+      'La ligne est conservée pour l’audit ; la référence n’est jamais réutilisée.',
     'certificates.deleted': 'Attestation révoquée.',
     'certificates.detailTitle': 'Attestation',
     'certificates.backToList': 'Retour à la liste',
@@ -681,7 +682,8 @@ export const DICTIONARIES: Record<SupportedLocale, Record<string, string>> = {
     'validation.commentRequired': 'Un commentaire est obligatoire pour refuser.',
     'validation.receiptTitle': 'Reçu de paiement',
     'validation.receiptHint': 'Disponible une fois les deux documents validés manuellement.',
-    'validation.receiptBlocked': 'Validez manuellement le rapport ET le journal avant de générer le reçu.',
+    'validation.receiptBlocked':
+      'Validez manuellement le rapport ET le journal avant de générer le reçu.',
     'validation.generateReceipt': 'Générer le reçu',
     'validation.reprint': 'Régénérer (même référence)',
     'validation.receiptDone': 'Reçu généré',
@@ -889,7 +891,8 @@ export const DICTIONARIES: Record<SupportedLocale, Record<string, string>> = {
     'tasksWs.bulkAddTitle': 'Ajouter la même tâche à plusieurs étudiants',
     'tasksWs.bulkEditTitle': 'Modifier les tâches sélectionnées',
     'tasksWs.bulkAddHint': 'Un seul appel atomique crée la tâche pour chaque étudiant coché.',
-    'tasksWs.bulkEditHint': 'Le titre et/ou la description sont appliqués à chaque tâche sélectionnée, en un seul appel atomique.',
+    'tasksWs.bulkEditHint':
+      'Le titre et/ou la description sont appliqués à chaque tâche sélectionnée, en un seul appel atomique.',
     'tasksWs.bulkTargets': 'Étudiants concernés',
     'tasksWs.bulkNoTarget': 'Cochez au moins un étudiant.',
     'tasksWs.aiDrafts': 'Brouillons IA',
@@ -1056,8 +1059,7 @@ export const DICTIONARIES: Record<SupportedLocale, Record<string, string>> = {
     'internAccounts.deactivate': 'Désactiver',
     'internAccounts.deleteTitle': 'Supprimer le compte',
     'internAccounts.deleteBody': 'Le compte {email} sera supprimé définitivement.',
-    'internAccounts.deleteConsequence':
-      'Un compte supprimé ne peut plus se connecter.',
+    'internAccounts.deleteConsequence': 'Un compte supprimé ne peut plus se connecter.',
     'internAccounts.hasAssignments':
       'Des stagiaires sont encore affectés à ce superviseur : réaffectez-les avant de supprimer.',
     'internAccounts.created': 'Compte créé.',
@@ -1334,7 +1336,8 @@ export const DICTIONARIES: Record<SupportedLocale, Record<string, string>> = {
       'Email not sent — use “Resend” to regenerate and send new credentials.',
     'credentials.resend': 'Resend',
     'credentials.close': 'Close',
-    'credentials.resendFailed': 'Could not regenerate the credentials right now. Please retry later.',
+    'credentials.resendFailed':
+      'Could not regenerate the credentials right now. Please retry later.',
     'dossier.reject': 'Reject',
     'dossier.requestCorrection': 'Request correction',
     'dossier.reasonLabel': 'Reason / comment',
@@ -1741,7 +1744,8 @@ export const DICTIONARIES: Record<SupportedLocale, Record<string, string>> = {
     'validation.commentRequired': 'A comment is required to reject.',
     'validation.receiptTitle': 'Payment receipt',
     'validation.receiptHint': 'Available once both documents are manually validated.',
-    'validation.receiptBlocked': 'Manually validate BOTH the report and the journal before generating the receipt.',
+    'validation.receiptBlocked':
+      'Manually validate BOTH the report and the journal before generating the receipt.',
     'validation.generateReceipt': 'Generate receipt',
     'validation.reprint': 'Regenerate (same reference)',
     'validation.receiptDone': 'Receipt generated',
@@ -1948,7 +1952,8 @@ export const DICTIONARIES: Record<SupportedLocale, Record<string, string>> = {
     'tasksWs.bulkAddTitle': 'Add the same task to several students',
     'tasksWs.bulkEditTitle': 'Edit the selected tasks',
     'tasksWs.bulkAddHint': 'One atomic call creates the task for each checked student.',
-    'tasksWs.bulkEditHint': 'The title and/or description apply to every selected task in one atomic call.',
+    'tasksWs.bulkEditHint':
+      'The title and/or description apply to every selected task in one atomic call.',
     'tasksWs.bulkTargets': 'Target students',
     'tasksWs.bulkNoTarget': 'Check at least one student.',
     'tasksWs.aiDrafts': 'AI drafts',
@@ -2059,8 +2064,7 @@ export const DICTIONARIES: Record<SupportedLocale, Record<string, string>> = {
     'common.delete': 'Delete',
     'common.create': 'Create',
     'supervisors.title': 'Supervisors',
-    'supervisors.subtitle':
-      'Supervisor accounts, search and assignment of approved internships.',
+    'supervisors.subtitle': 'Supervisor accounts, search and assignment of approved internships.',
     'supervisors.new': 'New supervisor',
     'supervisors.searchPlaceholder': 'Search an email…',
     'supervisors.empty': 'No supervisor account matches the filters.',
@@ -2831,7 +2835,8 @@ export const DICTIONARIES: Record<SupportedLocale, Record<string, string>> = {
     'candidates.managerInvalid': 'يجب أن يكون هذا الموظف بدور ADMIN أو SUPERVISOR.',
     'candidates.cin': 'رقم البطاقة',
     'candidates.cinRequired': 'رقم البطاقة إجباري لإنشاء ملف.',
-    'candidates.cinDuplicate': 'رقم البطاقة مستعمل بالفعل في ملف موجود. صحّح الرقم أو حدّث الملف القائم.',
+    'candidates.cinDuplicate':
+      'رقم البطاقة مستعمل بالفعل في ملف موجود. صحّح الرقم أو حدّث الملف القائم.',
     'candidates.profileExists': 'هذا الحساب يملك ملف مترشح بالفعل.',
     'candidates.firstName': 'الاسم',
     'candidates.lastName': 'اللقب',
@@ -3100,7 +3105,8 @@ export const DICTIONARIES: Record<SupportedLocale, Record<string, string>> = {
     'supervisors.assign': 'إسناد متربّص',
     'supervisors.internship': 'التربص',
     'supervisors.pickInternship': '— اختر تربصًا —',
-    'supervisors.assignHint': 'لا يمكن إلا إسناد المرشحين المصادق عليهم والتربصات النشطة (يفرضها الخادم).',
+    'supervisors.assignHint':
+      'لا يمكن إلا إسناد المرشحين المصادق عليهم والتربصات النشطة (يفرضها الخادم).',
     'supervisors.reassign': 'تغيير المشرف',
     'supervisors.newSupervisor': 'المشرف الجديد',
     'supervisors.pickSupervisor': '— اختر مشرفًا —',
@@ -3108,7 +3114,8 @@ export const DICTIONARIES: Record<SupportedLocale, Record<string, string>> = {
     'supervisors.reassignHint': 'يمكن للمشرف العام أن يشرف بنفسه. يبقى سجل الإسنادات محفوظًا.',
     'supervisors.deleteTitle': 'حذف حساب المشرف',
     'supervisors.deleteBody': 'سيُحذف الحساب {email} نهائيًا.',
-    'supervisors.deleteConsequence': 'لا يمكن للحساب المحذوف تسجيل الدخول. تبقى الإسنادات السابقة في السجل.',
+    'supervisors.deleteConsequence':
+      'لا يمكن للحساب المحذوف تسجيل الدخول. تبقى الإسنادات السابقة في السجل.',
     'supervisors.hasAssignments': 'لا يزال هناك متربّصون مسنَدون: أعد إسنادهم قبل الحذف.',
     'supervisors.updated': 'تم تحديث حساب المشرف.',
     'supervisors.deleted': 'تم حذف حساب المشرف.',
@@ -3124,8 +3131,7 @@ export const DICTIONARIES: Record<SupportedLocale, Record<string, string>> = {
     'internAccounts.pickRole': '— اختر الدور —',
     'internAccounts.roleIntern': 'متربّص (طالب)',
     'internAccounts.roleSupervisor': 'مشرف',
-    'internAccounts.createHint':
-      'يُولَّد سر مؤقت قوي ويُعرض مرة واحدة ثم يُرسل بالبريد.',
+    'internAccounts.createHint': 'يُولَّد سر مؤقت قوي ويُعرض مرة واحدة ثم يُرسل بالبريد.',
     'internAccounts.edit': 'تعديل الحساب',
     'internAccounts.enabled': 'الحساب مُفعّل',
     'internAccounts.reset': 'إعادة تعيين كلمة المرور',
@@ -3137,8 +3143,7 @@ export const DICTIONARIES: Record<SupportedLocale, Record<string, string>> = {
     'internAccounts.deleteTitle': 'حذف الحساب',
     'internAccounts.deleteBody': 'سيُحذف الحساب {email} نهائيًا.',
     'internAccounts.deleteConsequence': 'لا يمكن للحساب المحذوف تسجيل الدخول بعد الآن.',
-    'internAccounts.hasAssignments':
-      'لا يزال لهذا المشرف متربّصون مسنَدون: أعد إسنادهم قبل الحذف.',
+    'internAccounts.hasAssignments': 'لا يزال لهذا المشرف متربّصون مسنَدون: أعد إسنادهم قبل الحذف.',
     'internAccounts.created': 'تم إنشاء الحساب.',
     'internAccounts.deleted': 'تم حذف الحساب.',
     'internAccounts.updated': 'تم تحديث الحساب.',

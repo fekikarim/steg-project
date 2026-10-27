@@ -39,8 +39,14 @@ const DETAIL = {
  * failures with retry.
  */
 describe('CertificateDetailComponent', () => {
-  async function setup(detail: CertificateDetail | null = DETAIL, overrides: Record<string, unknown> = {}) {
-    const calls: { regenerated: unknown[]; downloaded: unknown[] } = { regenerated: [], downloaded: [] };
+  async function setup(
+    detail: CertificateDetail | null = DETAIL,
+    overrides: Record<string, unknown> = {},
+  ) {
+    const calls: { regenerated: unknown[]; downloaded: unknown[] } = {
+      regenerated: [],
+      downloaded: [],
+    };
     const service: Record<string, unknown> = {
       detail: () => (detail ? of(detail) : throwError(() => ({ error: { message: 'Down' } }))),
       regenerate: (id: string, issueDate?: string) => {
@@ -97,6 +103,6 @@ describe('CertificateDetailComponent', () => {
 
   it('surfaces load failures with a retry', async () => {
     const { fixture } = await setup(null);
-    expect((fixture.nativeElement.textContent as string)).toContain('Down');
+    expect(fixture.nativeElement.textContent as string).toContain('Down');
   });
 });

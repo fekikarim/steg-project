@@ -152,7 +152,11 @@ export class InternshipService {
    * the backend refuses them with 422).
    */
   complete(id: string): Observable<InternshipDetail> {
-    return this.api.transitionInternshipStatus(id, 'REPORT_SUBMITTED', 'Report submitted from the back office');
+    return this.api.transitionInternshipStatus(
+      id,
+      'REPORT_SUBMITTED',
+      'Report submitted from the back office',
+    );
   }
 
   /** Task status change (supervisor review of intern progress). */

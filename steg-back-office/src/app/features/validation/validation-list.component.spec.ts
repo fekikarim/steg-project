@@ -70,7 +70,13 @@ describe('ValidationListComponent (queue)', () => {
 
   it('renders the server page with status badges and detail links', async () => {
     const { fixture, queries } = await setup();
-    expect(queries[0]).toEqual({ page: 0, size: 20, q: undefined, statuses: undefined, type: undefined });
+    expect(queries[0]).toEqual({
+      page: 0,
+      size: 20,
+      q: undefined,
+      statuses: undefined,
+      type: undefined,
+    });
     const text = fixture.nativeElement.textContent as string;
     expect(text).toContain('Amine Ben Ali');
     expect(text).toContain('Bilel Trabelsi');
@@ -98,7 +104,7 @@ describe('ValidationListComponent (queue)', () => {
     const { fixture } = await setup({
       queue: () => throwError(() => ({ error: { message: 'Down' } })),
     });
-    expect((fixture.nativeElement.textContent as string)).toContain('Down');
+    expect(fixture.nativeElement.textContent as string).toContain('Down');
   });
 
   it('applies the dashboard drill-down preset as a server-side status filter', async () => {

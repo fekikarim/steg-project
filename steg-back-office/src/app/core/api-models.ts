@@ -780,13 +780,7 @@ export function toUserMessage(error: unknown): string {
 /* ------------------------------------------------------------------ */
 
 /** Task attached to an internship (Flutter + back office share the model). */
-export type TaskStatus =
-  | 'TODO'
-  | 'IN_PROGRESS'
-  | 'COMPLETED'
-  | 'APPROVED'
-  | 'DENIED'
-  | 'CANCELLED';
+export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'COMPLETED' | 'APPROVED' | 'DENIED' | 'CANCELLED';
 
 export interface CompanionTask {
   readonly id: string;
@@ -929,14 +923,23 @@ export interface ValidationDetail {
     readonly email: string | null;
     readonly displayName: string | null;
   };
-  readonly tasks: { readonly total: number; readonly done: number; readonly items: ValidationTaskItem[] };
+  readonly tasks: {
+    readonly total: number;
+    readonly done: number;
+    readonly items: ValidationTaskItem[];
+  };
   readonly report: ValidationDocumentRef | null;
   readonly journal: ValidationDocumentRef | null;
   readonly latestReportRun: ValidationRunView | null;
   readonly latestJournalRun: ValidationRunView | null;
   readonly reportDecision: ValidationDecisionView | null;
   readonly journalDecision: ValidationDecisionView | null;
-  readonly receipt: { readonly reference: string; readonly amount: string | null; readonly currency: string | null; readonly downloadable: boolean } | null;
+  readonly receipt: {
+    readonly reference: string;
+    readonly amount: string | null;
+    readonly currency: string | null;
+    readonly downloadable: boolean;
+  } | null;
 }
 
 export interface VerificationResult {

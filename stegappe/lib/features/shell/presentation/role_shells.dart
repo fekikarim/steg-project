@@ -12,8 +12,6 @@ import '../../../core/widgets/steg_modern.dart';
 import '../../auth/domain/entities/app_user.dart';
 import '../../auth/presentation/role_label.dart';
 import '../../../core/widgets/user_avatar.dart';
-import '../../auth/presentation/providers/auth_providers.dart';
-import '../../auth/presentation/screens/change_password_screen.dart';
 import '../../community/presentation/screens/community_post_detail_screen.dart';
 import '../../internship/presentation/screens/intern_home_screen.dart';
 import '../../internship/presentation/screens/journal_list_screen.dart';

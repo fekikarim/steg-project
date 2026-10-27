@@ -35,7 +35,10 @@ import type { CertificateDetail } from '../../core/api-models';
     DialogComponent,
   ],
   template: `
-    <st-page-header [title]="i18n.t('certificates.detailTitle')" [subtitle]="detail()?.certificate.reference ?? ''">
+    <st-page-header
+      [title]="i18n.t('certificates.detailTitle')"
+      [subtitle]="detail()?.certificate.reference ?? ''"
+    >
       <st-live-status />
       <a class="st-btn" routerLink="/certificates">{{ i18n.t('certificates.backToList') }}</a>
     </st-page-header>
@@ -85,7 +88,11 @@ import type { CertificateDetail } from '../../core/api-models';
           @for (v of d.versions; track v.versionNumber) {
             <li>
               v{{ v.versionNumber }} · {{ v.generatedAt }}
-              <button type="button" class="st-btn st-btn--sm" (click)="downloadVersion(v.versionNumber)">
+              <button
+                type="button"
+                class="st-btn st-btn--sm"
+                (click)="downloadVersion(v.versionNumber)"
+              >
                 {{ i18n.t('certificates.download') }}
               </button>
             </li>
@@ -94,7 +101,11 @@ import type { CertificateDetail } from '../../core/api-models';
       </section>
     }
 
-    <st-dialog [open]="editOpen()" [title]="i18n.t('certificates.editTitle')" (close)="editOpen.set(false)">
+    <st-dialog
+      [open]="editOpen()"
+      [title]="i18n.t('certificates.editTitle')"
+      (close)="editOpen.set(false)"
+    >
       <p>{{ i18n.t('certificates.editHint') }}</p>
       <label class="st-field">
         <span>{{ i18n.t('certificates.issueDateLabel') }}</span>
@@ -104,8 +115,15 @@ import type { CertificateDetail } from '../../core/api-models';
         <st-alert tone="error">{{ editError() }}</st-alert>
       }
       <div class="st-dialog__actions">
-        <button type="button" class="st-btn" (click)="editOpen.set(false)">{{ i18n.t('common.cancel') }}</button>
-        <button type="button" class="st-btn st-btn--primary" [disabled]="saving()" (click)="confirmEdit()">
+        <button type="button" class="st-btn" (click)="editOpen.set(false)">
+          {{ i18n.t('common.cancel') }}
+        </button>
+        <button
+          type="button"
+          class="st-btn st-btn--primary"
+          [disabled]="saving()"
+          (click)="confirmEdit()"
+        >
           {{ i18n.t('certificates.regenerate') }}
         </button>
       </div>
@@ -222,7 +240,8 @@ export class CertificateDetailComponent implements OnInit {
 
   download(): void {
     this.service.download(this.id()).subscribe({
-      next: (blob) => this.saveBlob(blob, `${this.detail()?.certificate.reference ?? 'certificate'}.pdf`),
+      next: (blob) =>
+        this.saveBlob(blob, `${this.detail()?.certificate.reference ?? 'certificate'}.pdf`),
       error: (e) => this.toast.show('error', CertificatesService.messageOf(e, 'Download failed')),
     });
   }
@@ -230,7 +249,10 @@ export class CertificateDetailComponent implements OnInit {
   downloadVersion(version: number): void {
     this.service.downloadVersion(this.id(), version).subscribe({
       next: (blob) =>
-        this.saveBlob(blob, `${this.detail()?.certificate.reference ?? 'certificate'}-v${version}.pdf`),
+        this.saveBlob(
+          blob,
+          `${this.detail()?.certificate.reference ?? 'certificate'}-v${version}.pdf`,
+        ),
       error: (e) => this.toast.show('error', CertificatesService.messageOf(e, 'Download failed')),
     });
   }

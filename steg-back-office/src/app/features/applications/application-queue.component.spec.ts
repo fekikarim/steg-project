@@ -6,10 +6,7 @@ import { ApplicationsComponent } from './application-queue.component';
 import { ApplicationQueueStore } from './application-queue-store';
 import { ApiClient } from '../../core/api-client.service';
 import { AuthService } from '../../core/auth.service';
-import type {
-  ApplicationQueueQuery,
-  ApplicationQueueRow,
-} from '../../core/api-models';
+import type { ApplicationQueueQuery, ApplicationQueueRow } from '../../core/api-models';
 import { signInDemo } from '../../core/testing/demo-session';
 
 @Component({ selector: 'st-stub', standalone: true, template: '' })
@@ -60,7 +57,13 @@ const CANDIDATES = [
 ];
 
 /** Minimal server stand-in: filtering happens SERVER-side, like the backend. */
-function fakeSearch(query: ApplicationQueueQuery): { content: ApplicationQueueRow[]; totalElements: number; totalPages: number; number: number; size: number } {
+function fakeSearch(query: ApplicationQueueQuery): {
+  content: ApplicationQueueRow[];
+  totalElements: number;
+  totalPages: number;
+  number: number;
+  size: number;
+} {
   let rows = [...ROWS];
   if (query.status) rows = rows.filter((r) => r.status === query.status);
   if (query.q) {

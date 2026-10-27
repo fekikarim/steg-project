@@ -15,7 +15,12 @@ import { AlertComponent } from '../../shared/ui/alert.component';
 import { DialogComponent, ConfirmDialogComponent } from '../../shared/ui/dialog.component';
 import { StIconComponent } from '../../shared/ui/icon.component';
 import { ApiClient } from '../../core/api-client.service';
-import type { BulkTaskMutation, CompanionTask, InternshipDetail, TaskStatus } from '../../core/api-models';
+import type {
+  BulkTaskMutation,
+  CompanionTask,
+  InternshipDetail,
+  TaskStatus,
+} from '../../core/api-models';
 
 /** One student group: all tasks of one internship, rendered together. */
 interface StudentGroup {
@@ -113,12 +118,12 @@ const STATUS_TONE: Record<TaskStatus, BadgeTone> = {
         }
       </select>
       @if (rows().length > 0) {
-        <button
-          type="button"
-          class="st-btn st-btn--sm"
-          (click)="toggleSelectAllTasks()"
-        >
-          {{ isAllTasksSelected() ? 'Tout désélectionner' : 'Sélectionner tout (' + rows().length + ')' }}
+        <button type="button" class="st-btn st-btn--sm" (click)="toggleSelectAllTasks()">
+          {{
+            isAllTasksSelected()
+              ? 'Tout désélectionner'
+              : 'Sélectionner tout (' + rows().length + ')'
+          }}
         </button>
       }
     </div>
@@ -177,7 +182,11 @@ const STATUS_TONE: Record<TaskStatus, BadgeTone> = {
                 </div>
                 <div class="st-task__actions">
                   @if (t.status === 'COMPLETED') {
-                    <button type="button" class="st-btn st-btn--sm st-btn--primary" (click)="approve(t)">
+                    <button
+                      type="button"
+                      class="st-btn st-btn--sm st-btn--primary"
+                      (click)="approve(t)"
+                    >
                       {{ i18n.t('tasksWs.approve') }}
                     </button>
                     <button type="button" class="st-btn st-btn--sm" (click)="openDeny(t)">
@@ -187,7 +196,11 @@ const STATUS_TONE: Record<TaskStatus, BadgeTone> = {
                   <button type="button" class="st-btn st-btn--sm" (click)="openEdit(t)">
                     {{ i18n.t('tasksWs.edit') }}
                   </button>
-                  <button type="button" class="st-btn st-btn--sm st-btn--danger" (click)="askDelete(t)">
+                  <button
+                    type="button"
+                    class="st-btn st-btn--sm st-btn--danger"
+                    (click)="askDelete(t)"
+                  >
                     {{ i18n.t('tasksWs.delete') }}
                   </button>
                 </div>
@@ -214,7 +227,9 @@ const STATUS_TONE: Record<TaskStatus, BadgeTone> = {
       @if (isSpecificStudentAdd()) {
         <div class="st-specific-student-badge">
           <st-icon name="user" [size]="15" />
-          <span>Candidat : <strong>{{ candidateLabelFor(formInternship) }}</strong></span>
+          <span
+            >Candidat : <strong>{{ candidateLabelFor(formInternship) }}</strong></span
+          >
         </div>
       } @else if (editing()) {
         <label class="st-field">
@@ -225,7 +240,11 @@ const STATUS_TONE: Record<TaskStatus, BadgeTone> = {
         <!-- Candidate checkboxes for Admin / Supervisor -->
         <fieldset class="st-field st-candidates-fieldset">
           <div class="st-candidates-legend">
-            <span>{{ i18n.t('nav.candidates') }} ({{ formCandidates().size }} sélectionné{{ formCandidates().size > 1 ? 's' : '' }}) *</span>
+            <span
+              >{{ i18n.t('nav.candidates') }} ({{ formCandidates().size }} sélectionné{{
+                formCandidates().size > 1 ? 's' : ''
+              }}) *</span
+            >
             <button type="button" class="st-btn st-btn--xs" (click)="toggleSelectAllCandidates()">
               {{ isAllCandidatesSelected() ? 'Tout désélectionner' : 'Tout sélectionner' }}
             </button>
@@ -244,7 +263,9 @@ const STATUS_TONE: Record<TaskStatus, BadgeTone> = {
                     (change)="toggleCandidateSelect(c.id)"
                   />
                   <div class="st-candidate-opt-info">
-                    <strong class="st-candidate-opt-name">{{ c.candidateFullName || ('Candidat #' + c.candidateId) }}</strong>
+                    <strong class="st-candidate-opt-name">{{
+                      c.candidateFullName || 'Candidat #' + c.candidateId
+                    }}</strong>
                     <span class="st-candidate-opt-ref">{{ c.reference }}</span>
                   </div>
                 </label>
@@ -266,8 +287,15 @@ const STATUS_TONE: Record<TaskStatus, BadgeTone> = {
         <st-alert tone="error">{{ formError() }}</st-alert>
       }
       <div class="st-dialog__actions">
-        <button type="button" class="st-btn" (click)="closeForm()">{{ i18n.t('common.cancel') }}</button>
-        <button type="button" class="st-btn st-btn--primary" [disabled]="saving()" (click)="saveForm()">
+        <button type="button" class="st-btn" (click)="closeForm()">
+          {{ i18n.t('common.cancel') }}
+        </button>
+        <button
+          type="button"
+          class="st-btn st-btn--primary"
+          [disabled]="saving()"
+          (click)="saveForm()"
+        >
           {{ i18n.t('common.save') }}
         </button>
       </div>
@@ -288,8 +316,15 @@ const STATUS_TONE: Record<TaskStatus, BadgeTone> = {
         <st-alert tone="error">{{ denyError() }}</st-alert>
       }
       <div class="st-dialog__actions">
-        <button type="button" class="st-btn" (click)="denyOpen.set(false)">{{ i18n.t('common.cancel') }}</button>
-        <button type="button" class="st-btn st-btn--primary" [disabled]="saving()" (click)="confirmDeny()">
+        <button type="button" class="st-btn" (click)="denyOpen.set(false)">
+          {{ i18n.t('common.cancel') }}
+        </button>
+        <button
+          type="button"
+          class="st-btn st-btn--primary"
+          [disabled]="saving()"
+          (click)="confirmDeny()"
+        >
           {{ i18n.t('tasksWs.deny') }}
         </button>
       </div>
@@ -307,12 +342,24 @@ const STATUS_TONE: Record<TaskStatus, BadgeTone> = {
         <details class="st-bulk-quick-apply">
           <summary><strong>Actions rapides (appliquer à toutes les tâches)</strong></summary>
           <div class="st-quick-row">
-            <input class="st-input st-input--sm" placeholder="Titre commun..." [(ngModel)]="bulkCommonTitle" />
-            <button type="button" class="st-btn st-btn--sm" (click)="applyCommonTitle()">Appliquer titre</button>
+            <input
+              class="st-input st-input--sm"
+              placeholder="Titre commun..."
+              [(ngModel)]="bulkCommonTitle"
+            />
+            <button type="button" class="st-btn st-btn--sm" (click)="applyCommonTitle()">
+              Appliquer titre
+            </button>
           </div>
           <div class="st-quick-row">
-            <input class="st-input st-input--sm" placeholder="Description commune..." [(ngModel)]="bulkCommonDesc" />
-            <button type="button" class="st-btn st-btn--sm" (click)="applyCommonDesc()">Appliquer desc</button>
+            <input
+              class="st-input st-input--sm"
+              placeholder="Description commune..."
+              [(ngModel)]="bulkCommonDesc"
+            />
+            <button type="button" class="st-btn st-btn--sm" (click)="applyCommonDesc()">
+              Appliquer desc
+            </button>
           </div>
           <div class="st-quick-row">
             <select class="st-input st-input--sm" [(ngModel)]="bulkCommonStatus">
@@ -321,7 +368,9 @@ const STATUS_TONE: Record<TaskStatus, BadgeTone> = {
                 <option [value]="s">{{ s }}</option>
               }
             </select>
-            <button type="button" class="st-btn st-btn--sm" (click)="applyCommonStatus()">Appliquer statut</button>
+            <button type="button" class="st-btn st-btn--sm" (click)="applyCommonStatus()">
+              Appliquer statut
+            </button>
           </div>
         </details>
       }
@@ -358,8 +407,15 @@ const STATUS_TONE: Record<TaskStatus, BadgeTone> = {
         <st-alert tone="error">{{ bulkError() }}</st-alert>
       }
       <div class="st-dialog__actions">
-        <button type="button" class="st-btn" (click)="bulkEditOpen.set(false)">{{ i18n.t('common.cancel') }}</button>
-        <button type="button" class="st-btn st-btn--primary" [disabled]="saving()" (click)="confirmBulkEdit()">
+        <button type="button" class="st-btn" (click)="bulkEditOpen.set(false)">
+          {{ i18n.t('common.cancel') }}
+        </button>
+        <button
+          type="button"
+          class="st-btn st-btn--primary"
+          [disabled]="saving()"
+          (click)="confirmBulkEdit()"
+        >
           Enregistrer toutes les modifications ({{ bulkEditItems().length }})
         </button>
       </div>
@@ -369,7 +425,12 @@ const STATUS_TONE: Record<TaskStatus, BadgeTone> = {
     <st-confirm-dialog
       [open]="bulkDeleteOpen()"
       [title]="i18n.t('tasksWs.bulkDeleteTitle')"
-      [body]="'Êtes-vous sûr de vouloir supprimer les ' + selected().size + ' tâches sélectionnées ? ' + i18n.t('tasksWs.bulkDeleteHint')"
+      [body]="
+        'Êtes-vous sûr de vouloir supprimer les ' +
+        selected().size +
+        ' tâches sélectionnées ? ' +
+        i18n.t('tasksWs.bulkDeleteHint')
+      "
       (cancel)="bulkDeleteOpen.set(false)"
       (confirmed)="confirmBulkDelete()"
     />
@@ -586,7 +647,14 @@ export class TaskListComponent implements OnInit {
   readonly i18n = inject(I18nService);
   private readonly toast = inject(ToastService);
 
-  readonly statuses: TaskStatus[] = ['TODO', 'IN_PROGRESS', 'COMPLETED', 'APPROVED', 'DENIED', 'CANCELLED'];
+  readonly statuses: TaskStatus[] = [
+    'TODO',
+    'IN_PROGRESS',
+    'COMPLETED',
+    'APPROVED',
+    'DENIED',
+    'CANCELLED',
+  ];
 
   readonly internships = signal<readonly InternshipDetail[]>([]);
   readonly internshipsLoading = signal(false);
@@ -919,7 +987,9 @@ export class TaskListComponent implements OnInit {
       if (this.formInternship.trim()) {
         targets.push(this.formInternship.trim());
       } else {
-        this.formError.set(this.i18n.t('tasksWs.bulkNoTarget') || 'Veuillez sélectionner au moins un candidat.');
+        this.formError.set(
+          this.i18n.t('tasksWs.bulkNoTarget') || 'Veuillez sélectionner au moins un candidat.',
+        );
         return;
       }
     }
@@ -951,13 +1021,13 @@ export class TaskListComponent implements OnInit {
         .pipe(
           catchError((bulkErr) => {
             const individualAdds = targets.map((internshipId) =>
-              this.tasks.add(internshipId, body).pipe(catchError(() => of(null)))
+              this.tasks.add(internshipId, body).pipe(catchError(() => of(null))),
             );
             return forkJoin(individualAdds).pipe(
               switchMap(() => of({ tasks: [], deletedCount: 0, items: [] })),
-              catchError(() => throwError(() => bulkErr))
+              catchError(() => throwError(() => bulkErr)),
             );
-          })
+          }),
         )
         .subscribe({
           next: (res) => {
@@ -1011,13 +1081,13 @@ export class TaskListComponent implements OnInit {
       .pipe(
         catchError((bulkErr) => {
           const individualDeletes = ids.map((id) =>
-            this.tasks.remove(id).pipe(catchError(() => of(null)))
+            this.tasks.remove(id).pipe(catchError(() => of(null))),
           );
           return forkJoin(individualDeletes).pipe(
             switchMap(() => of({ tasks: [], deletedCount: ids.length, items: [] })),
-            catchError(() => throwError(() => bulkErr))
+            catchError(() => throwError(() => bulkErr)),
           );
-        })
+        }),
       )
       .subscribe({
         next: (res) => {
@@ -1117,24 +1187,25 @@ export class TaskListComponent implements OnInit {
       return;
     }
 
-    const mutations: BulkTaskMutation[] = items.length > 0
-      ? items.map((item) => ({
-          action: 'UPDATE',
-          taskId: item.id,
-          task: {
-            title: item.title.trim(),
-            description: item.description.trim() || undefined,
-            status: item.status,
-          },
-        }))
-      : ids.map((taskId) => ({
-          action: 'UPDATE',
-          taskId,
-          task: {
-            title: this.bulkTitle.trim() || this.rowById(taskId)?.title || '',
-            description: this.bulkDesc.trim() || undefined,
-          },
-        }));
+    const mutations: BulkTaskMutation[] =
+      items.length > 0
+        ? items.map((item) => ({
+            action: 'UPDATE',
+            taskId: item.id,
+            task: {
+              title: item.title.trim(),
+              description: item.description.trim() || undefined,
+              status: item.status,
+            },
+          }))
+        : ids.map((taskId) => ({
+            action: 'UPDATE',
+            taskId,
+            task: {
+              title: this.bulkTitle.trim() || this.rowById(taskId)?.title || '',
+              description: this.bulkDesc.trim() || undefined,
+            },
+          }));
 
     this.saving.set(true);
     this.tasks
@@ -1142,13 +1213,13 @@ export class TaskListComponent implements OnInit {
       .pipe(
         catchError((bulkErr) => {
           const individualUpdates = mutations.map((m) =>
-            this.tasks.edit(m.taskId!, m.task!).pipe(catchError(() => of(null)))
+            this.tasks.edit(m.taskId!, m.task!).pipe(catchError(() => of(null))),
           );
           return forkJoin(individualUpdates).pipe(
             switchMap(() => of({ tasks: [], deletedCount: 0, items: [] })),
-            catchError(() => throwError(() => bulkErr))
+            catchError(() => throwError(() => bulkErr)),
           );
-        })
+        }),
       )
       .subscribe({
         next: (res) => {

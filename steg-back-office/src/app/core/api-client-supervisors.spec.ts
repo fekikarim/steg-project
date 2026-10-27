@@ -124,9 +124,7 @@ describe('ApiClient supervisor management', () => {
   });
 
   it('PUTs reassignment on the internship path with the new supervisor id', () => {
-    api
-      .reassignSupervisor('u2', 'i1', { newSupervisorUserId: 'u2', reason: 'leave' })
-      .subscribe();
+    api.reassignSupervisor('u2', 'i1', { newSupervisorUserId: 'u2', reason: 'leave' }).subscribe();
 
     const req = http.expectOne(`${environment.apiBaseUrl}/api/supervisors/u2/reassign/i1`);
     expect(req.request.method).toBe('PUT');

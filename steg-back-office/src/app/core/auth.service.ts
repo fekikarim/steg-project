@@ -96,12 +96,14 @@ export class AuthService {
   }
 
   login(email: string, password: string): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.baseUrl}/api/auth/back-office-login`, { email, password }).pipe(
-      tap((res) => this.handleAuthResponse(res)),
-      catchError((err) => {
-        throw err;
-      }),
-    );
+    return this.http
+      .post<AuthResponse>(`${this.baseUrl}/api/auth/back-office-login`, { email, password })
+      .pipe(
+        tap((res) => this.handleAuthResponse(res)),
+        catchError((err) => {
+          throw err;
+        }),
+      );
   }
 
   /** True when the session belongs to a Back Office role (ADMIN/SUPERVISOR). */
@@ -408,8 +410,7 @@ export class AuthService {
     }
     return null;
   }
-
-  }
+}
 
 function isSafeReturnTo(value: string): boolean {
   const lower = value.toLowerCase().trim();

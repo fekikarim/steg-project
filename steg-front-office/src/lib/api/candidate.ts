@@ -112,11 +112,6 @@ export async function validateIdentifiersClient(body: IdentifierValidationReques
       typeof data === 'object' && data !== null && 'message' in data
         ? String((data as {message: unknown}).message)
         : 'Validation failed.';
-    // Try to preserve duplicateFields if backend returned it even on error
-    const duplicateFields =
-      typeof data === 'object' && data !== null && 'duplicateFields' in data && Array.isArray((data as {duplicateFields: unknown}).duplicateFields)
-        ? ((data as {duplicateFields: string[]}).duplicateFields as string[])
-        : [];
     // If backend returned 422 with valid=false, we still want to surface it as a successful validation response
     // so the UI can show the warning dialog instead of a generic error.
     if (data && typeof data === 'object' && 'valid' in data && typeof (data as {valid: unknown}).valid === 'boolean') {

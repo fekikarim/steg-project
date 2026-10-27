@@ -33,7 +33,10 @@ export class ValidationService {
   }
 
   /** Advisory AI verification on one document (never moves a status). */
-  verify(internshipId: string, documentType: ValidationDocumentType): Observable<VerificationResult> {
+  verify(
+    internshipId: string,
+    documentType: ValidationDocumentType,
+  ): Observable<VerificationResult> {
     return this.api.runVerification(internshipId, documentType);
   }
 
