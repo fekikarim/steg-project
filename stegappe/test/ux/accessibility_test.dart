@@ -66,102 +66,90 @@ void main() {
       'lightTextPrimary/lightPage': (
         StegColors.lightTextPrimary,
         StegColors.lightPage,
-        body
+        body,
       ),
       'lightTextPrimary/lightSurface': (
         StegColors.lightTextPrimary,
         StegColors.lightSurface,
-        body
+        body,
       ),
       'lightTextSecondary/lightPage': (
         StegColors.lightTextSecondary,
         StegColors.lightPage,
-        body
+        body,
       ),
       'lightTextSecondary/lightSurface': (
         StegColors.lightTextSecondary,
         StegColors.lightSurface,
-        body
+        body,
       ),
       'info/lightPage': (StegColors.info, StegColors.lightPage, body),
       'success/lightPage': (StegColors.success, StegColors.lightPage, body),
       'warning/lightPage': (StegColors.warning, StegColors.lightPage, body),
       'error/lightPage': (StegColors.brandRed, StegColors.lightPage, body),
-      'white/brandNavy (app bar)': (
-        Colors.white,
-        StegColors.brandNavy,
-        body
-      ),
-      'white/success (banner fill)': (
-        Colors.white,
-        StegColors.success,
-        body
-      ),
-      'white/warning (banner fill)': (
-        Colors.white,
-        StegColors.warning,
-        body
-      ),
+      'white/brandNavy (app bar)': (Colors.white, StegColors.brandNavy, body),
+      'white/success (banner fill)': (Colors.white, StegColors.success, body),
+      'white/warning (banner fill)': (Colors.white, StegColors.warning, body),
       'darkTextPrimary/darkPage': (
         StegColors.darkTextPrimary,
         StegColors.darkPage,
-        body
+        body,
       ),
       'darkTextPrimary/darkSurface': (
         StegColors.darkTextPrimary,
         StegColors.darkSurface,
-        body
+        body,
       ),
       'darkTextPrimary/darkElevated': (
         StegColors.darkTextPrimary,
         StegColors.darkElevated,
-        body
+        body,
       ),
       'darkTextSecondary/darkSurface': (
         StegColors.darkTextSecondary,
         StegColors.darkSurface,
-        body
+        body,
       ),
       'darkTextSecondary/darkElevated': (
         StegColors.darkTextSecondary,
         StegColors.darkElevated,
-        body
+        body,
       ),
       'primaryBright/darkPage': (
         StegColors.primaryBright,
         StegColors.darkPage,
-        body
+        body,
       ),
       'primaryBright/darkSurface': (
         StegColors.primaryBright,
         StegColors.darkSurface,
-        body
+        body,
       ),
       'errorDark/darkPage': (StegColors.errorDark, StegColors.darkPage, body),
       'errorDark/darkSurface': (
         StegColors.errorDark,
         StegColors.darkSurface,
-        body
+        body,
       ),
       'successDark/darkPage': (
         StegColors.successDark,
         StegColors.darkPage,
-        body
+        body,
       ),
       'successDark/darkSurface': (
         StegColors.successDark,
         StegColors.darkSurface,
-        body
+        body,
       ),
       'warningDark/darkPage': (
         StegColors.warningDark,
         StegColors.darkPage,
-        body
+        body,
       ),
       'warningDark/darkSurface': (
         StegColors.warningDark,
         StegColors.darkSurface,
-        body
+        body,
       ),
     };
 
@@ -169,11 +157,18 @@ void main() {
       test('$label meets the barrier', () {
         final (fg, bg, min) = pair;
         final measured = contrastRatio(composite(fg, bg), bg);
-        expect(measured, greaterThanOrEqualTo(min),
-            reason: '$label measures ${measured.toStringAsFixed(2)}:1');
-        expect(measured, closeTo(recorded[label] ?? measured, 0.02),
-            reason: 'recorded ${recorded[label]} vs measured '
-                '${measured.toStringAsFixed(2)}');
+        expect(
+          measured,
+          greaterThanOrEqualTo(min),
+          reason: '$label measures ${measured.toStringAsFixed(2)}:1',
+        );
+        expect(
+          measured,
+          closeTo(recorded[label] ?? measured, 0.02),
+          reason:
+              'recorded ${recorded[label]} vs measured '
+              '${measured.toStringAsFixed(2)}',
+        );
       });
     });
 
@@ -182,9 +177,13 @@ void main() {
         final display = theme.textTheme.displayLarge!;
         final bg = theme.scaffoldBackgroundColor;
         final measured = contrastRatio(composite(display.color!, bg), bg);
-        expect(measured, greaterThanOrEqualTo(large),
-            reason: 'displayLarge measures ${measured.toStringAsFixed(2)}:1 '
-                'on ${theme.brightness}');
+        expect(
+          measured,
+          greaterThanOrEqualTo(large),
+          reason:
+              'displayLarge measures ${measured.toStringAsFixed(2)}:1 '
+              'on ${theme.brightness}',
+        );
       }
     });
 
@@ -193,15 +192,23 @@ void main() {
       // Measured before the fix: 3.24:1 and 3.43:1 on darkPage, i.e. below the
       // 4.5:1 body bar. Recorded so a regression back to the light tokens is
       // explicit rather than silent.
-      expect(contrastRatio(StegColors.success, StegColors.darkPage),
-          lessThan(body));
-      expect(contrastRatio(StegColors.warning, StegColors.darkPage),
-          lessThan(body));
+      expect(
+        contrastRatio(StegColors.success, StegColors.darkPage),
+        lessThan(body),
+      );
+      expect(
+        contrastRatio(StegColors.warning, StegColors.darkPage),
+        lessThan(body),
+      );
       // …and the shipped dark pair clears the body barrier.
-      expect(contrastRatio(StegColors.successDark, StegColors.darkPage),
-          greaterThanOrEqualTo(body));
-      expect(contrastRatio(StegColors.warningDark, StegColors.darkPage),
-          greaterThanOrEqualTo(body));
+      expect(
+        contrastRatio(StegColors.successDark, StegColors.darkPage),
+        greaterThanOrEqualTo(body),
+      );
+      expect(
+        contrastRatio(StegColors.warningDark, StegColors.darkPage),
+        greaterThanOrEqualTo(body),
+      );
     });
   });
 
@@ -242,16 +249,18 @@ void main() {
       return out;
     }
 
-    testWidgets('the measurement itself is calibrated against a known widget',
-        (tester) async {
+    testWidgets('the measurement itself is calibrated against a known widget', (
+      tester,
+    ) async {
       // Proves the semantics-rect math agrees with the widget geometry, so the
       // 48 dp assertions below mean what they claim.
       final handle = tester.ensureSemantics();
       final pump = await pumpUx(
-          tester, uxScreens().firstWhere((s) => s.id == 'ST-HOME').build());
+        tester,
+        uxScreens().firstWhere((s) => s.id == 'ST-HOME').build(),
+      );
       expect(pump.layoutOffenders, isEmpty);
-      final node = actionable(
-          semanticsRoot(tester))
+      final node = actionable(semanticsRoot(tester))
           .firstWhere((n) => n.getSemanticsData().label.isNotEmpty);
       final measured = globalRect(node);
       expect(measured.width, greaterThan(0));
@@ -301,8 +310,9 @@ void main() {
     }
 
     for (final screen in uxScreens()) {
-      testWidgets('${screen.id} · ${screen.name} targets and labels',
-          (tester) async {
+      testWidgets('${screen.id} · ${screen.name} targets and labels', (
+        tester,
+      ) async {
         final handle = tester.ensureSemantics();
         await pumpUx(
           tester,
@@ -319,8 +329,10 @@ void main() {
             final rect = tester.getRect(find.byWidget(e.widget));
             if (rect.width <= 0 || rect.height <= 0) continue;
             if (rect.width < 48 || rect.height < 48) {
-              tooSmall.add('$type ${rect.width.toStringAsFixed(0)}×'
-                  '${rect.height.toStringAsFixed(0)}');
+              tooSmall.add(
+                '$type ${rect.width.toStringAsFixed(0)}×'
+                '${rect.height.toStringAsFixed(0)}',
+              );
             }
           }
         }
@@ -330,8 +342,10 @@ void main() {
             final rect = tester.getRect(find.byWidget(e.widget));
             if (rect.width <= 0 || rect.height <= 0) continue;
             if (rect.width < 48 || rect.height < 48) {
-              tooSmall.add('$type ${rect.width.toStringAsFixed(0)}×'
-                  '${rect.height.toStringAsFixed(0)}');
+              tooSmall.add(
+                '$type ${rect.width.toStringAsFixed(0)}×'
+                '${rect.height.toStringAsFixed(0)}',
+              );
             }
           }
         }
@@ -350,15 +364,24 @@ void main() {
           if (n.isMergedIntoParent) continue;
           final rect = globalRect(n);
           if (rect.width <= 0 || rect.height <= 0) continue;
-          unlabelled.add('${rect.width.toStringAsFixed(0)}×'
-              '${rect.height.toStringAsFixed(0)}');
+          unlabelled.add(
+            '${rect.width.toStringAsFixed(0)}×'
+            '${rect.height.toStringAsFixed(0)}',
+          );
         }
 
-        expect(tooSmall, isEmpty,
-            reason: '${screen.name}: targets below 48 dp → $tooSmall');
-        expect(unlabelled, isEmpty,
-            reason: '${screen.name}: unlabelled interactive nodes → '
-                '$unlabelled');
+        expect(
+          tooSmall,
+          isEmpty,
+          reason: '${screen.name}: targets below 48 dp → $tooSmall',
+        );
+        expect(
+          unlabelled,
+          isEmpty,
+          reason:
+              '${screen.name}: unlabelled interactive nodes → '
+              '$unlabelled',
+        );
         handle.dispose();
       });
     }

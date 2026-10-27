@@ -39,8 +39,11 @@ void main() {
       for (final s in TaskStatus.values) {
         final wire = taskStatusToApi(s);
         if (s == TaskStatus.unknown) {
-          expect(wire, isNull,
-              reason: 'unknown is not backend vocabulary — never sent');
+          expect(
+            wire,
+            isNull,
+            reason: 'unknown is not backend vocabulary — never sent',
+          );
         } else {
           expect(taskStatusFrom(wire), s);
         }
@@ -81,21 +84,22 @@ void main() {
 
   group('student transitions (ST-TASK-02, BR-13)', () {
     test('forward path todo → in progress → awaiting approval', () {
-      expect(
-          studentTransitionsFrom(TaskStatus.todo), [TaskStatus.inProgress]);
-      expect(studentTransitionsFrom(TaskStatus.inProgress),
-          [TaskStatus.awaitingApproval]);
+      expect(studentTransitionsFrom(TaskStatus.todo), [TaskStatus.inProgress]);
+      expect(studentTransitionsFrom(TaskStatus.inProgress), [
+        TaskStatus.awaitingApproval,
+      ]);
     });
 
     test('a completion can be withdrawn and a denial is actionable again', () {
-      expect(studentTransitionsFrom(TaskStatus.awaitingApproval),
-          [TaskStatus.inProgress]);
-      expect(
-          studentTransitionsFrom(TaskStatus.denied), [TaskStatus.inProgress]);
+      expect(studentTransitionsFrom(TaskStatus.awaitingApproval), [
+        TaskStatus.inProgress,
+      ]);
+      expect(studentTransitionsFrom(TaskStatus.denied), [
+        TaskStatus.inProgress,
+      ]);
     });
 
-    test(
-        'student is never offered the supervisor/staff decisions '
+    test('student is never offered the supervisor/staff decisions '
         '(APPROVED/DENIED/CANCELLED)', () {
       for (final s in TaskStatus.values) {
         if (s == TaskStatus.unknown) continue;
@@ -119,12 +123,15 @@ void main() {
     });
 
     test('single row control matches the transition table', () {
+      expect(studentToggleTarget(TaskStatus.todo), TaskStatus.awaitingApproval);
       expect(
-          studentToggleTarget(TaskStatus.todo), TaskStatus.awaitingApproval);
-      expect(studentToggleTarget(TaskStatus.inProgress),
-          TaskStatus.awaitingApproval);
-      expect(studentToggleTarget(TaskStatus.awaitingApproval),
-          TaskStatus.inProgress);
+        studentToggleTarget(TaskStatus.inProgress),
+        TaskStatus.awaitingApproval,
+      );
+      expect(
+        studentToggleTarget(TaskStatus.awaitingApproval),
+        TaskStatus.inProgress,
+      );
       expect(studentToggleTarget(TaskStatus.denied), TaskStatus.inProgress);
       expect(studentToggleTarget(TaskStatus.approved), isNull);
       expect(studentToggleTarget(TaskStatus.cancelled), isNull);

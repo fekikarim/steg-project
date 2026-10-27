@@ -14,25 +14,28 @@ import 'community_test_support.dart';
 /// Addressing the card BY ITS CONTENT matters: the feed is newest-first, so
 /// tapping "the first menu icon" would open whichever post happens to sort
 /// first — here the other student's.
-Finder menuOf(String marker) => find
-    .descendant(
-      of: find.ancestor(
-          of: find.text(marker), matching: find.byType(CommunityPostCard)),
-      matching: find.byIcon(Icons.more_vert_outlined),
-    );
+Finder menuOf(String marker) => find.descendant(
+  of: find.ancestor(
+    of: find.text(marker),
+    matching: find.byType(CommunityPostCard),
+  ),
+  matching: find.byIcon(Icons.more_vert_outlined),
+);
 
 /// The community screen after the rework: it loads for a current intern, it
 /// offers a group-style entry point, the cohort is browsable, and a post can
 /// be edited or deleted by its author.
 void main() {
   group('community screen — group header + cohort', () {
-    testWidgets('shows the group identity and the two entry points',
-        (tester) async {
+    testWidgets('shows the group identity and the two entry points', (
+      tester,
+    ) async {
       final repo = FakeCommunityRepository()
         ..pages = [
           CommunityFeedPage(
-              items: [communityPost('p1', body: 'Bonjour la communauté')],
-              hasMore: false)
+            items: [communityPost('p1', body: 'Bonjour la communauté')],
+            hasMore: false,
+          ),
         ];
       await pumpCommunity(tester, const CommunityFeedScreen(), repo: repo);
 
@@ -43,25 +46,28 @@ void main() {
       expect(find.text('Partagez une question ou un conseil…'), findsOneWidget);
     });
 
-    testWidgets('"Voir les stagiaires" opens the cohort directory',
-        (tester) async {
+    testWidgets('"Voir les stagiaires" opens the cohort directory', (
+      tester,
+    ) async {
       final repo = FakeCommunityRepository()
         ..pages = [const CommunityFeedPage(items: [], hasMore: false)]
         ..candidateFixture = const [
           CommunityCandidate(
-              userId: 'u1',
-              displayName: 'Amine Trabelsi',
-              internshipReference: 'INT-2026-00001',
-              statusLabel: 'En cours de stage',
-              postCount: 3,
-              isMe: true),
+            userId: 'u1',
+            displayName: 'Amine Trabelsi',
+            internshipReference: 'INT-2026-00001',
+            statusLabel: 'En cours de stage',
+            postCount: 3,
+            isMe: true,
+          ),
           CommunityCandidate(
-              userId: 'u2',
-              displayName: 'Yasmine Haddad',
-              internshipReference: 'INT-2026-00002',
-              statusLabel: 'En cours de stage',
-              postCount: 1,
-              isMe: false),
+            userId: 'u2',
+            displayName: 'Yasmine Haddad',
+            internshipReference: 'INT-2026-00002',
+            statusLabel: 'En cours de stage',
+            postCount: 1,
+            isMe: false,
+          ),
         ];
       await pumpCommunity(tester, const CommunityFeedScreen(), repo: repo);
 
@@ -76,25 +82,28 @@ void main() {
       expect(find.text('vous'), findsOneWidget);
     });
 
-    testWidgets('the directory filters through the server, not on-device',
-        (tester) async {
+    testWidgets('the directory filters through the server, not on-device', (
+      tester,
+    ) async {
       final repo = FakeCommunityRepository()
         ..pages = [const CommunityFeedPage(items: [], hasMore: false)]
         ..candidateFixture = const [
           CommunityCandidate(
-              userId: 'u1',
-              displayName: 'Amine Trabelsi',
-              internshipReference: 'INT-2026-00001',
-              statusLabel: 'En cours',
-              postCount: 0,
-              isMe: true),
+            userId: 'u1',
+            displayName: 'Amine Trabelsi',
+            internshipReference: 'INT-2026-00001',
+            statusLabel: 'En cours',
+            postCount: 0,
+            isMe: true,
+          ),
           CommunityCandidate(
-              userId: 'u2',
-              displayName: 'Yasmine Haddad',
-              internshipReference: 'INT-2026-00002',
-              statusLabel: 'En cours',
-              postCount: 0,
-              isMe: false),
+            userId: 'u2',
+            displayName: 'Yasmine Haddad',
+            internshipReference: 'INT-2026-00002',
+            statusLabel: 'En cours',
+            postCount: 0,
+            isMe: false,
+          ),
         ];
       await pumpCommunity(tester, const CommunityFeedScreen(), repo: repo);
       await tester.tap(find.text('Voir les stagiaires'));
@@ -110,44 +119,52 @@ void main() {
       expect(find.text('Amine Trabelsi'), findsNothing);
     });
 
-    testWidgets('a directory failure is stated, never an empty list pretending',
-        (tester) async {
-      final repo = FakeCommunityRepository()
-        ..pages = [const CommunityFeedPage(items: [], hasMore: false)]
-        ..failCandidates = true;
-      await pumpCommunity(tester, const CommunityFeedScreen(), repo: repo);
-      await tester.tap(find.text('Voir les stagiaires'));
-      await tester.pumpAndSettle();
+    testWidgets(
+      'a directory failure is stated, never an empty list pretending',
+      (tester) async {
+        final repo = FakeCommunityRepository()
+          ..pages = [const CommunityFeedPage(items: [], hasMore: false)]
+          ..failCandidates = true;
+        await pumpCommunity(tester, const CommunityFeedScreen(), repo: repo);
+        await tester.tap(find.text('Voir les stagiaires'));
+        await tester.pumpAndSettle();
 
-      // A localized, actionable sentence — never the raw exception text.
-      expect(find.byType(StegErrorView), findsOneWidget);
-      expect(find.textContaining('candidates failed'), findsNothing);
-    });
+        // A localized, actionable sentence — never the raw exception text.
+        expect(find.byType(StegErrorView), findsOneWidget);
+        expect(find.textContaining('candidates failed'), findsNothing);
+      },
+    );
   });
 
   group('community screen — edit and delete my post', () {
     /// A repository holding one post of mine, wired the way the real one is
     /// (the page items and the by-id index describe the same rows).
-    FakeCommunityRepository repoWithMine(String id, String body,
-        {bool failEdit = false}) {
+    FakeCommunityRepository repoWithMine(
+      String id,
+      String body, {
+      bool failEdit = false,
+    }) {
       final post = communityPost(id, mine: true, body: body);
       return FakeCommunityRepository()
         ..postsById = {id: post}
         ..failNextEdit = failEdit
-        ..pages = [CommunityFeedPage(items: [post], hasMore: false)];
+        ..pages = [
+          CommunityFeedPage(items: [post], hasMore: false),
+        ];
     }
 
-    testWidgets('my post offers Edit and Delete, and never Report',
-        (tester) async {
+    testWidgets('my post offers Edit and Delete, and never Report', (
+      tester,
+    ) async {
       final repo = FakeCommunityRepository()
         ..pages = [
           CommunityFeedPage(
-              items: [
-                communityPost('mine',
-                    mine: true, body: 'Texte à corriger'),
-                communityPost('other', body: 'Question de quelqu’un d’autre'),
-              ],
-              hasMore: false)
+            items: [
+              communityPost('mine', mine: true, body: 'Texte à corriger'),
+              communityPost('other', body: 'Question de quelqu’un d’autre'),
+            ],
+            hasMore: false,
+          ),
         ];
       await pumpCommunity(tester, const CommunityFeedScreen(), repo: repo);
       // Open the overflow of MY post.
@@ -166,8 +183,9 @@ void main() {
       expect(find.text('Modifier'), findsNothing);
     });
 
-    testWidgets('editing a post sends the new body and updates the feed',
-        (tester) async {
+    testWidgets('editing a post sends the new body and updates the feed', (
+      tester,
+    ) async {
       final repo = repoWithMine('mine', 'Ancien texte');
       await pumpCommunity(tester, const CommunityFeedScreen(), repo: repo);
 
@@ -199,8 +217,9 @@ void main() {
       expect(repo.editedPosts, isEmpty);
     });
 
-    testWidgets('a refused edit rolls the feed back and says why',
-        (tester) async {
+    testWidgets('a refused edit rolls the feed back and says why', (
+      tester,
+    ) async {
       final repo = repoWithMine('mine', 'Avant', failEdit: true);
       await pumpCommunity(tester, const CommunityFeedScreen(), repo: repo);
 
@@ -220,8 +239,9 @@ void main() {
       expect(find.byType(SnackBar), findsOneWidget);
     });
 
-    testWidgets('deleting a post removes it after confirmation',
-        (tester) async {
+    testWidgets('deleting a post removes it after confirmation', (
+      tester,
+    ) async {
       final repo = repoWithMine('mine', 'À supprimer');
       await pumpCommunity(tester, const CommunityFeedScreen(), repo: repo);
 

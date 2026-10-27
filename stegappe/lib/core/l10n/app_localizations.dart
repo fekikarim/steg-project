@@ -163,6 +163,170 @@ class AppLocalizations {
       'en': 'Validations',
       'ar': 'المصادقات',
     },
+    'navDashboard': {'fr': 'Tableau', 'en': 'Overview', 'ar': 'اللوحة'},
+    'navCommunity': {'fr': 'Communauté', 'en': 'Community', 'ar': 'المجتمع'},
+    'navProfile': {'fr': 'Profil', 'en': 'Profile', 'ar': 'الملف'},
+    'profileSubtitle': {
+      'fr': 'Compte et préférences',
+      'en': 'Account and preferences',
+      'ar': 'الحساب والتفضيلات',
+    },
+    'profileMySpace': {'fr': 'Mon espace', 'en': 'My space', 'ar': 'مساحتي'},
+    'profileActive': {
+      'fr': 'Profil actif',
+      'en': 'Active profile',
+      'ar': 'ملف نشط',
+    },
+    'profileSupport': {
+      'fr': 'Aide et support',
+      'en': 'Help and support',
+      'ar': 'المساعدة والدعم',
+    },
+    'profileSupportHint': {
+      'fr': "Centre d'assistance",
+      'en': 'Support centre',
+      'ar': 'مركز الدعم',
+    },
+    'qaAssignTask': {
+      'fr': 'Assigner une tâche',
+      'en': 'Assign a task',
+      'ar': 'إسناد مهمة',
+    },
+    'qaSeeInterns': {
+      'fr': 'Voir les stagiaires',
+      'en': 'View interns',
+      'ar': 'عرض المتربصين',
+    },
+    'qaVerifyDocs': {
+      'fr': 'Vérifier les documents',
+      'en': 'Verify documents',
+      'ar': 'التحقق من الوثائق',
+    },
+    'qaMyJournal': {'fr': 'Mon journal', 'en': 'My journal', 'ar': 'يومياتي'},
+    'qaMentor': {'fr': 'Mon encadrant', 'en': 'My supervisor', 'ar': 'مؤطري'},
+    'qaAssistantAi': {
+      'fr': 'Assistant IA',
+      'en': 'AI assistant',
+      'ar': 'المساعد الذكي',
+    },
+    'loginHint': {
+      'fr': 'Utilisez l\'adresse e-mail de votre compte STEG.',
+      'en': 'Use the e-mail address of your STEG account.',
+      'ar': 'استخدم عنوان البريد الإلكتروني لحسابك في STEG.',
+    },
+    'loginWrongAudienceIntern': {
+      'fr': 'Ce compte n\'est pas un compte stagiaire. Choisissez l\'espace Encadrant.',
+      'en':
+          'This account is not an intern account. Choose the Supervisor space.',
+      'ar': 'هذا الحساب ليس حساب متربص. اختر فضاء المؤطر.',
+    },
+    'loginWrongAudienceSupervisor': {
+      'fr': 'Ce compte n\'est pas un compte encadrant. Choisissez l\'espace Stagiaire.',
+      'en':
+          'This account is not a supervisor account. Choose the Intern space.',
+      'ar': 'هذا الحساب ليس حساب مؤطر. اختر فضاء المتربص.',
+    },
+    'loginForgot': {
+      'fr': 'Mot de passe oublié ?',
+      'en': 'Forgot password?',
+      'ar': 'نسيت كلمة المرور؟',
+    },
+    'loginForgotTitle': {
+      'fr': 'Mot de passe oublié',
+      'en': 'Forgot password',
+      'ar': 'نسيت كلمة المرور',
+    },
+    'loginForgotBody': {
+      'fr': 'Contactez l\'administration STEG pour réinitialiser votre mot de passe.',
+      'en': 'Contact the STEG administration to reset your password.',
+      'ar': 'تواصل مع إدارة STEG لإعادة تعيين كلمة المرور.',
+    },
+    'loginNeedHelp': {
+      'fr': 'Besoin d\'aide ?',
+      'en': 'Need help?',
+      'ar': 'تحتاج مساعدة؟',
+    },
+    'loginContactSupport': {
+      'fr': 'Contacter le support',
+      'en': 'Contact support',
+      'ar': 'اتصل بالدعم',
+    },
+    'loginBrandTagline': {
+      'fr': 'Votre stage, bien accompagné',
+      'en': 'Your internship, well supported',
+      'ar': 'تربّص منظّم ومرافَق',
+    },
+    'loginEyebrow': {
+      'fr': 'Espace de stage',
+      'en': 'Internship space',
+      'ar': 'فضاء التربص',
+    },
+    'loginWelcome': {'fr': 'Bienvenue', 'en': 'Welcome', 'ar': 'مرحبًا'},
+    'loginSubtitle': {
+      'fr': 'Suivez chaque étape de votre stage dans un espace clair, sécurisé et collaboratif.',
+      'en': 'Follow every step of your internship in a clear, secure and collaborative space.',
+      'ar': 'تابع كل مرحلة من تربصك في فضاء واضح وآمن وتعاوني.',
+    },
+    'internCardContact': {'fr': 'Contacter', 'en': 'Contact', 'ar': 'تواصل'},
+    'internCardFollow': {
+      'fr': 'Voir le suivi',
+      'en': 'View follow-up',
+      'ar': 'عرض المتابعة',
+    },
+    'internCardTasks': {'fr': 'Tâches', 'en': 'Tasks', 'ar': 'المهام'},
+    'internCardProgress': {
+      'fr': 'Progression',
+      'en': 'Progress',
+      'ar': 'التقدم',
+    },
+    'internCardEnd': {
+      'fr': 'Fin du stage',
+      'en': 'End of internship',
+      'ar': 'نهاية التربص',
+    },
+    'internCardToProcess': {
+      'fr': 'à traiter',
+      'en': 'to process',
+      'ar': 'للمعالجة',
+    },
+    'internCardNoConversation': {
+      'fr': 'Aucune conversation avec ce stagiaire pour le moment.',
+      'en': 'No conversation with this intern yet.',
+      'ar': 'لا توجد محادثة مع هذا المتربص بعد.',
+    },
+    'msgInboxTitle': {'fr': 'Messagerie', 'en': 'Messages', 'ar': 'الرسائل'},
+    'msgInboxSubtitle': {
+      'fr': 'Vos échanges avec votre encadrement et votre équipe.',
+      'en': 'Your exchanges with your supervisor and team.',
+      'ar': 'محادثاتك مع المؤطر وفريقك.',
+    },
+    'msgSectionConversations': {
+      'fr': 'Conversations',
+      'en': 'Conversations',
+      'ar': 'المحادثات',
+    },
+    'communitySubtitle': {
+      'fr': 'Échangez entre stagiaires',
+      'en': 'Exchange between interns',
+      'ar': 'تبادل بين المتربصين',
+    },
+    'homeKpiTotal': {'fr': 'Tâches', 'en': 'Tasks', 'ar': 'المهام'},
+    'homeKpiDone': {'fr': 'Terminées', 'en': 'Done', 'ar': 'منجزة'},
+    'homeKpiRemaining': {
+      'fr': 'Restantes',
+      'en': 'Remaining',
+      'ar': 'المتبقية',
+    },
+    'homeProgressTitle': {
+      'fr': 'Votre progression',
+      'en': 'Your progress',
+      'ar': 'تقدمك',
+    },
+    'emailHint': {
+      'fr': 'nom@exemple.tn',
+      'en': 'name@example.tn',
+      'ar': 'name@example.tn',
+    },
     'comingSoon': {
       'fr': 'Disponible dans la prochaine phase.',
       'en': 'Available in the next phase.',
@@ -3045,6 +3209,49 @@ class AppLocalizations {
   String get navMore => _get('navMore');
   String get navInterns => _get('navInterns');
   String get navValidations => _get('navValidations');
+  String get navDashboard => _get('navDashboard');
+  String get navCommunity => _get('navCommunity');
+  String get navProfile => _get('navProfile');
+  String get profileSubtitle => _get('profileSubtitle');
+  String get profileMySpace => _get('profileMySpace');
+  String get profileActive => _get('profileActive');
+  String get profileSupport => _get('profileSupport');
+  String get profileSupportHint => _get('profileSupportHint');
+  String get qaAssignTask => _get('qaAssignTask');
+  String get qaSeeInterns => _get('qaSeeInterns');
+  String get qaVerifyDocs => _get('qaVerifyDocs');
+  String get qaMyJournal => _get('qaMyJournal');
+  String get qaMentor => _get('qaMentor');
+  String get qaAssistantAi => _get('qaAssistantAi');
+  String get loginHint => _get('loginHint');
+  String get loginWrongAudienceIntern => _get('loginWrongAudienceIntern');
+  String get loginWrongAudienceSupervisor =>
+      _get('loginWrongAudienceSupervisor');
+  String get loginForgot => _get('loginForgot');
+  String get loginForgotTitle => _get('loginForgotTitle');
+  String get loginForgotBody => _get('loginForgotBody');
+  String get loginNeedHelp => _get('loginNeedHelp');
+  String get loginContactSupport => _get('loginContactSupport');
+  String get loginBrandTagline => _get('loginBrandTagline');
+  String get loginEyebrow => _get('loginEyebrow');
+  String get loginWelcome => _get('loginWelcome');
+  String get loginSubtitle => _get('loginSubtitle');
+  String get emailHint => _get('emailHint');
+  String get homeProgressTitle => _get('homeProgressTitle');
+  String get homeKpiTotal => _get('homeKpiTotal');
+  String get homeKpiDone => _get('homeKpiDone');
+  String get homeKpiRemaining => _get('homeKpiRemaining');
+  String get communitySubtitle => _get('communitySubtitle');
+  String get msgInboxTitle => _get('msgInboxTitle');
+  String get msgInboxSubtitle => _get('msgInboxSubtitle');
+  String get msgSectionConversations => _get('msgSectionConversations');
+  String get internCardContact => _get('internCardContact');
+  String get internCardFollow => _get('internCardFollow');
+  String get internCardTasks => _get('internCardTasks');
+  String get internCardProgress => _get('internCardProgress');
+  String get internCardEnd => _get('internCardEnd');
+  String get internCardToProcess => _get('internCardToProcess');
+  String get internCardNoConversation => _get('internCardNoConversation');
   String get comingSoon => _get('comingSoon');
   String get unsupportedRole => _get('unsupportedRole');
   String get language => _get('language');

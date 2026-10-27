@@ -26,9 +26,10 @@ void main() {
 
     test('journalWriteJson always carries entryDate', () {
       final json = journalWriteJson(
-          title: 'Day 3',
-          description: 'Did X',
-          entryDate: DateTime(2026, 9, 15, 23, 59));
+        title: 'Day 3',
+        description: 'Did X',
+        entryDate: DateTime(2026, 9, 15, 23, 59),
+      );
       expect(json['entryDate'], '2026-09-15');
     });
   });
@@ -51,12 +52,14 @@ void main() {
       expect(await store.load('i1', day), isNull);
 
       await store.save(
-          'i1',
-          day,
-          ComposerDraft(
-              title: 'T',
-              description: 'D',
-              updatedAt: DateTime(2026, 9, 15, 10)));
+        'i1',
+        day,
+        ComposerDraft(
+          title: 'T',
+          description: 'D',
+          updatedAt: DateTime(2026, 9, 15, 10),
+        ),
+      );
       final loaded = await store.load('i1', day);
       expect(loaded?.title, 'T');
       expect(loaded?.description, 'D');

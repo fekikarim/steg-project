@@ -14,9 +14,13 @@ void main() {
       expect(data.weekTasks.map((t) => t.id), ['t-week']);
       // Completed work is not planned work anymore.
       expect(
-          [...data.todayTasks, ...data.overdueTasks, ...data.weekTasks]
-              .any((t) => t.id == 't-done'),
-          isFalse);
+        [
+          ...data.todayTasks,
+          ...data.overdueTasks,
+          ...data.weekTasks,
+        ].any((t) => t.id == 't-done'),
+        isFalse,
+      );
     });
 
     test('keeps Task / Journal / Evaluation distinct', () {
@@ -40,8 +44,7 @@ void main() {
       expect(data.tasksCompleted, 1);
       expect(data.tasksTotal, 4);
       expect(data.tasksFraction, 0.25);
-      expect(data.timelineFraction,
-          data.internship.timelineFraction(now));
+      expect(data.timelineFraction, data.internship.timelineFraction(now));
     });
 
     test('tasksFraction is null when nothing to measure', () {

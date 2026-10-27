@@ -4,8 +4,7 @@ import 'package:stegappe/core/network/paged.dart';
 import 'package:stegappe/features/messaging/domain/entities/conversation.dart';
 import 'package:stegappe/features/messaging/presentation/screens/chat_screen.dart';
 
-import 'messaging_widget_test.dart'
-    show FakeMessagingRepo, FakeStomp, pumpMsg;
+import 'messaging_widget_test.dart' show FakeMessagingRepo, FakeStomp, pumpMsg;
 
 /// Regression: editing/deleting an own 1-to-1 message must never red-screen.
 ///
@@ -16,15 +15,15 @@ import 'messaging_widget_test.dart'
 /// borrows a screen-owned controller; these tests drive both flows
 /// end-to-end and fail on any framework exception.
 ChatMessage _mine(int seq, String content) => ChatMessage(
-      id: 'mine$seq',
-      conversationId: 'c1',
-      senderId: 'me',
-      content: content,
-      status: MessageStatus.sent,
-      sequenceNumber: seq,
-      sentAt: DateTime(2026, 9, 15, 10, seq),
-      mine: true,
-    );
+  id: 'mine$seq',
+  conversationId: 'c1',
+  senderId: 'me',
+  content: content,
+  status: MessageStatus.sent,
+  sequenceNumber: seq,
+  sentAt: DateTime(2026, 9, 15, 10, seq),
+  mine: true,
+);
 
 class _MineRepo extends FakeMessagingRepo {
   _MineRepo({super.stomp});
@@ -57,8 +56,7 @@ Future<void> _pumpMine(WidgetTester tester) async {
 
 void main() {
   group('1-to-1 message edit / delete (regression)', () {
-    testWidgets('edit own message applies without exceptions',
-        (tester) async {
+    testWidgets('edit own message applies without exceptions', (tester) async {
       await _pumpMine(tester);
       expect(find.text('original text'), findsOneWidget);
 
@@ -70,8 +68,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Modifier le message'), findsOneWidget);
 
-      await tester.enterText(
-          find.byType(TextField).last, 'edited text');
+      await tester.enterText(find.byType(TextField).last, 'edited text');
       await tester.pump();
       await tester.tap(find.text('Enregistrer'));
       await tester.pumpAndSettle();
@@ -80,8 +77,9 @@ void main() {
       expect(find.text('edited text'), findsOneWidget);
     });
 
-    testWidgets('delete own message redacts without exceptions',
-        (tester) async {
+    testWidgets('delete own message redacts without exceptions', (
+      tester,
+    ) async {
       await _pumpMine(tester);
 
       await tester.longPress(find.text('original text'));

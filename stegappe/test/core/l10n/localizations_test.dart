@@ -6,11 +6,16 @@ void main() {
     test('every key has fr, en and ar translations', () {
       for (final entry in AppLocalizations.allValues.entries) {
         for (final lang in ['fr', 'en', 'ar']) {
-          expect(entry.value[lang],
-              isNotNullWhere((_) => true, reason: '${entry.key} missing $lang'),
-              reason: '${entry.key} missing $lang');
-          expect(entry.value[lang]!.trim().isNotEmpty, isTrue,
-              reason: '${entry.key} empty for $lang');
+          expect(
+            entry.value[lang],
+            isNotNullWhere((_) => true, reason: '${entry.key} missing $lang'),
+            reason: '${entry.key} missing $lang',
+          );
+          expect(
+            entry.value[lang]!.trim().isNotEmpty,
+            isTrue,
+            reason: '${entry.key} empty for $lang',
+          );
         }
       }
     });

@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
 import '../../support/queue_harness.dart';
+
 import 'package:stegappe/core/connectivity/connectivity_service.dart';
 import 'package:stegappe/core/l10n/app_localizations.dart';
 import 'package:stegappe/core/theme/steg_theme.dart';
@@ -104,8 +106,12 @@ void main() {
       tester,
     ) async {
       final fake = FakeInternshipRepository();
-      await pumpLoop(tester, const TaskListScreen(), fake: fake,
-          surfaceSize: const Size(800, 1200));
+      await pumpLoop(
+        tester,
+        const TaskListScreen(),
+        fake: fake,
+        surfaceSize: const Size(800, 1200),
+      );
 
       await tester.tap(find.byTooltip('Nouvelle tâche'));
       await tester.pumpAndSettle();
@@ -114,10 +120,12 @@ void main() {
       // The sheet's title field is the first TextField descendant of the sheet.
       // (find.byType(TextField).first alone would match the toolbar search field.)
       await tester.enterText(
-        find.descendant(
-          of: find.byType(TaskEditorSheet),
-          matching: find.byType(TextField),
-        ).first,
+        find
+            .descendant(
+              of: find.byType(TaskEditorSheet),
+              matching: find.byType(TextField),
+            )
+            .first,
         '',
       );
       await tester.tap(find.text('Enregistrer'));
@@ -128,16 +136,22 @@ void main() {
 
     testWidgets('valid task is created on the server', (tester) async {
       final fake = FakeInternshipRepository();
-      await pumpLoop(tester, const TaskListScreen(), fake: fake,
-          surfaceSize: const Size(800, 1200));
+      await pumpLoop(
+        tester,
+        const TaskListScreen(),
+        fake: fake,
+        surfaceSize: const Size(800, 1200),
+      );
 
       await tester.tap(find.byTooltip('Nouvelle tâche'));
       await tester.pumpAndSettle();
       await tester.enterText(
-        find.descendant(
-          of: find.byType(TaskEditorSheet),
-          matching: find.byType(TextField),
-        ).first,
+        find
+            .descendant(
+              of: find.byType(TaskEditorSheet),
+              matching: find.byType(TextField),
+            )
+            .first,
         'Prep demo',
       );
       await tester.tap(find.text('Enregistrer'));
@@ -151,8 +165,12 @@ void main() {
       tester,
     ) async {
       final fake = FakeInternshipRepository()..failWrites = true;
-      await pumpLoop(tester, const TaskListScreen(), fake: fake,
-          surfaceSize: const Size(800, 1200));
+      await pumpLoop(
+        tester,
+        const TaskListScreen(),
+        fake: fake,
+        surfaceSize: const Size(800, 1200),
+      );
 
       // Hold the server call so the optimistic frame is observable.
       fake.statusGate = Completer<void>();
@@ -195,38 +213,50 @@ void main() {
       expect(await drafts.load('internship-1', day), isNull);
     });
 
-    testWidgets('calendar day selection filters server-side; empty day is honest',
-        (tester) async {
-      final fake = FakeInternshipRepository(now: DateTime(2026, 9, 15));
-      await pumpLoop(
-        tester,
-        const JournalListScreen(),
-        fake: fake,
-        selectedDay: DateTime(2026, 9, 15),
-      );
-      // Only entries recorded on the selected day are shown.
-      await tester.scrollUntilVisible(find.text('Draft entry'), 240,
-          scrollable: find.byType(Scrollable).first);
-      await tester.pumpAndSettle();
-      expect(find.text('Draft entry'), findsOneWidget);
-      expect(find.text('Submitted entry'), findsNothing);
+    testWidgets(
+      'calendar day selection filters server-side; empty day is honest',
+      (tester) async {
+        final fake = FakeInternshipRepository(now: DateTime(2026, 9, 15));
+        await pumpLoop(
+          tester,
+          const JournalListScreen(),
+          fake: fake,
+          selectedDay: DateTime(2026, 9, 15),
+        );
+        // Only entries recorded on the selected day are shown.
+        await tester.scrollUntilVisible(
+          find.text('Draft entry'),
+          240,
+          scrollable: find.byType(Scrollable).first,
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Draft entry'), findsOneWidget);
+        expect(find.text('Submitted entry'), findsNothing);
 
-      // Pick a day with no entry on the month calendar: the day list
-      // re-queries the server and says so honestly.
-      await tester.scrollUntilVisible(find.byType(JournalMonthCalendar), -240,
-          scrollable: find.byType(Scrollable).first);
-      await tester.pumpAndSettle();
-      await tester.tap(find.descendant(
-        of: find.byType(JournalMonthCalendar),
-        matching: find.text('21'),
-      ));
-      await tester.pumpAndSettle();
-      await tester.scrollUntilVisible(
-          find.text('Aucune entrée pour le moment.'), 240,
-          scrollable: find.byType(Scrollable).first);
-      await tester.pumpAndSettle();
-      expect(find.text('Aucune entrée pour le moment.'), findsOneWidget);
-    });
+        // Pick a day with no entry on the month calendar: the day list
+        // re-queries the server and says so honestly.
+        await tester.scrollUntilVisible(
+          find.byType(JournalMonthCalendar),
+          -240,
+          scrollable: find.byType(Scrollable).first,
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.descendant(
+            of: find.byType(JournalMonthCalendar),
+            matching: find.text('21'),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.scrollUntilVisible(
+          find.text('Aucune entrée pour le moment.'),
+          240,
+          scrollable: find.byType(Scrollable).first,
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Aucune entrée pour le moment.'), findsOneWidget);
+      },
+    );
 
     testWidgets('detail shows comments + submit for drafts', (tester) async {
       final fake = FakeInternshipRepository(now: DateTime(2026, 9, 15));

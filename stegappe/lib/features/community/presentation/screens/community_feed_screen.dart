@@ -91,15 +91,21 @@ class _CommunityFeedScreenState extends ConsumerState<CommunityFeedScreen>
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.communityTitle),
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: StegColors.brandGradientWide,
-              begin: AlignmentDirectional.centerStart,
-              end: AlignmentDirectional.centerEnd,
+        // Light header (STEG design): the feed is a tab page for interns, so
+        // it carries no gradient of its own.
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.communityTitle,
+              style: Theme.of(context).textTheme.titleLarge
+                  ?.copyWith(fontWeight: FontWeight.w800),
             ),
-          ),
+            Text(
+              l10n.communitySubtitle,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
         ),
         actions: [
           if (canModerate)
@@ -242,10 +248,7 @@ class _OfflineStrip extends StatelessWidget {
         decoration: BoxDecoration(
           color: fg.withValues(alpha: dark ? 0.16 : 0.10),
           border: Border(
-            bottom: BorderSide(
-              color: fg.withValues(alpha: 0.35),
-              width: 1,
-            ),
+            bottom: BorderSide(color: fg.withValues(alpha: 0.35), width: 1),
           ),
         ),
         child: Row(
@@ -262,10 +265,8 @@ class _OfflineStrip extends StatelessWidget {
             Expanded(
               child: Text(
                 label,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: fg,
-                ),
+                style: Theme.of(context).textTheme.bodySmall
+                    ?.copyWith(fontWeight: FontWeight.w700, color: fg),
               ),
             ),
           ],

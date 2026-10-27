@@ -24,20 +24,24 @@ void main() {
       expect(userRoleFromBackend(['HR']), UserRole.unsupported);
       expect(userRoleFromBackend(const []), UserRole.unsupported);
       // Should-not-exist dual role resolves deterministically to the Admin.
-      expect(userRoleFromBackend(['ADMIN', 'SUPERVISOR']),
-          UserRole.adminSupervisor);
+      expect(
+        userRoleFromBackend(['ADMIN', 'SUPERVISOR']),
+        UserRole.adminSupervisor,
+      );
       expect(userRoleFromBackend(['role_admin']), UserRole.adminSupervisor);
     });
 
-    test('capabilities: only supervisor-ish roles get the supervisor shell',
-        () {
-      expect(UserRole.adminSupervisor.hasSupervisorExperience, isTrue);
-      expect(UserRole.adminSupervisor.isAdminSupervisor, isTrue);
-      expect(UserRole.supervisor.hasSupervisorExperience, isTrue);
-      expect(UserRole.supervisor.isAdminSupervisor, isFalse);
-      expect(UserRole.intern.hasSupervisorExperience, isFalse);
-      expect(UserRole.unsupported.hasSupervisorExperience, isFalse);
-    });
+    test(
+      'capabilities: only supervisor-ish roles get the supervisor shell',
+      () {
+        expect(UserRole.adminSupervisor.hasSupervisorExperience, isTrue);
+        expect(UserRole.adminSupervisor.isAdminSupervisor, isTrue);
+        expect(UserRole.supervisor.hasSupervisorExperience, isTrue);
+        expect(UserRole.supervisor.isAdminSupervisor, isFalse);
+        expect(UserRole.intern.hasSupervisorExperience, isFalse);
+        expect(UserRole.unsupported.hasSupervisorExperience, isFalse);
+      },
+    );
   });
 
   group('role routing (exhaustive)', () {
@@ -51,8 +55,11 @@ void main() {
     };
 
     test('every UserRole is covered by the routing table', () {
-      expect(expectedShell.keys.toSet(), UserRole.values.toSet(),
-          reason: 'a new UserRole needs a routing decision + this entry');
+      expect(
+        expectedShell.keys.toSet(),
+        UserRole.values.toSet(),
+        reason: 'a new UserRole needs a routing decision + this entry',
+      );
     });
 
     // Backend role lists that produce each mobile role.
@@ -70,8 +77,9 @@ void main() {
     };
 
     roleLists.forEach((roles, role) {
-      testWidgets('$roles → $role opens ${expectedShell[role]}',
-          (tester) async {
+      testWidgets('$roles → $role opens ${expectedShell[role]}', (
+        tester,
+      ) async {
         await pumpAuthGate(
           tester,
           user: AppUser(id: 'u1', email: 'user@steg.tn', roles: roles),
@@ -82,15 +90,15 @@ void main() {
   });
 
   group('role label (SH-PRO-01)', () {
-    testWidgets('the role is visible in the More tab for each shell',
-        (tester) async {
+    testWidgets('the role is visible on the Profile tab for each shell', (
+      tester,
+    ) async {
       final l10n = const AppLocalizations(Locale('fr'));
       await pumpAuthGate(
         tester,
-        user: const AppUser(
-            id: 'a1', email: 'admin@steg.tn', roles: ['ADMIN']),
+        user: const AppUser(id: 'a1', email: 'admin@steg.tn', roles: ['ADMIN']),
       );
-      await tester.tap(find.text(l10n.navMore).last);
+      await tester.tap(find.text(l10n.navProfile).last);
       await tester.pumpAndSettle();
       expect(find.text(l10n.roleAdminSupervisor), findsOneWidget);
     });

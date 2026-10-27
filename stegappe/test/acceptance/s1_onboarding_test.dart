@@ -30,8 +30,14 @@ void main() {
         expect(textFields, findsNWidgets(3)); // current, new, confirm
 
         await tester.enterText(textFields.at(0), 'TempP@ssword2026!');
-        await tester.enterText(textFields.at(1), 'BrandNewP@ssword2026!Complex');
-        await tester.enterText(textFields.at(2), 'BrandNewP@ssword2026!Complex');
+        await tester.enterText(
+          textFields.at(1),
+          'BrandNewP@ssword2026!Complex',
+        );
+        await tester.enterText(
+          textFields.at(2),
+          'BrandNewP@ssword2026!Complex',
+        );
 
         // Tap Continue/Submit button.
         final submitButton = find.widgetWithText(FilledButton, 'Continue');
@@ -41,7 +47,10 @@ void main() {
 
         // Expect password was changed and AuthGate transitioned to InternHomeScreen.
         expect(harness.authRepo.changePasswordCalls, 1);
-        expect(harness.authRepo.lastChangedPassword, 'BrandNewP@ssword2026!Complex');
+        expect(
+          harness.authRepo.lastChangedPassword,
+          'BrandNewP@ssword2026!Complex',
+        );
         expect(find.byType(ChangePasswordScreen), findsNothing);
         expect(find.byType(InternHomeScreen), findsOneWidget);
 
@@ -90,20 +99,32 @@ void main() {
         final container = await pumpAcceptanceApp(tester, harness: harness);
 
         // Verify initial LTR in French.
-        expect(Directionality.of(tester.element(find.byType(InternHomeScreen))), TextDirection.ltr);
+        expect(
+          Directionality.of(tester.element(find.byType(InternHomeScreen))),
+          TextDirection.ltr,
+        );
 
         // Switch language to Arabic via settings provider.
-        await container.read(localeProvider.notifier).setLocale(const Locale('ar'));
+        await container
+            .read(localeProvider.notifier)
+            .setLocale(const Locale('ar'));
         await tester.pumpAndSettle();
 
         // Directionality becomes RTL.
-        expect(Directionality.of(tester.element(find.byType(InternHomeScreen))), TextDirection.rtl);
+        expect(
+          Directionality.of(tester.element(find.byType(InternHomeScreen))),
+          TextDirection.rtl,
+        );
 
         // Switch theme to dark mode.
-        await container.read(themeModeProvider.notifier).setMode(StegThemeMode.dark);
+        await container
+            .read(themeModeProvider.notifier)
+            .setMode(StegThemeMode.dark);
         await tester.pumpAndSettle();
 
-        final darkTheme = Theme.of(tester.element(find.byType(InternHomeScreen)));
+        final darkTheme = Theme.of(
+          tester.element(find.byType(InternHomeScreen)),
+        );
         expect(darkTheme.brightness, Brightness.dark);
 
         // Verify persistence: check stored values.

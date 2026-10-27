@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:stegappe/core/navigation/app_destination.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -20,10 +21,8 @@ import 'package:stegappe/features/messaging/presentation/screens/notifications_s
 /// call is recorded so a test can assert the screen asked the *server* the
 /// right question (filter, size) instead of filtering a stale page locally.
 class FakeNotificationsRepository implements NotificationRepository {
-  FakeNotificationsRepository({
-    List<NotificationItem>? items,
-    this.unread = 0,
-  }) : items = items ?? const [];
+  FakeNotificationsRepository({List<NotificationItem>? items, this.unread = 0})
+    : items = items ?? const [];
 
   List<NotificationItem> items;
   int unread;
@@ -45,7 +44,10 @@ class FakeNotificationsRepository implements NotificationRepository {
     queries.add((size: size, unreadOnly: unreadOnly));
     if (failList) throw Exception('list failed');
     final shown = unreadOnly
-        ? [for (final n in items) if (!n.isRead) n]
+        ? [
+            for (final n in items)
+              if (!n.isRead) n,
+          ]
         : items;
     return Paged(
       items: shown,
@@ -108,15 +110,13 @@ class FakeStompService implements StompChatService {
   }
 
   @override
-  Future<void> disconnect() async =>
-      setState(ChatConnectionState.disconnected);
+  Future<void> disconnect() async => setState(ChatConnectionState.disconnected);
 
   @override
   Future<void Function()> subscribeConversation(
     String conversationId,
     ChatFrameCallback onFrame,
-  ) async =>
-      () {};
+  ) async => () {};
 
   @override
   Future<void> subscribeNotifications(ChatFrameCallback onPayload) async {}
@@ -128,8 +128,7 @@ class FakeStompService implements StompChatService {
   void communityInbound(String body) => communityHandler?.call(body);
 
   @override
-  Future<void Function()> subscribeCommunity(
-          ChatFrameCallback onFrame) async {
+  Future<void Function()> subscribeCommunity(ChatFrameCallback onFrame) async {
     communityHandler = onFrame;
     return () {
       communityHandler = null;
@@ -180,18 +179,17 @@ NotificationItem notif(
   bool isRead = false,
   String? entity,
   String? entityId,
-}) =>
-    NotificationItem(
-      id: id,
-      title: title,
-      message: message,
-      priority: priority,
-      createdAt: createdAt ?? DateTime.now(),
-      isRead: isRead,
-      type: type,
-      relatedEntityType: entity,
-      relatedEntityId: entityId,
-    );
+}) => NotificationItem(
+  id: id,
+  title: title,
+  message: message,
+  priority: priority,
+  createdAt: createdAt ?? DateTime.now(),
+  isRead: isRead,
+  type: type,
+  relatedEntityType: entity,
+  relatedEntityId: entityId,
+);
 
 /// Raw `/user/queue/notifications` frame (`NotificationPayload`).
 String frame(
@@ -214,7 +212,7 @@ Future<ProviderContainer> pumpNotifications(
   WidgetTester tester, {
   FakeNotificationsRepository? repo,
   FakeStompService? stomp,
-  ValueChanged<int>? onOpenTab,
+  ValueChanged<AppDestination>? onOpen,
   ValueChanged<String>? onOpenCommunityPost,
 }) async {
   final socket = stomp ?? FakeStompService();
@@ -245,9 +243,9 @@ Future<ProviderContainer> pumpNotifications(
                 onPressed: () => Navigator.of(ctx).push(
                   MaterialPageRoute<void>(
                     builder: (_) => NotificationsScreen(
-                        onOpenTab: onOpenTab,
-                        onOpenCommunityPost:
-                            onOpenCommunityPost),
+                      onOpen: onOpen,
+                      onOpenCommunityPost: onOpenCommunityPost,
+                    ),
                   ),
                 ),
                 child: const Text('open-notifications'),

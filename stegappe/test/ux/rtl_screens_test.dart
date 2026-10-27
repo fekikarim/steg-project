@@ -18,8 +18,9 @@ import 'ux_harness.dart';
 void main() {
   group('T15 RTL · every ux-ui §4 screen renders in Arabic', () {
     for (final screen in uxScreens()) {
-      testWidgets('${screen.id} · ${screen.name} is RTL and defect-free',
-          (tester) async {
+      testWidgets('${screen.id} · ${screen.name} is RTL and defect-free', (
+        tester,
+      ) async {
         final pump = await pumpUx(
           tester,
           screen.build(),
@@ -29,21 +30,36 @@ void main() {
           surface: Size(screen.wide ? 900 : 400, 800),
         );
         final ctx = tester.element(find.byType(Scaffold).first);
-        expect(Directionality.of(ctx), TextDirection.rtl,
-            reason: '${screen.name} must lay out right-to-left in Arabic');
-        expect(pump.layoutOffenders, isEmpty,
-            reason: '${screen.name} overflowed in Arabic:\n'
-                '${pump.layoutOffenders.join('\n')}');
+        expect(
+          Directionality.of(ctx),
+          TextDirection.rtl,
+          reason: '${screen.name} must lay out right-to-left in Arabic',
+        );
+        expect(
+          pump.layoutOffenders,
+          isEmpty,
+          reason:
+              '${screen.name} overflowed in Arabic:\n'
+              '${pump.layoutOffenders.join('\n')}',
+        );
       });
     }
   });
 
   group('T15 RTL · hardest combination (Arabic + dark + 2.0×)', () {
-    for (final screen in uxScreens().where((s) =>
-        const {'ST-HOME', 'ST-TASK', 'ST-MSG-chat', 'ST-COM', 'ST-NOT', 'SU-HOME'}
-            .contains(s.id))) {
-      testWidgets('${screen.id} · ${screen.name} survives ar+dark+2×',
-          (tester) async {
+    for (final screen in uxScreens().where(
+      (s) => const {
+        'ST-HOME',
+        'ST-TASK',
+        'ST-MSG-chat',
+        'ST-COM',
+        'ST-NOT',
+        'SU-HOME',
+      }.contains(s.id),
+    )) {
+      testWidgets('${screen.id} · ${screen.name} survives ar+dark+2×', (
+        tester,
+      ) async {
         final pump = await pumpUx(
           tester,
           screen.build(),
@@ -56,9 +72,13 @@ void main() {
         );
         final ctx = tester.element(find.byType(Scaffold).first);
         expect(Directionality.of(ctx), TextDirection.rtl);
-        expect(pump.layoutOffenders, isEmpty,
-            reason: '${screen.name} overflowed at ar+dark+2×:\n'
-                '${pump.layoutOffenders.join('\n')}');
+        expect(
+          pump.layoutOffenders,
+          isEmpty,
+          reason:
+              '${screen.name} overflowed at ar+dark+2×:\n'
+              '${pump.layoutOffenders.join('\n')}',
+        );
       });
     }
   });
@@ -66,7 +86,8 @@ void main() {
   group('T15 RTL · directional APIs are physically neutral', () {
     final sources = <String, String>{
       for (final f in _dartFiles('lib/features')) f.path: f.readAsStringSync(),
-      for (final f in _dartFiles('lib/core/widgets')) f.path: f.readAsStringSync(),
+      for (final f in _dartFiles('lib/core/widgets'))
+        f.path: f.readAsStringSync(),
     };
 
     test('InsetsDirectional/EdgeInsets.only never pin a single side', () {
@@ -77,27 +98,35 @@ void main() {
           offenders.add('$path → ${m.group(0)}');
         }
       });
-      expect(offenders, isEmpty,
-          reason: 'physical single-side padding cannot mirror: $offenders');
+      expect(
+        offenders,
+        isEmpty,
+        reason: 'physical single-side padding cannot mirror: $offenders',
+      );
     });
 
     test('every EdgeInsets.fromLTRB is horizontally symmetric', () {
       final asymmetric = <String>[];
       final pattern = RegExp(
-          r'EdgeInsets\.fromLTRB\(\s*([^,]+?),\s*[^,]+?,\s*([^,)]+?)\s*,',
-          dotAll: true);
+        r'EdgeInsets\.fromLTRB\(\s*([^,]+?),\s*[^,]+?,\s*([^,)]+?)\s*,',
+        dotAll: true,
+      );
       sources.forEach((path, source) {
         for (final m in pattern.allMatches(source)) {
           final left = m.group(1)!.replaceAll(RegExp(r'\s+'), ' ').trim();
           final right = m.group(2)!.replaceAll(RegExp(r'\s+'), ' ').trim();
           if (left != right) {
-            final line = '\n'.allMatches(source.substring(0, m.start)).length + 1;
+            final line =
+                '\n'.allMatches(source.substring(0, m.start)).length + 1;
             asymmetric.add('$path:$line left=$left right=$right');
           }
         }
       });
-      expect(asymmetric, isEmpty,
-          reason: 'asymmetric LTRB padding mirrors into a defect: $asymmetric');
+      expect(
+        asymmetric,
+        isEmpty,
+        reason: 'asymmetric LTRB padding mirrors into a defect: $asymmetric',
+      );
     });
 
     test('no physical alignment or positioning in feature code', () {
@@ -115,9 +144,13 @@ void main() {
           }
         }
       });
-      expect(offenders, isEmpty,
-          reason: 'use AlignmentDirectional/PositionedDirectional/start-end: '
-              '$offenders');
+      expect(
+        offenders,
+        isEmpty,
+        reason:
+            'use AlignmentDirectional/PositionedDirectional/start-end: '
+            '$offenders',
+      );
     });
   });
 
@@ -175,7 +208,8 @@ void main() {
       )..layout(maxWidth: 400);
       double left(int from, int to) => painter
           .getBoxesForSelection(
-              TextSelection(baseOffset: from, extentOffset: to))
+            TextSelection(baseOffset: from, extentOffset: to),
+          )
           .first
           .left;
       final headIsLeft = left(0, 4) < left(data.length - 4, data.length);
@@ -183,55 +217,78 @@ void main() {
       return headIsLeft;
     }
 
-    testWidgets('the account email is bidi-isolated in Arabic',
-        (tester) async {
-      await pumpUx(tester, uxScreens()
-          .firstWhere((s) => s.id == 'SH-PRO')
-          .build(), locale: const Locale('ar'));
-      final email = find.text(kInternUser.email);
-      expect(email, findsWidgets,
-          reason: 'the email must be rendered — otherwise the check is vacuous');
-      expect(isolated(tester, email), isTrue,
-          reason: 'an email rendered bare inside RTL reverses visually');
-    });
-
-    testWidgets('the internship reference reads LTR on the profile (measured)',
-        (tester) async {
-      // The reference is back-office data: it lives on the profile screen
-      // (not on the home identity row), so that is where the measured reading
-      // order is proven.
-      await pumpUx(tester, uxScreens()
-          .firstWhere((s) => s.id == 'SH-PRO')
-          .build(), locale: const Locale('ar'));
-      final chips = find.textContaining('STG-2026');
-      expect(chips, findsWidgets,
-          reason: 'the profile must show the internship reference');
-      // Measured rather than inferred from a wrapper: the chip holds a
-      // standalone technical run, which already resolves LTR-visual in an
-      // RTL paragraph (checked with TextPainter glyph boxes), so wrapping it
-      // in isolates would only put invisible characters into a copyable,
-      // screen-reader-read value. What must hold is the reading order.
-      expect(laysOutLtrVisual(tester, chips), isTrue,
-          reason: 'a reference code must not be read backwards in Arabic');
-    });
-
-    testWidgets('an intern-card reference is bidi-isolated in Arabic',
-        (tester) async {
+    testWidgets('the account email is bidi-isolated in Arabic', (tester) async {
       await pumpUx(
+        tester,
+        uxScreens().firstWhere((s) => s.id == 'SH-PRO').build(),
+        locale: const Locale('ar'),
+      );
+      final email = find.text(kInternUser.email);
+      expect(
+        email,
+        findsWidgets,
+        reason: 'the email must be rendered — otherwise the check is vacuous',
+      );
+      expect(
+        isolated(tester, email),
+        isTrue,
+        reason: 'an email rendered bare inside RTL reverses visually',
+      );
+    });
+
+    testWidgets(
+      'the internship reference reads LTR on the profile (measured)',
+      (tester) async {
+        // The reference is back-office data: it lives on the profile screen
+        // (not on the home identity row), so that is where the measured reading
+        // order is proven.
+        await pumpUx(
           tester,
-          uxScreens().firstWhere((s) => s.id == 'W12').build(),
+          uxScreens().firstWhere((s) => s.id == 'SH-PRO').build(),
           locale: const Locale('ar'),
-          role: UxRole.supervisor);
+        );
+        final chips = find.textContaining('STG-2026');
+        expect(
+          chips,
+          findsWidgets,
+          reason: 'the profile must show the internship reference',
+        );
+        // Measured rather than inferred from a wrapper: the chip holds a
+        // standalone technical run, which already resolves LTR-visual in an
+        // RTL paragraph (checked with TextPainter glyph boxes), so wrapping it
+        // in isolates would only put invisible characters into a copyable,
+        // screen-reader-read value. What must hold is the reading order.
+        expect(
+          laysOutLtrVisual(tester, chips),
+          isTrue,
+          reason: 'a reference code must not be read backwards in Arabic',
+        );
+      },
+    );
+
+    testWidgets('an intern-card reference is bidi-isolated in Arabic', (
+      tester,
+    ) async {
+      await pumpUx(
+        tester,
+        uxScreens().firstWhere((s) => s.id == 'W12').build(),
+        locale: const Locale('ar'),
+        role: UxRole.supervisor,
+      );
       final refs = find.textContaining('STG-2026');
       expect(refs, findsWidgets);
-      expect(isolated(tester, refs), isTrue,
-          reason: 'the reference is embedded in a localized subtitle');
+      expect(
+        isolated(tester, refs),
+        isTrue,
+        reason: 'the reference is embedded in a localized subtitle',
+      );
     });
   });
 }
 
-List<File> _dartFiles(String dir) => Directory(dir)
-    .listSync(recursive: true)
-    .whereType<File>()
-    .where((f) => f.path.endsWith('.dart'))
-    .toList();
+List<File> _dartFiles(String dir) =>
+    Directory(dir)
+        .listSync(recursive: true)
+        .whereType<File>()
+        .where((f) => f.path.endsWith('.dart'))
+        .toList();

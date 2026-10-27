@@ -13,8 +13,7 @@ import 'package:stegappe/features/auth/presentation/providers/auth_providers.dar
 import 'package:stegappe/features/internship/presentation/providers/workspace_providers.dart';
 import 'package:stegappe/features/shell/presentation/about_screen.dart';
 import 'package:stegappe/features/shell/presentation/auth_gate.dart';
-import 'package:stegappe/features/shell/presentation/more_tab.dart';
-import 'package:stegappe/features/shell/presentation/profile_screen.dart';
+import 'package:stegappe/features/shell/presentation/account_settings_section.dart';
 
 import '../../support/shell_harness.dart';
 import '../../test_fixtures.dart';
@@ -36,6 +35,7 @@ class _FakeAuth implements AuthRepository {
   Future<void> logout() async {
     logoutCalls++;
   }
+
   @override
   Future<bool> refreshSession() async => true;
   @override
@@ -68,7 +68,9 @@ Future<({FakeInternshipRepository repo, _FakeAuth auth})> pumpMore(
           GlobalCupertinoLocalizations.delegate,
         ],
         theme: StegTheme.light(),
-        home: const Scaffold(body: MoreTab()),
+        home: Scaffold(
+          body: ListView(children: const [AccountSettingsSection()]),
+        ),
       ),
     ),
   );
@@ -98,11 +100,11 @@ Future<void> scrollTo(WidgetTester tester, Finder target) async {
 
 void main() {
   group('T14 settings: sections, language, theme, about, logout', () {
-    testWidgets('sections render with identity, no raw user id', (tester) async {
+    testWidgets('sections render: appearance, language, about, logout', (
+      tester,
+    ) async {
       final l10n = await loadL10n('fr');
       await pumpMore(tester);
-      expect(find.text('intern@u.tn'), findsWidgets);
-      expect(find.text(l10n.accountTitle), findsOneWidget);
       expect(find.text(l10n.appearanceTitle), findsOneWidget);
       await scrollTo(tester, find.text(l10n.language));
       expect(find.text(l10n.language), findsOneWidget);
@@ -115,8 +117,9 @@ void main() {
       expect(find.text('u1'), findsNothing);
     });
 
-    testWidgets('language switch applies immediately and syncs best-effort',
-        (tester) async {
+    testWidgets('language switch applies immediately and syncs best-effort', (
+      tester,
+    ) async {
       final h = await pumpMore(tester);
       await scrollTo(tester, find.text('English'));
       await tester.tap(find.text('English'));
@@ -138,8 +141,9 @@ void main() {
       await tester.pumpAndSettle();
       final ctx = tester.element(find.byType(Scaffold).first);
       expect(
-          ProviderScope.containerOf(ctx).read(localeProvider)?.languageCode,
-          'en');
+        ProviderScope.containerOf(ctx).read(localeProvider)?.languageCode,
+        'en',
+      );
       expect(h.repo.localeSyncCalls, 0);
     });
 
@@ -152,8 +156,9 @@ void main() {
       await tester.pumpAndSettle();
       final ctx = tester.element(find.byType(Scaffold).first);
       expect(
-          ProviderScope.containerOf(ctx).read(themeModeProvider),
-          StegThemeMode.dark);
+        ProviderScope.containerOf(ctx).read(themeModeProvider),
+        StegThemeMode.dark,
+      );
       expect(l10n.themeDark, isNotEmpty);
     });
 
@@ -168,18 +173,9 @@ void main() {
       expect(find.text(l10n.aboutSupport), findsOneWidget);
     });
 
-    testWidgets('profile entry opens the profile screen', (tester) async {
-      await pumpMore(tester);
-      final l10n = await loadL10n('fr');
-      final row = find.widgetWithText(ListTile, l10n.profileTitle);
-      await scrollTo(tester, row);
-      await tester.tap(row);
-      await tester.pumpAndSettle();
-      expect(find.byType(ProfileScreen), findsOneWidget);
-    });
-
-    testWidgets('logout asks for confirmation; cancel keeps the session',
-        (tester) async {
+    testWidgets('logout asks for confirmation; cancel keeps the session', (
+      tester,
+    ) async {
       final h = await pumpMore(tester);
       final l10n = await loadL10n('fr');
       await scrollTo(tester, find.text(l10n.logout));
@@ -189,7 +185,7 @@ void main() {
       await tester.tap(find.text(l10n.cancelAction));
       await tester.pumpAndSettle();
       expect(h.auth.logoutCalls, 0);
-      expect(find.byType(MoreTab), findsOneWidget);
+      expect(find.byType(AccountSettingsSection), findsOneWidget);
     });
 
     testWidgets('logout confirm signs out', (tester) async {
@@ -224,25 +220,29 @@ void main() {
       expect(prefs.readLocale(), isNull);
     });
 
-    testWidgets('sign-out clears the stored language (next user starts clean)',
-        (tester) async {
-      // A left the device in Arabic; B must not be greeted in it.
-      await pumpAuthGate(
-        tester,
-        user: _intern,
-        seedPrefs: {PrefsStore.kLocale: 'ar'},
-      );
-      final ctx = tester.element(find.byType(AuthGate));
-      final container = ProviderScope.containerOf(ctx);
-      expect(container.read(localeProvider)?.languageCode, 'ar');
+    testWidgets(
+      'sign-out clears the stored language (next user starts clean)',
+      (tester) async {
+        // A left the device in Arabic; B must not be greeted in it.
+        await pumpAuthGate(
+          tester,
+          user: _intern,
+          seedPrefs: {PrefsStore.kLocale: 'ar'},
+        );
+        final ctx = tester.element(find.byType(AuthGate));
+        final container = ProviderScope.containerOf(ctx);
+        expect(container.read(localeProvider)?.languageCode, 'ar');
 
-      await container.read(authControllerProvider.notifier).logout();
-      await tester.pumpAndSettle();
+        await container.read(authControllerProvider.notifier).logout();
+        await tester.pumpAndSettle();
 
-      expect(container.read(localeProvider), isNull);
-      expect(container.read(prefsStoreProvider).readLocale(), isNull);
-      expect(container.read(authControllerProvider),
-          isA<AuthUnauthenticated>());
-    });
+        expect(container.read(localeProvider), isNull);
+        expect(container.read(prefsStoreProvider).readLocale(), isNull);
+        expect(
+          container.read(authControllerProvider),
+          isA<AuthUnauthenticated>(),
+        );
+      },
+    );
   });
 }

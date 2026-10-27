@@ -93,30 +93,37 @@ String _jwt(String tag, {Duration ttl = const Duration(minutes: 15)}) {
 
 void main() {
   group('S1 — token refresh coordinator', () {
-    test('concurrent callers share ONE refresh (rotation race impossible)', () async {
-      final tokens = _Tokens()..access = _jwt('old');
-      final repo = _Repo(tokens);
-      final coordinator =
-          TokenRefreshCoordinator(repository: repo, tokens: tokens);
+    test(
+      'concurrent callers share ONE refresh (rotation race impossible)',
+      () async {
+        final tokens = _Tokens()..access = _jwt('old');
+        final repo = _Repo(tokens);
+        final coordinator = TokenRefreshCoordinator(
+          repository: repo,
+          tokens: tokens,
+        );
 
-      final results = await Future.wait([
-        coordinator.refresh(),
-        coordinator.refresh(),
-        coordinator.refresh(),
-        coordinator.refresh(),
-        coordinator.refresh(),
-      ]);
+        final results = await Future.wait([
+          coordinator.refresh(),
+          coordinator.refresh(),
+          coordinator.refresh(),
+          coordinator.refresh(),
+          coordinator.refresh(),
+        ]);
 
-      expect(results, everyElement(isTrue));
-      // Five callers, ONE network refresh: the backend never sees a race.
-      expect(repo.refreshCalls, 1);
-    });
+        expect(results, everyElement(isTrue));
+        // Five callers, ONE network refresh: the backend never sees a race.
+        expect(repo.refreshCalls, 1);
+      },
+    );
 
     test('a later call refreshes again once the first finished', () async {
       final tokens = _Tokens()..access = _jwt('old');
       final repo = _Repo(tokens);
-      final coordinator =
-          TokenRefreshCoordinator(repository: repo, tokens: tokens);
+      final coordinator = TokenRefreshCoordinator(
+        repository: repo,
+        tokens: tokens,
+      );
 
       await coordinator.refresh();
       await coordinator.refresh();
@@ -127,9 +134,13 @@ void main() {
       final tokens = _Tokens()..access = _jwt('old');
       final repo = _Repo(tokens)
         ..refreshError = const ApiException(
-            kind: ApiErrorKind.network, message: 'connection reset');
-      final coordinator =
-          TokenRefreshCoordinator(repository: repo, tokens: tokens);
+          kind: ApiErrorKind.network,
+          message: 'connection reset',
+        );
+      final coordinator = TokenRefreshCoordinator(
+        repository: repo,
+        tokens: tokens,
+      );
 
       final ok = await coordinator.refresh();
 
@@ -146,8 +157,10 @@ void main() {
         ..refresh = 'r1';
       final repo = _Repo(tokens)..refreshOk = false;
       var expired = 0;
-      final coordinator = TokenRefreshCoordinator(repository: repo, tokens: tokens)
-        ..onSessionExpired = () => expired++;
+      final coordinator = TokenRefreshCoordinator(
+        repository: repo,
+        tokens: tokens,
+      )..onSessionExpired = () => expired++;
 
       expect(await coordinator.refresh(), isFalse);
       expect(coordinator.sessionDead, isTrue);
@@ -158,8 +171,10 @@ void main() {
     test('tokenForRetry returns the freshly issued token', () async {
       final tokens = _Tokens()..access = _jwt('old');
       final repo = _Repo(tokens);
-      final coordinator =
-          TokenRefreshCoordinator(repository: repo, tokens: tokens);
+      final coordinator = TokenRefreshCoordinator(
+        repository: repo,
+        tokens: tokens,
+      );
 
       final retry = await coordinator.tokenForRetry();
 
@@ -170,8 +185,10 @@ void main() {
     test('tokenForRetry is null when the session is really over', () async {
       final tokens = _Tokens()..access = _jwt('old');
       final repo = _Repo(tokens)..refreshOk = false;
-      final coordinator =
-          TokenRefreshCoordinator(repository: repo, tokens: tokens);
+      final coordinator = TokenRefreshCoordinator(
+        repository: repo,
+        tokens: tokens,
+      );
 
       expect(await coordinator.tokenForRetry(), isNull);
     });
@@ -179,8 +196,10 @@ void main() {
     test('a broken keystore degrades instead of crashing', () async {
       final tokens = _Tokens()..failReads = true;
       final repo = _Repo(tokens);
-      final coordinator =
-          TokenRefreshCoordinator(repository: repo, tokens: tokens);
+      final coordinator = TokenRefreshCoordinator(
+        repository: repo,
+        tokens: tokens,
+      );
 
       expect(await coordinator.timeToLive(), isNull);
       expect(await coordinator.tokenForRetry(), isNull);
@@ -189,8 +208,10 @@ void main() {
     test('timeToLive is derived from the token exp claim', () async {
       final tokens = _Tokens()
         ..access = _jwt('soon', ttl: const Duration(minutes: 10));
-      final coordinator =
-          TokenRefreshCoordinator(repository: _Repo(tokens), tokens: tokens);
+      final coordinator = TokenRefreshCoordinator(
+        repository: _Repo(tokens),
+        tokens: tokens,
+      );
 
       final ttl = await coordinator.timeToLive();
       expect(ttl, isNotNull);
@@ -201,27 +222,36 @@ void main() {
   group('S1 — terminal vs transient refresh failures', () {
     test('401 and a refresh-token 422 are terminal', () {
       expect(
-        isTerminalRefreshFailure(const ApiException(
+        isTerminalRefreshFailure(
+          const ApiException(
             kind: ApiErrorKind.unauthorized,
             statusCode: 401,
-            message: 'expired')),
+            message: 'expired',
+          ),
+        ),
         isTrue,
       );
       expect(
-        isTerminalRefreshFailure(const ApiException(
-          kind: ApiErrorKind.validation,
-          statusCode: 422,
-          code: 'INVALID_REFRESH_TOKEN',
-          message: 'invalid refresh token',
-        )),
+        isTerminalRefreshFailure(
+          const ApiException(
+            kind: ApiErrorKind.validation,
+            statusCode: 422,
+            code: 'INVALID_REFRESH_TOKEN',
+            message: 'invalid refresh token',
+          ),
+        ),
         isTrue,
       );
     });
 
     test('an unauthorized kind with no status code is still terminal', () {
       expect(
-        isTerminalRefreshFailure(const ApiException(
-            kind: ApiErrorKind.unauthorized, message: 'expired')),
+        isTerminalRefreshFailure(
+          const ApiException(
+            kind: ApiErrorKind.unauthorized,
+            message: 'expired',
+          ),
+        ),
         isTrue,
       );
     });
@@ -229,22 +259,40 @@ void main() {
     test('network, timeout, 5xx and 409 are NOT terminal', () {
       for (final failure in [
         const ApiException(kind: ApiErrorKind.network, message: 'offline'),
-        const ApiException(kind: ApiErrorKind.unknown, statusCode: 500, message: 'boom'),
-        const ApiException(kind: ApiErrorKind.server, statusCode: 409, message: 'conflict'),
-        const ApiException(kind: ApiErrorKind.server, statusCode: 503, message: 'down'),
+        const ApiException(
+          kind: ApiErrorKind.unknown,
+          statusCode: 500,
+          message: 'boom',
+        ),
+        const ApiException(
+          kind: ApiErrorKind.server,
+          statusCode: 409,
+          message: 'conflict',
+        ),
+        const ApiException(
+          kind: ApiErrorKind.server,
+          statusCode: 503,
+          message: 'down',
+        ),
       ]) {
-        expect(isTerminalRefreshFailure(failure), isFalse,
-            reason: 'must not log the user out: $failure');
+        expect(
+          isTerminalRefreshFailure(failure),
+          isFalse,
+          reason: 'must not log the user out: $failure',
+        );
       }
     });
 
     test('a 422 about something else is not terminal', () {
       expect(
-        isTerminalRefreshFailure(const ApiException(
+        isTerminalRefreshFailure(
+          const ApiException(
             kind: ApiErrorKind.validation,
             statusCode: 422,
             code: 'POST_TOO_LONG',
-            message: 'too long')),
+            message: 'too long',
+          ),
+        ),
         isFalse,
       );
     });
@@ -258,8 +306,10 @@ void main() {
     });
 
     test('a nearly-dead token is renewed immediately', () {
-      expect(SessionRefresher.targetDelay(const Duration(seconds: 5)),
-          Duration.zero);
+      expect(
+        SessionRefresher.targetDelay(const Duration(seconds: 5)),
+        Duration.zero,
+      );
     });
 
     test('never schedules in the past', () {
@@ -270,41 +320,53 @@ void main() {
   group('S1 — ApiClient replays a request after refreshing', () {
     /// Answers 401 until the bearer changes, then 200 — exactly what the real
     /// backend does once the session is renewed.
-    test('a 401 is refreshed and the SAME request replayed with the new token',
-        () async {
-      final tokens = _Tokens()..access = 'stale';
-      final repo = _Repo(tokens);
-      var refreshCalls = 0;
-      final client = ApiClient(
-        baseUrl: 'http://api.test',
-        // Behaves like the real backend: the stale bearer is refused, the
-        // freshly issued one is accepted.
-        httpClient: MockClient((request) async {
-          final auth = request.headers['Authorization'];
-          if (auth != null && auth != 'Bearer stale') {
-            return http.Response('{"ok":true}', 200,
-                headers: {'content-type': 'application/json'});
-          }
-          return http.Response('{}', 401,
-              headers: {'content-type': 'application/json'});
-        }),
-        onUnauthorized: () async {
-          refreshCalls++;
-          await repo.refreshSession();
-          return tokens.access;
-        },
-      );
+    test(
+      'a 401 is refreshed and the SAME request replayed with the new token',
+      () async {
+        final tokens = _Tokens()..access = 'stale';
+        final repo = _Repo(tokens);
+        var refreshCalls = 0;
+        final client = ApiClient(
+          baseUrl: 'http://api.test',
+          // Behaves like the real backend: the stale bearer is refused, the
+          // freshly issued one is accepted.
+          httpClient: MockClient((request) async {
+            final auth = request.headers['Authorization'];
+            if (auth != null && auth != 'Bearer stale') {
+              return http.Response(
+                '{"ok":true}',
+                200,
+                headers: {'content-type': 'application/json'},
+              );
+            }
+            return http.Response(
+              '{}',
+              401,
+              headers: {'content-type': 'application/json'},
+            );
+          }),
+          onUnauthorized: () async {
+            refreshCalls++;
+            await repo.refreshSession();
+            return tokens.access;
+          },
+        );
 
-      final result = await client.get<Map<String, dynamic>>(
-        '/protected',
-        bearer: tokens.access,
-        decode: (json) => (json as Map).cast<String, dynamic>(),
-      );
+        final result = await client.get<Map<String, dynamic>>(
+          '/protected',
+          bearer: tokens.access,
+          decode: (json) => (json as Map).cast<String, dynamic>(),
+        );
 
-      expect(refreshCalls, 1, reason: 'refresh happens exactly once');
-      expect(repo.refreshCalls, 1, reason: 'not one refresh per request');
-      expect(result['ok'], isTrue, reason: 'the replay carried the new token');
-    });
+        expect(refreshCalls, 1, reason: 'refresh happens exactly once');
+        expect(repo.refreshCalls, 1, reason: 'not one refresh per request');
+        expect(
+          result['ok'],
+          isTrue,
+          reason: 'the replay carried the new token',
+        );
+      },
+    );
 
     test('a second call also succeeds (the session keeps working)', () async {
       final tokens = _Tokens()..access = 'stale';
@@ -314,11 +376,17 @@ void main() {
         httpClient: MockClient((request) async {
           final auth = request.headers['Authorization'];
           if (auth != null && auth != 'Bearer stale') {
-            return http.Response('{"ok":true}', 200,
-                headers: {'content-type': 'application/json'});
+            return http.Response(
+              '{"ok":true}',
+              200,
+              headers: {'content-type': 'application/json'},
+            );
           }
-          return http.Response('{}', 401,
-              headers: {'content-type': 'application/json'});
+          return http.Response(
+            '{}',
+            401,
+            headers: {'content-type': 'application/json'},
+          );
         }),
         onUnauthorized: () async {
           await repo.refreshSession();
@@ -338,31 +406,41 @@ void main() {
       expect(repo.refreshCalls, lessThanOrEqualTo(2));
     });
 
-    test('when renewal is impossible the 401 surfaces (no infinite retry)',
-        () async {
-      var calls = 0;
-      final client = ApiClient(
-        baseUrl: 'http://api.test',
-        httpClient: MockClient((request) async {
-          calls++;
-          return http.Response('{}', 401,
-              headers: {'content-type': 'application/json'});
-        }),
-        onUnauthorized: () async => null,
-      );
+    test(
+      'when renewal is impossible the 401 surfaces (no infinite retry)',
+      () async {
+        var calls = 0;
+        final client = ApiClient(
+          baseUrl: 'http://api.test',
+          httpClient: MockClient((request) async {
+            calls++;
+            return http.Response(
+              '{}',
+              401,
+              headers: {'content-type': 'application/json'},
+            );
+          }),
+          onUnauthorized: () async => null,
+        );
 
-      await expectLater(
-        client.get<Map<String, dynamic>>(
-          '/protected',
-          bearer: 'stale',
-          decode: (json) => (json as Map).cast<String, dynamic>(),
-        ),
-        throwsA(isA<ApiException>()
-            .having((e) => e.kind, 'kind', ApiErrorKind.unauthorized)),
-      );
-      // Exactly one attempt: the client never spins on a dead session.
-      expect(calls, 1);
-    });
+        await expectLater(
+          client.get<Map<String, dynamic>>(
+            '/protected',
+            bearer: 'stale',
+            decode: (json) => (json as Map).cast<String, dynamic>(),
+          ),
+          throwsA(
+            isA<ApiException>().having(
+              (e) => e.kind,
+              'kind',
+              ApiErrorKind.unauthorized,
+            ),
+          ),
+        );
+        // Exactly one attempt: the client never spins on a dead session.
+        expect(calls, 1);
+      },
+    );
 
     test('a live token is never refreshed (no needless rotation)', () async {
       var calls = 0;
@@ -371,8 +449,11 @@ void main() {
         baseUrl: 'http://api.test',
         httpClient: MockClient((request) async {
           calls++;
-          return http.Response('{"ok":true}', 200,
-              headers: {'content-type': 'application/json'});
+          return http.Response(
+            '{"ok":true}',
+            200,
+            headers: {'content-type': 'application/json'},
+          );
         }),
         onUnauthorized: () async {
           refreshCalls++;

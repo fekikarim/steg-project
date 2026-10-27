@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
 import '../../support/queue_harness.dart';
+
 import 'package:stegappe/core/connectivity/connectivity_service.dart';
 import 'package:stegappe/core/l10n/app_localizations.dart';
 import 'package:stegappe/core/network/api_exception.dart';
@@ -21,8 +23,11 @@ import 'package:stegappe/features/internship/presentation/screens/task_drafts_sc
 
 import '../../test_fixtures.dart';
 
-const _supervisor =
-    AppUser(id: 'sup1', email: 'sup@steg.tn', roles: ['SUPERVISOR']);
+const _supervisor = AppUser(
+  id: 'sup1',
+  email: 'sup@steg.tn',
+  roles: ['SUPERVISOR'],
+);
 
 class _FakeAuthRepo implements AuthRepository {
   @override
@@ -42,58 +47,66 @@ class _FakeAuthRepo implements AuthRepository {
 }
 
 SupervisedIntern _intern(String id, String name) => SupervisedIntern(
-      internshipId: id,
-      reference: 'STG-$id',
-      internName: name,
-      status: InternshipStatus.inProgress,
-      type: InternshipType.perfectionnement,
-      startDate: DateTime(2026, 1, 1),
-      endDate: DateTime(2026, 6, 30),
-      departmentName: 'DSI',
-      tasksCompleted: 1,
-      tasksTotal: 3,
-      pendingJournal: 0,
-      pendingDeliverables: 0,
-      evaluationsCount: 0,
-    );
+  internshipId: id,
+  reference: 'STG-$id',
+  internName: name,
+  status: InternshipStatus.inProgress,
+  type: InternshipType.perfectionnement,
+  startDate: DateTime(2026, 1, 1),
+  endDate: DateTime(2026, 6, 30),
+  departmentName: 'DSI',
+  tasksCompleted: 1,
+  tasksTotal: 3,
+  pendingJournal: 0,
+  pendingDeliverables: 0,
+  evaluationsCount: 0,
+);
 
 class _DraftsFake extends FakeInternshipRepository {
   @override
   Future<List<SupervisedIntern>> supervisedInterns() async => [
-        _intern('internship-1', 'Amira Ben Salah'),
-        _intern('internship-2', 'Yassine Trabelsi'),
-      ];
+    _intern('internship-1', 'Amira Ben Salah'),
+    _intern('internship-2', 'Yassine Trabelsi'),
+  ];
 
   @override
-  Future<Paged<InternTask>> listTasks(String internshipId,
-      {int page = 0, int size = 50, TaskStatus? status}) async =>
-      pageOf(const [], total: 0);
+  Future<Paged<InternTask>> listTasks(
+    String internshipId, {
+    int page = 0,
+    int size = 50,
+    TaskStatus? status,
+  }) async => pageOf(const [], total: 0);
 }
 
 class _RateLimitedFake extends _DraftsFake {
   @override
-  Future<List<TaskDraft>> generateDraftsFromText(String internshipId,
-      {required String specText}) async {
+  Future<List<TaskDraft>> generateDraftsFromText(
+    String internshipId, {
+    required String specText,
+  }) async {
     throw const ApiException(
-        kind: ApiErrorKind.unknown,
-        message: 'Rate limited',
-        statusCode: 429,
-        code: 'RATE_LIMIT_EXCEEDED');
+      kind: ApiErrorKind.unknown,
+      message: 'Rate limited',
+      statusCode: 429,
+      code: 'RATE_LIMIT_EXCEEDED',
+    );
   }
 }
 
 class _ForbiddenBulkFake extends _DraftsFake {
   @override
-  Future<DraftBulkResult> bulkAddDrafts(
-      {required List<String> draftIds,
-      required List<String> internshipIds,
-      required String idempotencyKey,
-      DateTime? visibleFrom}) async {
+  Future<DraftBulkResult> bulkAddDrafts({
+    required List<String> draftIds,
+    required List<String> internshipIds,
+    required String idempotencyKey,
+    DateTime? visibleFrom,
+  }) async {
     throw const ApiException(
-        kind: ApiErrorKind.notFound,
-        message: 'Not found',
-        statusCode: 404,
-        code: 'NOT_FOUND');
+      kind: ApiErrorKind.notFound,
+      message: 'Not found',
+      statusCode: 404,
+      code: 'NOT_FOUND',
+    );
   }
 }
 
@@ -143,12 +156,14 @@ Future<void> _pump(
 
 void main() {
   group('TaskDraftsScreen idle + generation', () {
-    testWidgets('idle shows proposal note, tabs, empty drafts, targets',
-        (tester) async {
+    testWidgets('idle shows proposal note, tabs, empty drafts, targets', (
+      tester,
+    ) async {
       await _pump(
-          tester, const TaskDraftsScreen(referenceInternshipId: 'internship-1'));
-      expect(
-          find.textContaining('rien ne devient une tâche'), findsOneWidget);
+        tester,
+        const TaskDraftsScreen(referenceInternshipId: 'internship-1'),
+      );
+      expect(find.textContaining('rien ne devient une tâche'), findsOneWidget);
       expect(find.text('Document PDF'), findsOneWidget);
       expect(find.text('Décrire'), findsOneWidget);
       expect(find.text('Aucun brouillon pour le moment'), findsOneWidget);
@@ -157,19 +172,22 @@ void main() {
       expect(find.text('Yassine Trabelsi'), findsWidgets);
       // No drafts → bulk-add disabled (targets section is below the
       // fold in the 800x600 binding: scroll it into view first).
-            final bulk = tester.widget<StegButton>(
-          find.widgetWithText(StegButton, 'Créer les tâches'));
+      final bulk = tester.widget<StegButton>(
+        find.widgetWithText(StegButton, 'Créer les tâches'),
+      );
       expect(bulk.onPressed, isNull);
     });
 
-    testWidgets('text flow generates reviewable drafts with badges',
-        (tester) async {
+    testWidgets('text flow generates reviewable drafts with badges', (
+      tester,
+    ) async {
       final fake = _DraftsFake();
-      await _pump(tester,
-          const TaskDraftsScreen(referenceInternshipId: 'internship-1'),
-          fake: fake);
-      await tester.enterText(
-          find.byType(TextField).first, 'Set up the bench.');
+      await _pump(
+        tester,
+        const TaskDraftsScreen(referenceInternshipId: 'internship-1'),
+        fake: fake,
+      );
+      await tester.enterText(find.byType(TextField).first, 'Set up the bench.');
       await tester.pump();
       await tester.tap(find.text('Générer'));
       await tester.pumpAndSettle();
@@ -182,14 +200,16 @@ void main() {
       expect(find.text('Réviser avec l’IA'), findsWidgets);
     });
 
-    testWidgets('per-item edit / revise / delete drive the backend',
-        (tester) async {
+    testWidgets('per-item edit / revise / delete drive the backend', (
+      tester,
+    ) async {
       final fake = _DraftsFake();
-      await _pump(tester,
-          const TaskDraftsScreen(referenceInternshipId: 'internship-1'),
-          fake: fake);
-      await tester.enterText(
-          find.byType(TextField).first, 'Set up the bench.');
+      await _pump(
+        tester,
+        const TaskDraftsScreen(referenceInternshipId: 'internship-1'),
+        fake: fake,
+      );
+      await tester.enterText(find.byType(TextField).first, 'Set up the bench.');
       await tester.pump();
       await tester.tap(find.text('Générer'));
       await tester.pumpAndSettle();
@@ -199,31 +219,32 @@ void main() {
       await tester.pumpAndSettle();
       final editDialog = find.byType(AlertDialog);
       await tester.enterText(
-          find.descendant(
-              of: editDialog, matching: find.byType(TextField)).first,
-          'Draft one v2');
+        find.descendant(of: editDialog, matching: find.byType(TextField)).first,
+        'Draft one v2',
+      );
       await tester.tap(find.text('Modifier').last);
       await tester.pumpAndSettle();
       expect(
-          fake.fakeDrafts
-              .firstWhere((d) => d.id == 'd1')
-              .title,
-          'Draft one v2');
+        fake.fakeDrafts.firstWhere((d) => d.id == 'd1').title,
+        'Draft one v2',
+      );
 
       // Revise the second draft with an instruction.
-            await tester.tap(find.text('Réviser avec l’IA').first);
+      await tester.tap(find.text('Réviser avec l’IA').first);
       await tester.pumpAndSettle();
       await tester.enterText(
-          find.descendant(
-              of: find.byType(AlertDialog),
-              matching: find.byType(TextField)),
-          'More concrete');
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.byType(TextField),
+        ),
+        'More concrete',
+      );
       await tester.tap(find.text('Réviser avec l’IA').last);
       await tester.pumpAndSettle();
       expect(fake.revisedDrafts.single['instruction'], 'More concrete');
 
       // Delete the second draft with confirm.
-            await tester.tap(find.text('Supprimer le brouillon').last);
+      await tester.tap(find.text('Supprimer le brouillon').last);
       await tester.pumpAndSettle();
       await tester.tap(find.text('Supprimer le brouillon').last);
       await tester.pumpAndSettle();
@@ -233,11 +254,12 @@ void main() {
 
     testWidgets('manual add keeps working while AI is down', (tester) async {
       final fake = _DraftsFake()..failDrafts = true;
-      await _pump(tester,
-          const TaskDraftsScreen(referenceInternshipId: 'internship-1'),
-          fake: fake);
-      await tester.enterText(
-          find.byType(TextField).first, 'Set up the bench.');
+      await _pump(
+        tester,
+        const TaskDraftsScreen(referenceInternshipId: 'internship-1'),
+        fake: fake,
+      );
+      await tester.enterText(find.byType(TextField).first, 'Set up the bench.');
       await tester.pump();
       await tester.tap(find.text('Générer'));
       await tester.pumpAndSettle();
@@ -249,47 +271,52 @@ void main() {
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField).at(1), 'Handmade');
       await tester.pump();
-            await tester.tap(find.text('Ajouter un brouillon à la main').last);
+      await tester.tap(find.text('Ajouter un brouillon à la main').last);
       await tester.pumpAndSettle();
-      expect(
-          fake.fakeDrafts
-              .where((d) => d.title == 'Handmade')
-              .length,
-          1);
+      expect(fake.fakeDrafts.where((d) => d.title == 'Handmade').length, 1);
     });
 
-    testWidgets('rate limit shows the wait hint, offline disables generation',
-        (tester) async {
-      await _pump(tester,
-          const TaskDraftsScreen(referenceInternshipId: 'internship-1'),
-          fake: _RateLimitedFake());
-      await tester.enterText(
-          find.byType(TextField).first, 'Set up the bench.');
+    testWidgets('rate limit shows the wait hint, offline disables generation', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        const TaskDraftsScreen(referenceInternshipId: 'internship-1'),
+        fake: _RateLimitedFake(),
+      );
+      await tester.enterText(find.byType(TextField).first, 'Set up the bench.');
       await tester.pump();
       await tester.tap(find.text('Générer'));
       await tester.pumpAndSettle();
-            expect(find.textContaining('Patientez'), findsWidgets);
+      expect(find.textContaining('Patientez'), findsWidgets);
 
-      await _pump(tester,
-          const TaskDraftsScreen(referenceInternshipId: 'internship-1'),
-          online: false);
+      await _pump(
+        tester,
+        const TaskDraftsScreen(referenceInternshipId: 'internship-1'),
+        online: false,
+      );
       final generate = tester.widget<StegButton>(
-          find.widgetWithText(StegButton, 'Générer'));
+        find.widgetWithText(StegButton, 'Générer'),
+      );
       expect(generate.onPressed, isNull);
-      expect(find.text('La génération IA nécessite une connexion.'),
-          findsOneWidget);
+      expect(
+        find.text('La génération IA nécessite une connexion.'),
+        findsOneWidget,
+      );
     });
   });
 
   group('TaskDraftsScreen bulk-add', () {
-    testWidgets('targets + schedule + per-pair result, no silent partial',
-        (tester) async {
+    testWidgets('targets + schedule + per-pair result, no silent partial', (
+      tester,
+    ) async {
       final fake = _DraftsFake();
-      await _pump(tester,
-          const TaskDraftsScreen(referenceInternshipId: 'internship-1'),
-          fake: fake);
-      await tester.enterText(
-          find.byType(TextField).first, 'Set up the bench.');
+      await _pump(
+        tester,
+        const TaskDraftsScreen(referenceInternshipId: 'internship-1'),
+        fake: fake,
+      );
+      await tester.enterText(find.byType(TextField).first, 'Set up the bench.');
       await tester.pump();
       await tester.tap(find.text('Générer'));
       await tester.pumpAndSettle();
@@ -307,26 +334,29 @@ void main() {
     });
 
     testWidgets('out-of-scope bulk failure surfaces honestly', (tester) async {
-      await _pump(tester,
-          const TaskDraftsScreen(referenceInternshipId: 'internship-1'),
-          fake: _ForbiddenBulkFake());
-      await tester.enterText(
-          find.byType(TextField).first, 'Set up the bench.');
+      await _pump(
+        tester,
+        const TaskDraftsScreen(referenceInternshipId: 'internship-1'),
+        fake: _ForbiddenBulkFake(),
+      );
+      await tester.enterText(find.byType(TextField).first, 'Set up the bench.');
       await tester.pump();
       await tester.tap(find.text('Générer'));
       await tester.pumpAndSettle();
-            await tester.tap(find.text('Créer les tâches'));
+      await tester.tap(find.text('Créer les tâches'));
       await tester.pumpAndSettle();
       expect(find.textContaining('Exception'), findsNothing);
     });
 
     testWidgets('arabic RTL with translated chrome', (tester) async {
-      await _pump(tester,
-          const TaskDraftsScreen(referenceInternshipId: 'internship-1'),
-          locale: const Locale('ar'), theme: StegTheme.dark());
+      await _pump(
+        tester,
+        const TaskDraftsScreen(referenceInternshipId: 'internship-1'),
+        locale: const Locale('ar'),
+        theme: StegTheme.dark(),
+      );
       // AppBar title + section header share the key (findsWidgets).
-      expect(
-          find.text('إنشاء مهام بالذكاء الاصطناعي'), findsWidgets);
+      expect(find.text('إنشاء مهام بالذكاء الاصطناعي'), findsWidgets);
       expect(find.text('الوصف'), findsOneWidget);
     });
   });

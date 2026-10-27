@@ -12,8 +12,9 @@ ProviderContainer containerWith({
 }) {
   final container = ProviderContainer(
     overrides: [
-      notificationRepositoryProvider
-          .overrideWithValue(repo ?? FakeNotificationsRepository()),
+      notificationRepositoryProvider.overrideWithValue(
+        repo ?? FakeNotificationsRepository(),
+      ),
       stompChatServiceProvider.overrideWithValue(stomp ?? FakeStompService()),
     ],
   );
@@ -23,8 +24,11 @@ ProviderContainer containerWith({
 
 /// Creates the controller (auto-dispose) and awaits its first REST load.
 Future<NotificationsState> boot(ProviderContainer container) async {
-  container.listen(notificationsControllerProvider, (_, _) {},
-      fireImmediately: true);
+  container.listen(
+    notificationsControllerProvider,
+    (_, _) {},
+    fireImmediately: true,
+  );
   await pumpEventQueue();
   return container.read(notificationsControllerProvider);
 }
@@ -35,8 +39,11 @@ void main() {
       final repo = FakeNotificationsRepository(
         unread: 2,
         items: [
-          notif('n1', title: 'Journal validé',
-              createdAt: DateTime(2026, 9, 15, 9)),
+          notif(
+            'n1',
+            title: 'Journal validé',
+            createdAt: DateTime(2026, 9, 15, 9),
+          ),
           notif('n2', title: 'Bienvenue', isRead: true),
         ],
       );
@@ -51,61 +58,76 @@ void main() {
       expect(repo.queries.last.unreadOnly, isFalse);
     });
 
-    test('a first load failure surfaces the error instead of an empty page',
-        () async {
-      final repo = FakeNotificationsRepository()..failList = true;
-      final state = await boot(containerWith(repo: repo));
+    test(
+      'a first load failure surfaces the error instead of an empty page',
+      () async {
+        final repo = FakeNotificationsRepository()..failList = true;
+        final state = await boot(containerWith(repo: repo));
 
-      expect(state.error, isNotNull);
-      expect(state.items, isEmpty);
-      expect(state.loading, isFalse);
-      expect(state.loaded, isTrue);
-    });
+        expect(state.error, isNotNull);
+        expect(state.items, isEmpty);
+        expect(state.loading, isFalse);
+        expect(state.loaded, isTrue);
+      },
+    );
 
-    test('the unread filter is a server query, not a page-local filter',
-        () async {
-      final repo = FakeNotificationsRepository(
-        unread: 1,
-        items: [
-          notif('n1', createdAt: DateTime(2026, 9, 15, 9)),
-          notif('n2', isRead: true),
-        ],
-      );
-      final container = containerWith(repo: repo);
-      await boot(container);
+    test(
+      'the unread filter is a server query, not a page-local filter',
+      () async {
+        final repo = FakeNotificationsRepository(
+          unread: 1,
+          items: [
+            notif('n1', createdAt: DateTime(2026, 9, 15, 9)),
+            notif('n2', isRead: true),
+          ],
+        );
+        final container = containerWith(repo: repo);
+        await boot(container);
 
-      await container
-          .read(notificationsControllerProvider.notifier)
-          .setUnreadOnly(true);
+        await container
+            .read(notificationsControllerProvider.notifier)
+            .setUnreadOnly(true);
 
-      expect(repo.queries.last.unreadOnly, isTrue);
-      expect(container.read(notificationsControllerProvider).unreadOnly, isTrue);
-      expect(
-        container.read(notificationsControllerProvider).items.map((n) => n.id),
-        ['n1'],
-      );
-    });
+        expect(repo.queries.last.unreadOnly, isTrue);
+        expect(
+          container.read(notificationsControllerProvider).unreadOnly,
+          isTrue,
+        );
+        expect(
+          container
+              .read(notificationsControllerProvider)
+              .items
+              .map((n) => n.id),
+          ['n1'],
+        );
+      },
+    );
   });
 
   group('live frames (BR-42)', () {
-    test('a frame merges once — the same notification id never duplicates',
-        () async {
-      final repo = FakeNotificationsRepository(unread: 0);
-      final container = containerWith(repo: repo);
-      await boot(container);
-      final frames = container.read(notificationFramesProvider);
+    test(
+      'a frame merges once — the same notification id never duplicates',
+      () async {
+        final repo = FakeNotificationsRepository(unread: 0);
+        final container = containerWith(repo: repo);
+        await boot(container);
+        final frames = container.read(notificationFramesProvider);
 
-      frames.add(frame('live-1'));
-      frames.add(frame('live-1'));
-      frames.add(frame('live-2'));
-      await pumpEventQueue();
+        frames.add(frame('live-1'));
+        frames.add(frame('live-1'));
+        frames.add(frame('live-2'));
+        await pumpEventQueue();
 
-      final items = container.read(notificationsControllerProvider).items;
-      expect(items.map((n) => n.id).toSet(), {'live-1', 'live-2'});
-      expect(items, hasLength(2), reason: 'the duplicate id collapsed');
-      expect(items.first.type, NotificationType.unknown,
-          reason: 'a frame without a type degrades to the generic rendering');
-    });
+        final items = container.read(notificationsControllerProvider).items;
+        expect(items.map((n) => n.id).toSet(), {'live-1', 'live-2'});
+        expect(items, hasLength(2), reason: 'the duplicate id collapsed');
+        expect(
+          items.first.type,
+          NotificationType.unknown,
+          reason: 'a frame without a type degrades to the generic rendering',
+        );
+      },
+    );
 
     test('frames stay newest-first with a stable id tie-break', () async {
       final container = containerWith();
@@ -115,7 +137,9 @@ void main() {
 
       frames.add(frame('b', createdAt: sameMoment));
       frames.add(frame('a', createdAt: sameMoment));
-      frames.add(frame('newer', createdAt: sameMoment.add(const Duration(hours: 1))));
+      frames.add(
+        frame('newer', createdAt: sameMoment.add(const Duration(hours: 1))),
+      );
       await pumpEventQueue();
 
       expect(
@@ -124,41 +148,54 @@ void main() {
       );
     });
 
-    test('a typed frame parses into the catalogue and refetches the badge',
-        () async {
-      final repo = FakeNotificationsRepository(unread: 3);
-      final container = containerWith(repo: repo);
-      await boot(container);
+    test(
+      'a typed frame parses into the catalogue and refetches the badge',
+      () async {
+        final repo = FakeNotificationsRepository(unread: 3);
+        final container = containerWith(repo: repo);
+        await boot(container);
 
-      container.read(notificationFramesProvider).add(
-          frame('live-task', type: 'TASK_UPDATED', title: 'Tâche modifiée'));
-      await pumpEventQueue();
+        container
+            .read(notificationFramesProvider)
+            .add(
+              frame('live-task', type: 'TASK_UPDATED', title: 'Tâche modifiée'),
+            );
+        await pumpEventQueue();
 
-      final item = container.read(notificationsControllerProvider).items.single;
-      expect(item.type, NotificationType.taskUpdated);
-      expect(item.title, 'Tâche modifiée');
-      expect(item.relatedEntityType, 'Task');
-      expect(container.read(notificationsControllerProvider).unreadCount, 3);
-    });
+        final item = container
+            .read(notificationsControllerProvider)
+            .items
+            .single;
+        expect(item.type, NotificationType.taskUpdated);
+        expect(item.title, 'Tâche modifiée');
+        expect(item.relatedEntityType, 'Task');
+        expect(container.read(notificationsControllerProvider).unreadCount, 3);
+      },
+    );
 
-    test('a malformed or unidentifiable frame never touches REST state',
-        () async {
-      final repo = FakeNotificationsRepository(
-        items: [notif('n1', createdAt: DateTime(2026, 9, 15))],
-      );
-      final container = containerWith(repo: repo);
-      await boot(container);
-      final frames = container.read(notificationFramesProvider);
+    test(
+      'a malformed or unidentifiable frame never touches REST state',
+      () async {
+        final repo = FakeNotificationsRepository(
+          items: [notif('n1', createdAt: DateTime(2026, 9, 15))],
+        );
+        final container = containerWith(repo: repo);
+        await boot(container);
+        final frames = container.read(notificationFramesProvider);
 
-      frames.add('not json at all');
-      frames.add('{"title":"no id"}');
-      await pumpEventQueue();
+        frames.add('not json at all');
+        frames.add('{"title":"no id"}');
+        await pumpEventQueue();
 
-      expect(
-        container.read(notificationsControllerProvider).items.map((n) => n.id),
-        ['n1'],
-      );
-    });
+        expect(
+          container
+              .read(notificationsControllerProvider)
+              .items
+              .map((n) => n.id),
+          ['n1'],
+        );
+      },
+    );
 
     test('a reconnect resyncs the authoritative list', () async {
       final repo = FakeNotificationsRepository(unread: 1);
@@ -176,24 +213,31 @@ void main() {
   });
 
   group('offline degradation (acceptance 5)', () {
-    test('a failed refresh keeps the last known rows and flags the banner',
-        () async {
-      final repo = FakeNotificationsRepository(
-        unread: 1,
-        items: [notif('n1', createdAt: DateTime(2026, 9, 15))],
-      );
-      final container = containerWith(repo: repo);
-      await boot(container);
+    test(
+      'a failed refresh keeps the last known rows and flags the banner',
+      () async {
+        final repo = FakeNotificationsRepository(
+          unread: 1,
+          items: [notif('n1', createdAt: DateTime(2026, 9, 15))],
+        );
+        final container = containerWith(repo: repo);
+        await boot(container);
 
-      repo.failList = true;
-      await container.read(notificationsControllerProvider.notifier).refresh();
+        repo.failList = true;
+        await container
+            .read(notificationsControllerProvider.notifier)
+            .refresh();
 
-      final state = container.read(notificationsControllerProvider);
-      expect(state.items.map((n) => n.id), ['n1']);
-      expect(state.offlineCache, isTrue);
-      expect(state.error, isNull,
-          reason: 'a degraded but usable list is not an error screen');
-    });
+        final state = container.read(notificationsControllerProvider);
+        expect(state.items.map((n) => n.id), ['n1']);
+        expect(state.offlineCache, isTrue);
+        expect(
+          state.error,
+          isNull,
+          reason: 'a degraded but usable list is not an error screen',
+        );
+      },
+    );
 
     test('a failed unread-count read never breaks the list', () async {
       final repo = FakeNotificationsRepository(
@@ -208,24 +252,31 @@ void main() {
   });
 
   group('read actions are optimistic with rollback', () {
-    test('markRead flags the row first, then persists through the server',
-        () async {
-      final repo = FakeNotificationsRepository(
-        unread: 1,
-        items: [notif('n1', createdAt: DateTime(2026, 9, 15))],
-      );
-      final container = containerWith(repo: repo);
-      await boot(container);
-      final row = container.read(notificationsControllerProvider).items.single;
+    test(
+      'markRead flags the row first, then persists through the server',
+      () async {
+        final repo = FakeNotificationsRepository(
+          unread: 1,
+          items: [notif('n1', createdAt: DateTime(2026, 9, 15))],
+        );
+        final container = containerWith(repo: repo);
+        await boot(container);
+        final row = container
+            .read(notificationsControllerProvider)
+            .items
+            .single;
 
-      await container
-          .read(notificationsControllerProvider.notifier)
-          .markRead(row);
+        await container
+            .read(notificationsControllerProvider.notifier)
+            .markRead(row);
 
-      expect(repo.read, ['n1']);
-      expect(container.read(notificationsControllerProvider).items.single.isRead,
-          isTrue);
-    });
+        expect(repo.read, ['n1']);
+        expect(
+          container.read(notificationsControllerProvider).items.single.isRead,
+          isTrue,
+        );
+      },
+    );
 
     test('a refused markRead rolls the optimistic flag back', () async {
       final repo = FakeNotificationsRepository(
@@ -292,38 +343,50 @@ void main() {
       expect(container.read(notificationsControllerProvider).unreadCount, 1);
     });
 
-    test('markAllRead clears the badge and rolls back when the server refuses',
-        () async {
-      final repo = FakeNotificationsRepository(
-        unread: 2,
-        items: [
-          notif('n1', createdAt: DateTime(2026, 9, 15)),
-          notif('n2', createdAt: DateTime(2026, 9, 14)),
-        ],
-      );
-      final container = containerWith(repo: repo);
-      await boot(container);
-      final notifier =
-          container.read(notificationsControllerProvider.notifier);
+    test(
+      'markAllRead clears the badge and rolls back when the server refuses',
+      () async {
+        final repo = FakeNotificationsRepository(
+          unread: 2,
+          items: [
+            notif('n1', createdAt: DateTime(2026, 9, 15)),
+            notif('n2', createdAt: DateTime(2026, 9, 14)),
+          ],
+        );
+        final container = containerWith(repo: repo);
+        await boot(container);
+        final notifier = container.read(
+          notificationsControllerProvider.notifier,
+        );
 
-      await notifier.markAllRead();
-      expect(repo.readAllCalls, 1);
-      expect(
-        container.read(notificationsControllerProvider).items.every((n) => n.isRead),
-        isTrue,
-      );
-      expect(container.read(notificationsControllerProvider).unreadCount, 0);
+        await notifier.markAllRead();
+        expect(repo.readAllCalls, 1);
+        expect(
+          container
+              .read(notificationsControllerProvider)
+              .items
+              .every((n) => n.isRead),
+          isTrue,
+        );
+        expect(container.read(notificationsControllerProvider).unreadCount, 0);
 
-      // Rollback path: a refused bulk read must not leave a false "all read".
-      repo.failReadAll = true;
-      repo.items = [notif('n3', createdAt: DateTime(2026, 9, 16))];
-      await notifier.refresh();
-      await expectLater(notifier.markAllRead(), throwsA(isA<Exception>()));
-      final rolledBack = container.read(notificationsControllerProvider);
-      expect(rolledBack.items.single.isRead, isFalse,
-          reason: 'the optimistic "all read" was rolled back');
-      expect(rolledBack.unreadCount, 2,
-          reason: 'the badge is restored to the pre-action server value');
-    });
+        // Rollback path: a refused bulk read must not leave a false "all read".
+        repo.failReadAll = true;
+        repo.items = [notif('n3', createdAt: DateTime(2026, 9, 16))];
+        await notifier.refresh();
+        await expectLater(notifier.markAllRead(), throwsA(isA<Exception>()));
+        final rolledBack = container.read(notificationsControllerProvider);
+        expect(
+          rolledBack.items.single.isRead,
+          isFalse,
+          reason: 'the optimistic "all read" was rolled back',
+        );
+        expect(
+          rolledBack.unreadCount,
+          2,
+          reason: 'the badge is restored to the pre-action server value',
+        );
+      },
+    );
   });
 }

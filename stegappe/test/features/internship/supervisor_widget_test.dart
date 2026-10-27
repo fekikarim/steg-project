@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
 import '../../support/queue_harness.dart';
+
 import 'package:stegappe/core/connectivity/connectivity_service.dart';
 import 'package:stegappe/core/l10n/app_localizations.dart';
 import 'package:stegappe/core/theme/steg_theme.dart';
@@ -86,8 +88,7 @@ void main() {
     ) async {
       // T13: the static headline gave way to the greeting + quick actions;
       // queues now read the T12 server counts (same assertions, new source).
-      await pumpSup(
-          tester, SupervisorHomeScreen(user: _sup, onOpenTab: null));
+      await pumpSup(tester, SupervisorHomeScreen(user: _sup, onOpen: null));
 
       expect(find.text('Encadrant'), findsOneWidget);
       expect(find.text('Journal en attente'), findsWidgets);
@@ -98,11 +99,13 @@ void main() {
       // the scroll view, so the queues sit a toolbar lower: keep scrolling
       // until the section header *and* its intern card are both on screen.
       final scroll = find.byType(CustomScrollView).first;
-      for (var i = 0;
-          i < 12 &&
-              (find.text('Nécessite votre attention').evaluate().isEmpty ||
-                  find.text('Amira Ben Salah').evaluate().isEmpty);
-          i++) {
+      for (
+        var i = 0;
+        i < 12 &&
+            (find.text('Nécessite votre attention').evaluate().isEmpty ||
+                find.text('Amira Ben Salah').evaluate().isEmpty);
+        i++
+      ) {
         await tester.drag(scroll, const Offset(0, -300));
         await tester.pumpAndSettle();
       }

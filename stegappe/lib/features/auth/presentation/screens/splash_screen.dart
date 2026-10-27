@@ -143,10 +143,7 @@ class _SplashContentState extends State<_SplashContent>
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: StegMotion.medium,
-    );
+    _controller = AnimationController(vsync: this, duration: StegMotion.medium);
     _logoScale = Tween<double>(begin: 0.96, end: 1).animate(
       CurvedAnimation(
         parent: _controller,

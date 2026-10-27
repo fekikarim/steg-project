@@ -91,21 +91,31 @@ void main() {
     expect(find.text('Accueil'), findsWidgets);
     expect(auth.loggedOut, isFalse);
 
-    // Logout lives in the More tab behind a confirmation dialog.
-    await tester.tap(find.byIcon(Icons.more_horiz).last);
+    // Logout lives on the Profil tab, behind a confirmation dialog.
+    await tester.tap(find.text('Profil').last);
     await tester.pumpAndSettle();
     // The More list is lazy: scroll the logout card into the viewport first.
     await tester.scrollUntilVisible(
       find.text('Déconnexion'),
       300,
-      scrollable: find.ancestor(
-        of: find.text('Changer le mot de passe'),
-        matching: find.byType(Scrollable),
-      ),
+      scrollable: find
+          .byWidgetPredicate(
+            (w) => w is Scrollable && w.axisDirection == AxisDirection.down,
+          )
+          .first,
     );
+    await tester.ensureVisible(find.text('Déconnexion').first);
+    // Lift the button clear of the floating bottom bar before tapping.
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -200));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Déconnexion').first);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Déconnexion').last);
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.text('Déconnexion'),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(auth.loggedOut, isTrue);
@@ -163,9 +173,9 @@ void main() {
     // Normal authenticated intern shell first.
     expect(find.byType(ChangePasswordScreen), findsNothing);
 
-    ProviderScope.containerOf(
-      tester.element(find.byType(AuthGate)),
-    ).read(authControllerProvider.notifier).requirePasswordChange();
+    ProviderScope.containerOf(tester.element(find.byType(AuthGate)))
+        .read(authControllerProvider.notifier)
+        .requirePasswordChange();
     await tester.pumpAndSettle();
 
     expect(find.byType(ChangePasswordScreen), findsOneWidget);

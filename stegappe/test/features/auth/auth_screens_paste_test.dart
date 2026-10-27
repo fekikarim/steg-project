@@ -10,8 +10,9 @@ import 'package:stegappe/features/auth/presentation/screens/login_screen.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('LoginScreen allows pasting via keyboard shortcut',
-      (tester) async {
+  testWidgets('LoginScreen allows pasting via keyboard shortcut', (
+    tester,
+  ) async {
     tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
       SystemChannels.platform,
       (MethodCall methodCall) async {
@@ -57,8 +58,9 @@ void main() {
     expect(find.text('test-intern@steg.com.tn'), findsOneWidget);
   });
 
-  testWidgets('ChangePasswordScreen allows pasting via keyboard shortcut',
-      (tester) async {
+  testWidgets('ChangePasswordScreen allows pasting via keyboard shortcut', (
+    tester,
+  ) async {
     tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
       SystemChannels.platform,
       (MethodCall methodCall) async {

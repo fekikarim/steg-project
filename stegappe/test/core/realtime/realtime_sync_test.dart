@@ -9,14 +9,16 @@ import 'package:stegappe/features/messaging/presentation/providers/messaging_pro
 void main() {
   group('category → provider mapping', () {
     test('every RealtimeCategory has a mapping entry', () {
-      expect(kRealtimeTargets.keys.toSet(), RealtimeCategory.values.toSet(),
-          reason: 'a new RealtimeCategory must declare its invalidation set');
+      expect(
+        kRealtimeTargets.keys.toSet(),
+        RealtimeCategory.values.toSet(),
+        reason: 'a new RealtimeCategory must declare its invalidation set',
+      );
     });
 
     test('tasks invalidates the task + dashboard + supervised providers', () {
-      final targets = RiverpodRealtimeSync((_) {}).targetsFor(
-        RealtimeCategory.tasks,
-      );
+      final targets = RiverpodRealtimeSync((_) {})
+          .targetsFor(RealtimeCategory.tasks);
       expect(
         targets,
         containsAll(<Object>[
@@ -31,23 +33,30 @@ void main() {
     test('notifications invalidates the feed + badge', () {
       final targets = RiverpodRealtimeSync((_) {})
           .targetsFor(RealtimeCategory.notifications);
-      expect(targets,
-          containsAll(<Object>[notificationsProvider, unreadNotificationsProvider]));
+      expect(
+        targets,
+        containsAll(<Object>[
+          notificationsProvider,
+          unreadNotificationsProvider,
+        ]),
+      );
     });
 
     test('messages invalidates the conversation list + unread badge', () {
-      final targets =
-          RiverpodRealtimeSync((_) {}).targetsFor(RealtimeCategory.messages);
+      final targets = RiverpodRealtimeSync((_) {})
+          .targetsFor(RealtimeCategory.messages);
       expect(
         targets,
-        containsAll(
-            <Object>[conversationsProvider, totalUnreadMessagesProvider]),
+        containsAll(<Object>[
+          conversationsProvider,
+          totalUnreadMessagesProvider,
+        ]),
       );
     });
 
     test('documents invalidates the deliverable + validation queues', () {
-      final targets =
-          RiverpodRealtimeSync((_) {}).targetsFor(RealtimeCategory.documents);
+      final targets = RiverpodRealtimeSync((_) {})
+          .targetsFor(RealtimeCategory.documents);
       expect(
         targets,
         containsAll(<Object>[
@@ -63,9 +72,8 @@ void main() {
     });
 
     test('community invalidates the feed + detail + reports providers', () {
-      final targets = RiverpodRealtimeSync((_) {}).targetsFor(
-        RealtimeCategory.community,
-      );
+      final targets = RiverpodRealtimeSync((_) {})
+          .targetsFor(RealtimeCategory.community);
       expect(targets, contains(communityFeedProvider));
       expect(targets, contains(communityReportsProvider));
     });
@@ -98,14 +106,19 @@ void main() {
       expect(builds, 3, reason: 'messages invalidation must refetch');
     });
 
-    test('invalidateAll is a no-op with nothing subscribed (no socket needed)',
-        () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-      final sync = RiverpodRealtimeSync(container.invalidate);
-      expect(sync.invalidateAll, returnsNormally);
-      expect(() => sync.invalidate(RealtimeCategory.community), returnsNormally);
-    });
+    test(
+      'invalidateAll is a no-op with nothing subscribed (no socket needed)',
+      () {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final sync = RiverpodRealtimeSync(container.invalidate);
+        expect(sync.invalidateAll, returnsNormally);
+        expect(
+          () => sync.invalidate(RealtimeCategory.community),
+          returnsNormally,
+        );
+      },
+    );
 
     test('a category with an empty mapping invalidates nothing', () {
       var builds = 0;

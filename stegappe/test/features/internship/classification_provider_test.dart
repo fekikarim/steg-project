@@ -10,9 +10,9 @@ import 'package:stegappe/features/internship/presentation/providers/workspace_pr
 import '../../test_fixtures.dart';
 
 ProviderContainer _container(FakeInternshipRepository fake) =>
-    ProviderContainer(overrides: [
-      internshipRepositoryProvider.overrideWithValue(fake),
-    ]);
+    ProviderContainer(
+      overrides: [internshipRepositoryProvider.overrideWithValue(fake)],
+    );
 
 void main() {
   group('classificationBoardProvider', () {
@@ -45,8 +45,7 @@ void main() {
       await container.read(classificationBoardProvider.future);
       await fake.assignTaskCategory('t-today', categoryId: 'c1');
       final tasks = await fake.listTasks('internship-1');
-      final toggled =
-          tasks.items.firstWhere((t) => t.id == 't-today');
+      final toggled = tasks.items.firstWhere((t) => t.id == 't-today');
       // The fake mirrors the server rule: status untouched by classification.
       expect(toggled.status.name, isNot('approved'));
       expect(fake.fakeBoard.categoryOf('t-today'), 'c1');
@@ -67,14 +66,14 @@ void main() {
         ..fakeUnclassifiedCount = 2;
       final container = _container(fake);
       addTearDown(container.dispose);
-      final controller =
-          container.read(suggestionFlowProvider.notifier);
+      final controller = container.read(suggestionFlowProvider.notifier);
 
       await controller.load();
       expect(container.read(suggestionFlowProvider).proposals.length, 2);
 
       await controller.acceptOne(
-          const CategoryProposal(taskId: 't-today', categoryId: 'c1'));
+        const CategoryProposal(taskId: 't-today', categoryId: 'c1'),
+      );
       final state = container.read(suggestionFlowProvider);
       expect(state.acceptedTaskIds, {'t-today'});
       expect(fake.appliedItems.length, 1);
@@ -82,50 +81,54 @@ void main() {
       expect(state.lastBatchId, isNotNull);
     });
 
-    test('accept-all affects only valid proposals (rejected lines skipped)',
-        () async {
-      final fake = FakeInternshipRepository()
-        ..fakeBoard = const ClassificationBoard(
-          categories: [TaskCategory(id: 'c1', name: 'Frontend')],
-          assignments: {},
-        )
-        ..fakeProposals = const [
-          CategoryProposal(taskId: 't-today', categoryId: 'c1'),
-          CategoryProposal(taskId: 't-week', categoryId: 'c1'),
-        ];
-      final container = _container(fake);
-      addTearDown(container.dispose);
-      final controller =
-          container.read(suggestionFlowProvider.notifier);
+    test(
+      'accept-all affects only valid proposals (rejected lines skipped)',
+      () async {
+        final fake = FakeInternshipRepository()
+          ..fakeBoard = const ClassificationBoard(
+            categories: [TaskCategory(id: 'c1', name: 'Frontend')],
+            assignments: {},
+          )
+          ..fakeProposals = const [
+            CategoryProposal(taskId: 't-today', categoryId: 'c1'),
+            CategoryProposal(taskId: 't-week', categoryId: 'c1'),
+          ];
+        final container = _container(fake);
+        addTearDown(container.dispose);
+        final controller = container.read(suggestionFlowProvider.notifier);
 
-      await controller.load();
-      await controller.acceptAll();
-      expect(fake.appliedItems.length, 2);
-      expect(
-          container.read(suggestionFlowProvider).acceptedTaskIds,
-          {'t-today', 't-week'});
-    });
+        await controller.load();
+        await controller.acceptAll();
+        expect(fake.appliedItems.length, 2);
+        expect(container.read(suggestionFlowProvider).acceptedTaskIds, {
+          't-today',
+          't-week',
+        });
+      },
+    );
 
-    test('AI failure keeps an explicit error and preserves the board',
-        () async {
-      final fake = FakeInternshipRepository()
-        ..fakeBoard = const ClassificationBoard(
-          categories: [TaskCategory(id: 'c1', name: 'Frontend')],
-          assignments: {},
-        )
-        ..failSuggest = true;
-      final container = _container(fake);
-      addTearDown(container.dispose);
+    test(
+      'AI failure keeps an explicit error and preserves the board',
+      () async {
+        final fake = FakeInternshipRepository()
+          ..fakeBoard = const ClassificationBoard(
+            categories: [TaskCategory(id: 'c1', name: 'Frontend')],
+            assignments: {},
+          )
+          ..failSuggest = true;
+        final container = _container(fake);
+        addTearDown(container.dispose);
 
-      await container.read(classificationBoardProvider.future);
-      await container.read(suggestionFlowProvider.notifier).load();
-      final state = container.read(suggestionFlowProvider);
-      expect(state.error, isNotNull);
-      expect(state.proposals, isEmpty);
-      // The board the student already had is untouched.
-      final board = container.read(classificationBoardProvider).valueOrNull;
-      expect(board?.categories.map((c) => c.name), ['Frontend']);
-    });
+        await container.read(classificationBoardProvider.future);
+        await container.read(suggestionFlowProvider.notifier).load();
+        final state = container.read(suggestionFlowProvider);
+        expect(state.error, isNotNull);
+        expect(state.proposals, isEmpty);
+        // The board the student already had is untouched.
+        final board = container.read(classificationBoardProvider).valueOrNull;
+        expect(board?.categories.map((c) => c.name), ['Frontend']);
+      },
+    );
 
     test('double invocation is guarded (second load is a no-op)', () async {
       final gate = Completer<void>();
@@ -137,8 +140,7 @@ void main() {
         ..suggestGate = gate;
       final container = _container(fake);
       addTearDown(container.dispose);
-      final controller =
-          container.read(suggestionFlowProvider.notifier);
+      final controller = container.read(suggestionFlowProvider.notifier);
 
       final first = controller.load();
       final second = controller.load();
@@ -159,8 +161,7 @@ void main() {
         ];
       final container = _container(fake);
       addTearDown(container.dispose);
-      final controller =
-          container.read(suggestionFlowProvider.notifier);
+      final controller = container.read(suggestionFlowProvider.notifier);
 
       await controller.load();
       await Future.wait([controller.acceptAll(), controller.acceptAll()]);
@@ -178,29 +179,29 @@ void main() {
         ];
       final container = _container(fake);
       addTearDown(container.dispose);
-      final controller =
-          container.read(suggestionFlowProvider.notifier);
+      final controller = container.read(suggestionFlowProvider.notifier);
 
       await controller.load();
       await controller.acceptAll();
-      final batchId =
-          container.read(suggestionFlowProvider).lastBatchId;
+      final batchId = container.read(suggestionFlowProvider).lastBatchId;
       expect(batchId, isNotNull);
       await controller.undo();
       expect(fake.undoneBatches, [batchId]);
     });
 
-    test('unauthorized AI response is stored raw for the localized UI',
-        () async {
-      final fake = _ForbiddenSuggestFake();
-      final container = _container(fake);
-      addTearDown(container.dispose);
+    test(
+      'unauthorized AI response is stored raw for the localized UI',
+      () async {
+        final fake = _ForbiddenSuggestFake();
+        final container = _container(fake);
+        addTearDown(container.dispose);
 
-      await container.read(suggestionFlowProvider.notifier).load();
-      final error = container.read(suggestionFlowProvider).error;
-      expect(error, isA<ApiException>());
-      expect((error as ApiException).kind, ApiErrorKind.forbidden);
-    });
+        await container.read(suggestionFlowProvider.notifier).load();
+        final error = container.read(suggestionFlowProvider).error;
+        expect(error, isA<ApiException>());
+        expect((error as ApiException).kind, ApiErrorKind.forbidden);
+      },
+    );
   });
 }
 
@@ -210,11 +211,13 @@ void main() {
 class _ForbiddenSuggestFake extends FakeInternshipRepository {
   @override
   Future<ClassificationSuggestion> suggestCategories(
-      String internshipId) async {
+    String internshipId,
+  ) async {
     throw const ApiException(
-        kind: ApiErrorKind.forbidden,
-        message: 'Forbidden',
-        statusCode: 403,
-        code: 'FORBIDDEN');
+      kind: ApiErrorKind.forbidden,
+      message: 'Forbidden',
+      statusCode: 403,
+      code: 'FORBIDDEN',
+    );
   }
 }

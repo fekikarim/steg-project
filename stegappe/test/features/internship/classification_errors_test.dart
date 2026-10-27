@@ -9,17 +9,18 @@ AppLocalizations _en() => const AppLocalizations(Locale('en'));
 AppLocalizations _ar() => const AppLocalizations(Locale('ar'));
 
 ApiException _err(String code, int status) => ApiException(
-    kind: ApiErrorKind.values.firstWhere(
-      (k) => switch (status) {
-        503 => k == ApiErrorKind.server,
-        422 => k == ApiErrorKind.validation,
-        409 => k == ApiErrorKind.conflict,
-        _ => k == ApiErrorKind.unknown,
-      },
-    ),
-    message: code,
-    statusCode: status,
-    code: code);
+  kind: ApiErrorKind.values.firstWhere(
+    (k) => switch (status) {
+      503 => k == ApiErrorKind.server,
+      422 => k == ApiErrorKind.validation,
+      409 => k == ApiErrorKind.conflict,
+      _ => k == ApiErrorKind.unknown,
+    },
+  ),
+  message: code,
+  statusCode: status,
+  code: code,
+);
 
 void main() {
   group('T03 error mapping (centralized, never raw)', () {
@@ -43,36 +44,49 @@ void main() {
       // Four different causes must not collapse into one sentence.
       expect(seen.length, greaterThan(1));
 
-      expect(userErrorOf(_err('AI_UNAVAILABLE', 503), _fr()).message,
-          _fr().errAiNotConfigured);
-      expect(userErrorOf(_err('AI_TEMPORARILY_UNAVAILABLE', 503), _fr()).message,
-          _fr().errAiTemporarilyUnavailable);
-      expect(userErrorOf(_err('AI_GENERATION_FAILED', 422), _fr()).message,
-          _fr().errAiFormatFailed);
+      expect(
+        userErrorOf(_err('AI_UNAVAILABLE', 503), _fr()).message,
+        _fr().errAiNotConfigured,
+      );
+      expect(
+        userErrorOf(_err('AI_TEMPORARILY_UNAVAILABLE', 503), _fr()).message,
+        _fr().errAiTemporarilyUnavailable,
+      );
+      expect(
+        userErrorOf(_err('AI_GENERATION_FAILED', 422), _fr()).message,
+        _fr().errAiFormatFailed,
+      );
     });
 
-    test('a temporary AI outage is retryable, a format failure is not blind',
-        () {
-      expect(
+    test(
+      'a temporary AI outage is retryable, a format failure is not blind',
+      () {
+        expect(
           userErrorOf(_err('AI_TEMPORARILY_UNAVAILABLE', 503), _fr()).retryable,
-          isTrue);
-    });
+          isTrue,
+        );
+      },
+    );
 
     test('a provider quota ceiling says so instead of "slow down"', () {
       final err = userErrorOf(_err('AI_QUOTA_EXCEEDED', 429), _fr());
       expect(err.message, _fr().errAiQuotaExceeded);
     });
 
-    test('stale classification explains reload (never overwrites silently)',
-        () {
-      final err = userErrorOf(_err('CATEGORY_CHANGED', 409), _fr());
-      expect(err.message, _fr().errCategoryChanged);
-      expect(err.retryable, isFalse);
-    });
+    test(
+      'stale classification explains reload (never overwrites silently)',
+      () {
+        final err = userErrorOf(_err('CATEGORY_CHANGED', 409), _fr());
+        expect(err.message, _fr().errCategoryChanged);
+        expect(err.retryable, isFalse);
+      },
+    );
 
     test('missing categories explains the manual path first', () {
-      final err =
-          userErrorOf(_err('CATEGORY_SUGGESTION_NO_CATEGORIES', 422), _fr());
+      final err = userErrorOf(
+        _err('CATEGORY_SUGGESTION_NO_CATEGORIES', 422),
+        _fr(),
+      );
       expect(err.message, _fr().errCategoryNoCategories);
     });
 

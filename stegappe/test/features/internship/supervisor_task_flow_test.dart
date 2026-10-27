@@ -9,24 +9,21 @@ import 'package:stegappe/features/internship/presentation/providers/workspace_pr
 import '../../test_fixtures.dart';
 
 ProviderContainer _container(FakeInternshipRepository fake) =>
-    ProviderContainer(overrides: [
-      internshipRepositoryProvider.overrideWithValue(fake),
-    ]);
+    ProviderContainer(
+      overrides: [internshipRepositoryProvider.overrideWithValue(fake)],
+    );
 
 void main() {
   group('schedule clock (Tunis, no device ambiguity)', () {
     test('tunis wall converts with the fixed +01:00 offset', () {
       // Africa/Tunis has no DST: 14:30 wall is always 13:30Z.
-      final instant =
-          tunisWallToInstant(DateTime.utc(2026, 6, 15), 14, 30);
+      final instant = tunisWallToInstant(DateTime.utc(2026, 6, 15), 14, 30);
       expect(instant.toUtc(), DateTime.utc(2026, 6, 15, 13, 30));
-      expect(tunisWallFromInstant(instant),
-          DateTime.utc(2026, 6, 15, 14, 30));
+      expect(tunisWallFromInstant(instant), DateTime.utc(2026, 6, 15, 14, 30));
     });
 
     test('midnight boundary rolls the UTC day back', () {
-      final instant =
-          tunisWallToInstant(DateTime.utc(2026, 1, 10), 0, 15);
+      final instant = tunisWallToInstant(DateTime.utc(2026, 1, 10), 0, 15);
       expect(instant.toUtc(), DateTime.utc(2026, 1, 9, 23, 15));
     });
   });
@@ -64,8 +61,7 @@ void main() {
       final at = DateTime.utc(2030, 5, 1, 12);
       final ok = await container
           .read(supervisorTaskControllerProvider.notifier)
-          .createTask('internship-1',
-              title: 'Scheduled', visibleFrom: at);
+          .createTask('internship-1', title: 'Scheduled', visibleFrom: at);
       expect(ok, isTrue);
       expect(fake.createdTasks.single['visibleFrom'], at);
       expect(fake.createdTasks.single['internshipId'], 'internship-1');
@@ -75,8 +71,9 @@ void main() {
       final fake = FakeInternshipRepository();
       final container = _container(fake);
       addTearDown(container.dispose);
-      final controller =
-          container.read(supervisorTaskControllerProvider.notifier);
+      final controller = container.read(
+        supervisorTaskControllerProvider.notifier,
+      );
 
       final results = await Future.wait([
         controller.createTask('internship-1', title: 'One'),
@@ -86,26 +83,34 @@ void main() {
       expect(fake.createdTasks.length, 1);
     });
 
-    test('review approve/deny drive the fake and record the reason',
-        () async {
+    test('review approve/deny drive the fake and record the reason', () async {
       final fake = FakeInternshipRepository();
       final container = _container(fake);
       addTearDown(container.dispose);
-      final controller =
-          container.read(supervisorTaskControllerProvider.notifier);
+      final controller = container.read(
+        supervisorTaskControllerProvider.notifier,
+      );
 
-      final approved = await controller.reviewTask('t-x', 'internship-1',
-          approve: true);
+      final approved = await controller.reviewTask(
+        't-x',
+        'internship-1',
+        approve: true,
+      );
       expect(approved?.status, TaskStatus.approved);
-      final denied = await controller.reviewTask('t-y', 'internship-1',
-          approve: false, comment: 'Missing tests');
+      final denied = await controller.reviewTask(
+        't-y',
+        'internship-1',
+        approve: false,
+        comment: 'Missing tests',
+      );
       expect(denied?.status, TaskStatus.denied);
       expect(denied?.denialReason, 'Missing tests');
       expect(
-          fake.reviewedTasks
-              .where((r) => r['approve'] == false)
-              .single['comment'],
-          'Missing tests');
+        fake.reviewedTasks
+            .where((r) => r['approve'] == false)
+            .single['comment'],
+        'Missing tests',
+      );
     });
 
     test('delete records the task id', () async {
@@ -124,18 +129,21 @@ void main() {
       final fake = FakeInternshipRepository();
       final container = _container(fake);
       addTearDown(container.dispose);
-      final controller =
-          container.read(supervisorTaskControllerProvider.notifier);
+      final controller = container.read(
+        supervisorTaskControllerProvider.notifier,
+      );
 
       final mutations = [
         bulkMutationJson(
-            action: 'CREATE',
-            internshipId: 'internship-1',
-            task: taskWriteJson(title: 'A')),
+          action: 'CREATE',
+          internshipId: 'internship-1',
+          task: taskWriteJson(title: 'A'),
+        ),
         bulkMutationJson(
-            action: 'CREATE',
-            internshipId: 'internship-1',
-            task: taskWriteJson(title: 'B')),
+          action: 'CREATE',
+          internshipId: 'internship-1',
+          task: taskWriteJson(title: 'B'),
+        ),
       ];
       final first = await controller.bulkTasks(mutations);
       final second = await controller.bulkTasks(mutations);
@@ -147,8 +155,7 @@ void main() {
       expect(fake.bulkMutations.length, 4);
     });
 
-    test('offline failure stores a raw error for the localized UI',
-        () async {
+    test('offline failure stores a raw error for the localized UI', () async {
       final fake = FakeInternshipRepository()..failWrites = true;
       final container = _container(fake);
       addTearDown(container.dispose);
@@ -157,9 +164,7 @@ void main() {
           .read(supervisorTaskControllerProvider.notifier)
           .createTask('internship-1', title: 'Nope');
       expect(ok, isFalse);
-      expect(
-          container.read(supervisorTaskControllerProvider).error,
-          isNotNull);
+      expect(container.read(supervisorTaskControllerProvider).error, isNotNull);
     });
   });
 }

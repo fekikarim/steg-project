@@ -30,8 +30,11 @@ void main() {
     test('no file under lib/ contains an admin-only API path', () {
       final offenders = <String>[];
       final lib = Directory('lib');
-      expect(lib.existsSync(), isTrue,
-          reason: 'run `flutter test` from the stegappe package root');
+      expect(
+        lib.existsSync(),
+        isTrue,
+        reason: 'run `flutter test` from the stegappe package root',
+      );
       for (final entity in lib.listSync(recursive: true)) {
         if (entity is! File || !entity.path.endsWith('.dart')) continue;
         final source = entity.readAsStringSync();
@@ -41,9 +44,13 @@ void main() {
           }
         }
       }
-      expect(offenders, isEmpty,
-          reason: 'BR-07: admin-only endpoints must not be reachable '
-              'from the mobile app:\n${offenders.join('\n')}');
+      expect(
+        offenders,
+        isEmpty,
+        reason:
+            'BR-07: admin-only endpoints must not be reachable '
+            'from the mobile app:\n${offenders.join('\n')}',
+      );
     });
 
     test('the mobile endpoint catalogue exposes no admin-only module', () {
@@ -53,18 +60,24 @@ void main() {
       expect(Endpoints.notifications, '/api/notifications');
       expect(Endpoints.aiAssistant, '/api/ai/assistant/query');
 
-      final catalogue =
-          File('lib/core/network/endpoints.dart').readAsStringSync();
+      final catalogue = File('lib/core/network/endpoints.dart')
+          .readAsStringSync();
       for (final path in adminOnlyPaths) {
-        expect(catalogue.contains(path), isFalse,
-            reason: 'the endpoint catalogue must not declare $path');
+        expect(
+          catalogue.contains(path),
+          isFalse,
+          reason: 'the endpoint catalogue must not declare $path',
+        );
       }
     });
   });
 
   group('shells render no admin-only module', () {
-    Future<void> assertNoAdminModule(WidgetTester tester, List<String> roles,
-        Type shell) async {
+    Future<void> assertNoAdminModule(
+      WidgetTester tester,
+      List<String> roles,
+      Type shell,
+    ) async {
       await pumpAuthGate(
         tester,
         user: AppUser(id: 'u1', email: 'user@steg.tn', roles: roles),
@@ -80,8 +93,11 @@ void main() {
         'Validation du stage',
         'Comptes stagiaires',
       ]) {
-        expect(find.text(label), findsNothing,
-            reason: 'admin-only module "$label" leaked into mobile');
+        expect(
+          find.text(label),
+          findsNothing,
+          reason: 'admin-only module "$label" leaked into mobile',
+        );
       }
     }
 

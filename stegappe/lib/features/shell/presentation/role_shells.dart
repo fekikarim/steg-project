@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/l10n/app_localizations.dart';
+import '../../../core/navigation/app_destination.dart';
 import '../../../core/theme/steg_colors.dart';
 import '../../../core/theme/steg_motion.dart';
 import '../../../core/theme/steg_spacing.dart';
@@ -12,32 +13,55 @@ import '../../../core/widgets/steg_modern.dart';
 import '../../auth/domain/entities/app_user.dart';
 import '../../auth/presentation/role_label.dart';
 import '../../../core/widgets/user_avatar.dart';
+import '../../community/presentation/screens/community_feed_screen.dart';
 import '../../community/presentation/screens/community_post_detail_screen.dart';
 import '../../internship/presentation/screens/intern_home_screen.dart';
 import '../../internship/presentation/screens/journal_list_screen.dart';
 import '../../internship/presentation/screens/supervised_interns_screen.dart';
 import '../../internship/presentation/screens/supervisor_home_screen.dart';
+import '../../internship/presentation/screens/supervisor_tasks_screen.dart';
 import '../../internship/presentation/screens/supervisor_validations_screen.dart';
 import '../../internship/presentation/screens/task_list_screen.dart';
 import '../../messaging/presentation/providers/messaging_providers.dart';
 import '../../messaging/presentation/screens/conversations_screen.dart';
 import '../../messaging/presentation/screens/notifications_screen.dart';
-import 'more_tab.dart';
 import 'profile_screen.dart';
 
-/// Destination descriptor for a role shell tab.
+/// One bottom-navigation tab of a role shell.
 class RoleDestination {
   const RoleDestination({
+    required this.destination,
     required this.label,
     required this.icon,
     this.selectedIcon,
     required this.page,
   });
 
+  final AppDestination destination;
   final String label;
   final IconData icon;
   final IconData? selectedIcon;
   final Widget page;
+}
+
+/// Opens [target] from inside a role shell: a tab switches the shell, any
+/// other destination is pushed on top of it from [pushed].
+void _openShellDestination({
+  required BuildContext context,
+  required List<AppDestination> tabs,
+  required AppDestination target,
+  required ValueChanged<int> onTab,
+  required Map<AppDestination, WidgetBuilder> pushed,
+}) {
+  final tab = tabs.indexOf(target);
+  if (tab >= 0) {
+    onTab(tab);
+    return;
+  }
+  final builder = pushed[target];
+  if (builder != null) {
+    Navigator.of(context).push(MaterialPageRoute(builder: builder));
+  }
 }
 
 /// Premium navigation scaffold shared by both roles.
@@ -52,12 +76,14 @@ class RoleScaffold extends ConsumerWidget {
     required this.destinations,
     required this.index,
     required this.onIndexChanged,
+    required this.onOpen,
   });
 
   final AppUser user;
   final List<RoleDestination> destinations;
   final int index;
   final ValueChanged<int> onIndexChanged;
+  final ValueChanged<AppDestination> onOpen;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -92,12 +118,10 @@ class RoleScaffold extends ConsumerWidget {
           onOpenNotifs: () => Navigator.of(context).push(
             MaterialPageRoute(
               builder: (_) => NotificationsScreen(
-                onOpenTab: onIndexChanged,
-                onOpenCommunityPost: (postId) =>
-                    Navigator.of(context).push(
+                onOpen: onOpen,
+                onOpenCommunityPost: (postId) => Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) =>
-                        CommunityPostDetailScreen(postId: postId),
+                    builder: (_) => CommunityPostDetailScreen(postId: postId),
                   ),
                 ),
               ),
@@ -105,9 +129,7 @@ class RoleScaffold extends ConsumerWidget {
           ),
           notifsLabel: l10n.notifTitle,
           displayName: user.email,
-          onOpenProfile: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const ProfileScreen()),
-          ),
+          onOpenProfile: () => onOpen(AppDestination.profile),
         ),
         body: StegGlassBarInset(
           height: topBarHeight,
@@ -115,8 +137,10 @@ class RoleScaffold extends ConsumerWidget {
               ? current.page
               : AnimatedSwitcher(
                   duration: StegMotion.shell,
-                  child:
-                      KeyedSubtree(key: ValueKey(index), child: current.page),
+                  child: KeyedSubtree(
+                    key: ValueKey(index),
+                    child: current.page,
+                  ),
                 ),
         ),
         bottomNavigationBar: _FuturisticNavBar(
@@ -169,55 +193,62 @@ class _FloatingNotificationBar extends StatelessWidget
           elevation: 0,
           scrolledUnderElevation: 0,
           automaticallyImplyLeading: false,
+          // The brand mark + name needs more room than the default slot.
+          leadingWidth: 200,
           // ── Avatar pill — top left ──────────────────────────────────
           leading: Padding(
-            padding: const EdgeInsetsDirectional.only(
-              start: StegSpacing.md,
-              top: 4,
-              bottom: 4,
-            ),
-            child: Semantics(
-              button: true,
-              label: displayName,
-              child: GestureDetector(
-                onTap: onOpenProfile,
-                child: ClipOval(
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: dark
-                            ? Colors.white.withValues(alpha: 0.10)
-                            : Colors.white.withValues(alpha: 0.85),
-                        shape: BoxShape.circle,
-                        border: Border.all(
+            padding: const EdgeInsetsDirectional.only(start: StegSpacing.md),
+            child: const _BrandMark(),
+          ),
+          // ── Notification bell — top right ───────────────────────────
+          actions: [
+            Padding(
+              padding: const EdgeInsetsDirectional.only(
+                end: StegSpacing.xs,
+                top: 4,
+                bottom: 4,
+              ),
+              child: Semantics(
+                button: true,
+                label: displayName,
+                child: GestureDetector(
+                  onTap: onOpenProfile,
+                  child: ClipOval(
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                      child: Container(
+                        decoration: BoxDecoration(
                           color: dark
-                              ? Colors.white.withValues(alpha: 0.18)
-                              : StegColors.lightBorder,
-                          width: 1,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black
-                                .withValues(alpha: dark ? 0.3 : 0.10),
-                            blurRadius: 10,
-                            offset: const Offset(0, 3),
+                              ? Colors.white.withValues(alpha: 0.10)
+                              : Colors.white.withValues(alpha: 0.85),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: dark
+                                ? Colors.white.withValues(alpha: 0.18)
+                                : StegColors.lightBorder,
+                            width: 1,
                           ),
-                        ],
-                      ),
-                      child: UserAvatar(
-                        displayName: displayName,
-                        radius: 17,
-                        ring: false,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(
+                                alpha: dark ? 0.3 : 0.10,
+                              ),
+                              blurRadius: 10,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: UserAvatar(
+                          displayName: displayName,
+                          radius: 17,
+                          ring: false,
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
-          // ── Notification bell — top right ───────────────────────────
-          actions: [
             Padding(
               padding: const EdgeInsetsDirectional.only(
                 end: StegSpacing.md,
@@ -245,8 +276,9 @@ class _FloatingNotificationBar extends StatelessWidget
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black
-                                .withValues(alpha: dark ? 0.25 : 0.08),
+                            color: Colors.black.withValues(
+                              alpha: dark ? 0.25 : 0.08,
+                            ),
                             blurRadius: 12,
                             offset: const Offset(0, 4),
                           ),
@@ -259,8 +291,7 @@ class _FloatingNotificationBar extends StatelessWidget
                             icon: Icon(
                               Icons.notifications_outlined,
                               size: 22,
-                              color:
-                                  dark ? Colors.white : StegColors.brandNavy,
+                              color: dark ? Colors.white : StegColors.brandNavy,
                             ),
                             tooltip: notifsLabel,
                             onPressed: onOpenNotifs,
@@ -290,6 +321,60 @@ class _FloatingNotificationBar extends StatelessWidget
           ],
         ),
       ),
+    );
+  }
+}
+
+/// STEG mark and product name shown at the start of the floating top bar.
+class _BrandMark extends StatelessWidget {
+  const _BrandMark();
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 34,
+          height: 34,
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Image.asset(
+            'assets/android-chrome-192x192.png',
+            semanticLabel: 'STEG',
+            errorBuilder: (_, _, _) => const SizedBox.shrink(),
+          ),
+        ),
+        const SizedBox(width: StegSpacing.xs),
+        Flexible(
+          child: Text.rich(
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            TextSpan(
+              children: [
+                const TextSpan(text: 'STEG '),
+                TextSpan(
+                  text: 'Intern',
+                  style: TextStyle(
+                    color: dark
+                        ? StegColors.primaryBright
+                        : StegColors.brandPrimary,
+                  ),
+                ),
+              ],
+            ),
+            style: TextStyle(
+              color: dark ? Colors.white : StegColors.brandNavy,
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -335,8 +420,7 @@ class _FuturisticNavBar extends StatelessWidget {
                   for (final d in destinations)
                     NavigationDestination(
                       icon: Icon(d.icon),
-                      selectedIcon:
-                          Icon(d.selectedIcon ?? d.icon),
+                      selectedIcon: Icon(d.selectedIcon ?? d.icon),
                       label: d.label,
                     ),
                 ],
@@ -353,7 +437,7 @@ class _FuturisticNavBar extends StatelessWidget {
               end: StegSpacing.md,
               bottom:
                   (bottomPadding > 0 ? bottomPadding : StegSpacing.md) +
-                      StegSpacing.xs,
+                  StegSpacing.xs,
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(StegSpacing.radiusXl),
@@ -365,25 +449,19 @@ class _FuturisticNavBar extends StatelessWidget {
                     gradient: LinearGradient(
                       colors: dark
                           ? [
-                              StegColors.darkElevated
-                                  .withValues(alpha: 0.92),
-                              StegColors.darkSurface
-                                  .withValues(alpha: 0.88),
+                              StegColors.darkElevated.withValues(alpha: 0.92),
+                              StegColors.darkSurface.withValues(alpha: 0.88),
                             ]
                           : [
-                              StegColors.brandNavy
-                                  .withValues(alpha: 0.96),
-                              const Color(0xFF0A2E4A)
-                                  .withValues(alpha: 0.94),
+                              StegColors.brandNavy.withValues(alpha: 0.96),
+                              const Color(0xFF0A2E4A).withValues(alpha: 0.94),
                             ],
                       begin: AlignmentDirectional.topStart,
                       end: AlignmentDirectional.bottomEnd,
                     ),
-                    borderRadius:
-                        BorderRadius.circular(StegSpacing.radiusXl),
+                    borderRadius: BorderRadius.circular(StegSpacing.radiusXl),
                     border: Border.all(
-                      color: Colors.white
-                          .withValues(alpha: dark ? 0.1 : 0.15),
+                      color: Colors.white.withValues(alpha: dark ? 0.1 : 0.15),
                       width: 1,
                     ),
                     boxShadow: [
@@ -395,8 +473,7 @@ class _FuturisticNavBar extends StatelessWidget {
                         offset: const Offset(0, 8),
                       ),
                       BoxShadow(
-                        color: StegColors.brandPrimary
-                            .withValues(alpha: 0.12),
+                        color: StegColors.brandPrimary.withValues(alpha: 0.12),
                         blurRadius: 40,
                         offset: const Offset(0, 4),
                       ),
@@ -404,20 +481,17 @@ class _FuturisticNavBar extends StatelessWidget {
                   ),
                   child: Row(
                     children: [
-                      for (int i = 0;
-                          i < destinations.length;
-                          i++)
+                      for (int i = 0; i < destinations.length; i++)
                         Expanded(
                           child: _NavItem(
                             destination: destinations[i],
                             isSelected: i == selectedIndex,
-                            onTap: () =>
-                                onDestinationSelected(i),
+                            onTap: () => onDestinationSelected(i),
                             badge:
                                 destinations[i].icon ==
-                                        Icons.chat_bubble_outline
-                                    ? unreadMessages
-                                    : 0,
+                                    Icons.chat_bubble_outline
+                                ? unreadMessages
+                                : 0,
                           ),
                         ),
                     ],
@@ -479,8 +553,9 @@ class _NavItem extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
-                          color: StegColors.primaryBright
-                              .withValues(alpha: 0.4),
+                          color: StegColors.primaryBright.withValues(
+                            alpha: 0.4,
+                          ),
                           blurRadius: 12,
                           offset: const Offset(0, 4),
                         ),
@@ -532,8 +607,7 @@ class _NavItem extends StatelessWidget {
               duration: const Duration(milliseconds: 200),
               style: TextStyle(
                 fontSize: 9.5,
-                fontWeight:
-                    isSelected ? FontWeight.w800 : FontWeight.w500,
+                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
                 color: iconColor,
                 height: 1.2,
                 letterSpacing: 0.1,
@@ -565,8 +639,26 @@ class InternShell extends StatefulWidget {
   State<InternShell> createState() => _InternShellState();
 }
 
+/// Intern tab order (matches the STEG intern design: Accueil, Tâches,
+/// Communauté, Messages, Profil). Journal is pushed from home.
+const _internTabs = <AppDestination>[
+  AppDestination.home,
+  AppDestination.tasks,
+  AppDestination.community,
+  AppDestination.messages,
+  AppDestination.profile,
+];
+
 class _InternShellState extends State<InternShell> {
   int _index = 0;
+
+  void _open(AppDestination target) => _openShellDestination(
+    context: context,
+    tabs: _internTabs,
+    target: target,
+    onTab: (i) => setState(() => _index = i),
+    pushed: {AppDestination.journal: (_) => const JournalListScreen()},
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -575,39 +667,42 @@ class _InternShellState extends State<InternShell> {
       user: widget.user,
       index: _index,
       onIndexChanged: (i) => setState(() => _index = i),
+      onOpen: _open,
       destinations: [
         RoleDestination(
+          destination: AppDestination.home,
           label: l10n.navHome,
           icon: Icons.home_outlined,
           selectedIcon: Icons.home_rounded,
-          page: InternHomeScreen(
-            user: widget.user,
-            onOpenTab: (i) => setState(() => _index = i),
-          ),
+          page: InternHomeScreen(user: widget.user, onOpen: _open),
         ),
         RoleDestination(
+          destination: AppDestination.tasks,
           label: l10n.navTasks,
           icon: Icons.checklist_outlined,
           selectedIcon: Icons.checklist_rounded,
           page: const TaskListScreen(),
         ),
         RoleDestination(
-          label: l10n.navJournal,
-          icon: Icons.book_outlined,
-          selectedIcon: Icons.book_rounded,
-          page: const JournalListScreen(),
+          destination: AppDestination.community,
+          label: l10n.navCommunity,
+          icon: Icons.groups_outlined,
+          selectedIcon: Icons.groups_rounded,
+          page: const CommunityFeedScreen(),
         ),
         RoleDestination(
+          destination: AppDestination.messages,
           label: l10n.navMessages,
           icon: Icons.chat_bubble_outline,
           selectedIcon: Icons.chat_bubble_rounded,
           page: const ConversationsScreen(),
         ),
         RoleDestination(
-          label: l10n.navMore,
-          icon: Icons.more_horiz,
-          selectedIcon: Icons.more_horiz_rounded,
-          page: const MoreTab(),
+          destination: AppDestination.profile,
+          label: l10n.navProfile,
+          icon: Icons.person_outline,
+          selectedIcon: Icons.person_rounded,
+          page: const ProfileScreen(),
         ),
       ],
     );
@@ -627,8 +722,28 @@ class SupervisorShell extends StatefulWidget {
   State<SupervisorShell> createState() => _SupervisorShellState();
 }
 
+/// Supervisor tab order (matches the STEG supervisor design: Tableau, Tâches,
+/// Stagiaires, Messages, Profil). Validations is pushed from home.
+const _supervisorTabs = <AppDestination>[
+  AppDestination.home,
+  AppDestination.tasks,
+  AppDestination.interns,
+  AppDestination.messages,
+  AppDestination.profile,
+];
+
 class _SupervisorShellState extends State<SupervisorShell> {
   int _index = 0;
+
+  void _open(AppDestination target) => _openShellDestination(
+    context: context,
+    tabs: _supervisorTabs,
+    target: target,
+    onTab: (i) => setState(() => _index = i),
+    pushed: {
+      AppDestination.validations: (_) => const SupervisorValidationsScreen(),
+    },
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -637,39 +752,42 @@ class _SupervisorShellState extends State<SupervisorShell> {
       user: widget.user,
       index: _index,
       onIndexChanged: (i) => setState(() => _index = i),
+      onOpen: _open,
       destinations: [
         RoleDestination(
-          label: l10n.navHome,
+          destination: AppDestination.home,
+          label: l10n.navDashboard,
           icon: Icons.dashboard_outlined,
           selectedIcon: Icons.dashboard_rounded,
-          page: SupervisorHomeScreen(
-            user: widget.user,
-            onOpenTab: (i) => setState(() => _index = i),
-          ),
+          page: SupervisorHomeScreen(user: widget.user, onOpen: _open),
         ),
         RoleDestination(
+          destination: AppDestination.tasks,
+          label: l10n.navTasks,
+          icon: Icons.checklist_outlined,
+          selectedIcon: Icons.checklist_rounded,
+          page: const SupervisorTasksScreen(),
+        ),
+        RoleDestination(
+          destination: AppDestination.interns,
           label: l10n.navInterns,
           icon: Icons.people_outline,
           selectedIcon: Icons.people_rounded,
           page: const SupervisedInternsScreen(),
         ),
         RoleDestination(
-          label: l10n.navValidations,
-          icon: Icons.fact_check_outlined,
-          selectedIcon: Icons.fact_check_rounded,
-          page: const SupervisorValidationsScreen(),
-        ),
-        RoleDestination(
+          destination: AppDestination.messages,
           label: l10n.navMessages,
           icon: Icons.chat_bubble_outline,
           selectedIcon: Icons.chat_bubble_rounded,
           page: const ConversationsScreen(),
         ),
         RoleDestination(
-          label: l10n.navMore,
-          icon: Icons.more_horiz,
-          selectedIcon: Icons.more_horiz_rounded,
-          page: const MoreTab(),
+          destination: AppDestination.profile,
+          label: l10n.navProfile,
+          icon: Icons.person_outline,
+          selectedIcon: Icons.person_rounded,
+          page: const ProfileScreen(),
         ),
       ],
     );

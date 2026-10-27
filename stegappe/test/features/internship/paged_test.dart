@@ -5,21 +5,13 @@ import 'package:stegappe/core/network/paged.dart';
 void main() {
   group('Paged.fromJson', () {
     test('parses the real Spring shape (content + page.*)', () {
-      final page = Paged.fromJson(
-        {
-          'content': [
-            {'id': 'a'},
-            {'id': 'b'},
-          ],
-          'page': {
-            'size': 5,
-            'number': 0,
-            'totalElements': 12,
-            'totalPages': 3,
-          },
-        },
-        (m) => m['id'] as String,
-      );
+      final page = Paged.fromJson({
+        'content': [
+          {'id': 'a'},
+          {'id': 'b'},
+        ],
+        'page': {'size': 5, 'number': 0, 'totalElements': 12, 'totalPages': 3},
+      }, (m) => m['id'] as String);
       expect(page.items, ['a', 'b']);
       expect(page.totalElements, 12);
       expect(page.totalPages, 3);
@@ -27,30 +19,24 @@ void main() {
     });
 
     test('falls back to the flat OpenAPI-documented shape', () {
-      final page = Paged.fromJson(
-        {
-          'content': [
-            {'id': 'a'},
-          ],
-          'totalElements': 1,
-          'totalPages': 1,
-          'number': 0,
-        },
-        (m) => m['id'] as String,
-      );
+      final page = Paged.fromJson({
+        'content': [
+          {'id': 'a'},
+        ],
+        'totalElements': 1,
+        'totalPages': 1,
+        'number': 0,
+      }, (m) => m['id'] as String);
       expect(page.items, ['a']);
       expect(page.totalElements, 1);
       expect(page.isLast, isTrue);
     });
 
     test('accepts bare lists (unread counts, conversations)', () {
-      final page = Paged.fromJson(
-        [
-          {'unreadCount': 2},
-          {'unreadCount': 3},
-        ],
-        (m) => (m['unreadCount'] as num).toInt(),
-      );
+      final page = Paged.fromJson([
+        {'unreadCount': 2},
+        {'unreadCount': 3},
+      ], (m) => (m['unreadCount'] as num).toInt());
       expect(page.items, [2, 3]);
       expect(page.isLast, isTrue);
     });

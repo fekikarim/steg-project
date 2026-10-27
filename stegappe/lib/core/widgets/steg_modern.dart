@@ -141,8 +141,9 @@ class StegGradientHeader extends StatelessWidget {
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: StegColors.primaryBright
-                                  .withValues(alpha: 0.5),
+                              color: StegColors.primaryBright.withValues(
+                                alpha: 0.5,
+                              ),
                               blurRadius: 14,
                               offset: const Offset(0, 4),
                             ),
@@ -259,13 +260,8 @@ class StegSectionHeader extends StatelessWidget {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  Theme.of(context)
-                      .colorScheme
-                      .primary
-                      .withValues(alpha: 0.18),
-                  Theme.of(context)
-                      .colorScheme
-                      .tertiary
+                  Theme.of(context).colorScheme.primary.withValues(alpha: 0.18),
+                  Theme.of(context).colorScheme.tertiary
                       .withValues(alpha: 0.12),
                 ],
                 begin: AlignmentDirectional.topStart,
@@ -287,10 +283,10 @@ class StegSectionHeader extends StatelessWidget {
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontSize: 15,
-                  letterSpacing: -0.2,
-                  fontWeight: FontWeight.w800,
-                ),
+              fontSize: 15,
+              letterSpacing: -0.2,
+              fontWeight: FontWeight.w800,
+            ),
           ),
         ),
         if (action != null)
@@ -350,7 +346,8 @@ class StegMenuTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final grad = gradient ??
+    final grad =
+        gradient ??
         (dark
             ? [
                 StegColors.primaryBright.withValues(alpha: 0.28),
@@ -378,27 +375,22 @@ class StegMenuTile extends StatelessWidget {
             borderRadius: BorderRadius.circular(14),
             boxShadow: [
               BoxShadow(
-                color: (gradient?.first ?? StegColors.brandPrimary)
-                    .withValues(alpha: 0.25),
+                color: (gradient?.first ?? StegColors.brandPrimary).withValues(
+                  alpha: 0.25,
+                ),
                 blurRadius: 8,
                 offset: const Offset(0, 3),
               ),
             ],
           ),
-          child: Icon(
-            icon,
-            size: 21,
-            color: Colors.white,
-          ),
+          child: Icon(icon, size: 21, color: Colors.white),
         ),
         title: Text(
           title,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-                fontSize: 15,
-              ),
+          style: Theme.of(context).textTheme.bodyLarge
+              ?.copyWith(fontWeight: FontWeight.w700, fontSize: 15),
         ),
         subtitle: subtitle == null
             ? null
@@ -408,13 +400,12 @@ class StegMenuTile extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.bodySmall,
               ),
-        trailing: trailing ??
+        trailing:
+            trailing ??
             Icon(
               Icons.arrow_forward_ios_rounded,
               size: 14,
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurfaceVariant
+              color: Theme.of(context).colorScheme.onSurfaceVariant
                   .withValues(alpha: 0.45),
             ),
       ),
@@ -503,19 +494,18 @@ class StegStatTile extends StatelessWidget {
           Text(
             value,
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.w900,
-                  fontSize: 28,
-                  letterSpacing: -0.5,
-                ),
+              fontWeight: FontWeight.w900,
+              fontSize: 28,
+              letterSpacing: -0.5,
+            ),
           ),
           const SizedBox(height: 2),
           Text(
             label,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+            style: Theme.of(context).textTheme.bodySmall
+                ?.copyWith(fontWeight: FontWeight.w600),
           ),
         ],
       ),
@@ -537,7 +527,8 @@ class StegStatTile extends StatelessWidget {
 // Glass App Bar (for secondary screens that still need a back button)
 // ─────────────────────────────────────────────────────────────────────────────
 
-class StegGradientAppBar extends StatelessWidget implements PreferredSizeWidget {
+class StegGradientAppBar extends StatelessWidget
+    implements PreferredSizeWidget {
   const StegGradientAppBar({
     super.key,
     required this.title,
@@ -684,7 +675,8 @@ class StegGlassCard extends StatelessWidget {
                   ),
             borderRadius: BorderRadius.circular(StegSpacing.radiusLg),
             border: Border.all(
-              color: borderColor ??
+              color:
+                  borderColor ??
                   Colors.white.withValues(alpha: dark ? 0.08 : 0.4),
               width: 1,
             ),

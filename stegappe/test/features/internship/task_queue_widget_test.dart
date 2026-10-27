@@ -71,12 +71,17 @@ Future<ProviderContainer> _pumpRow(
   return container;
 }
 
-const _task = InternTask(id: 't-today', title: 'Today task', status: TaskStatus.todo);
+const _task = InternTask(
+  id: 't-today',
+  title: 'Today task',
+  status: TaskStatus.todo,
+);
 
 void main() {
   group('TaskRow offline queue (T06/D12)', () {
-    testWidgets('offline toggle queues visibly with a pending chip',
-        (tester) async {
+    testWidgets('offline toggle queues visibly with a pending chip', (
+      tester,
+    ) async {
       final fake = FakeInternshipRepository();
       final container = await _pumpRow(
         tester,
@@ -89,8 +94,10 @@ void main() {
       await tester.pumpAndSettle();
 
       // Accepted into the visible queue — never sent, never lost.
-      expect(find.text('Enregistré — sera envoyé à la reconnexion.'),
-          findsOneWidget);
+      expect(
+        find.text('Enregistré — sera envoyé à la reconnexion.'),
+        findsOneWidget,
+      );
       expect(find.text('En attente'), findsOneWidget);
       expect(container.read(pendingWritesProvider).count, 1);
       // No direct write happened while offline.
@@ -112,8 +119,9 @@ void main() {
       expect(find.text('En attente'), findsNothing);
     });
 
-    testWidgets('flush clears the pending chip after the server confirms',
-        (tester) async {
+    testWidgets('flush clears the pending chip after the server confirms', (
+      tester,
+    ) async {
       final fake = FakeInternshipRepository();
       final container = await _pumpRow(
         tester,
@@ -126,9 +134,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('En attente'), findsOneWidget);
 
-      await container
-          .read(pendingWritesProvider.notifier)
-          .flushTaskStatuses();
+      await container.read(pendingWritesProvider.notifier).flushTaskStatuses();
       await tester.pumpAndSettle();
 
       expect(find.text('En attente'), findsNothing);
@@ -140,8 +146,9 @@ void main() {
         ProviderScope(
           overrides: [
             authRepositoryProvider.overrideWithValue(_FakeAuthRepo()),
-            internshipRepositoryProvider
-                .overrideWithValue(FakeInternshipRepository()),
+            internshipRepositoryProvider.overrideWithValue(
+              FakeInternshipRepository(),
+            ),
             isOnlineProvider.overrideWithValue(false),
             await queueOverride(),
           ],
@@ -156,7 +163,8 @@ void main() {
             ],
             theme: StegTheme.dark(),
             home: Scaffold(
-                body: TaskRow(task: _task, now: DateTime.now())),
+              body: TaskRow(task: _task, now: DateTime.now()),
+            ),
           ),
         ),
       );

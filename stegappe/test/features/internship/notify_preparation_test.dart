@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
 import '../../support/queue_harness.dart';
+
 import 'package:stegappe/core/connectivity/connectivity_service.dart';
 import 'package:stegappe/core/l10n/app_localizations.dart';
 import 'package:stegappe/core/network/api_exception.dart';
@@ -40,31 +42,34 @@ class _FakeAuth implements AuthRepository {
 }
 
 SupervisedIntern _row(String id, String name) => SupervisedIntern(
-      internshipId: id,
-      reference: 'REF-$id',
-      internName: name,
-      status: InternshipStatus.inProgress,
-      type: InternshipType.perfectionnement,
-      startDate: DateTime(2026, 1, 1),
-      endDate: DateTime(2026, 3, 31),
-      departmentName: 'DSI',
-      tasksCompleted: 0,
-      tasksTotal: 0,
-      pendingJournal: 0,
-      pendingDeliverables: 0,
-      evaluationsCount: 0,
-    );
+  internshipId: id,
+  reference: 'REF-$id',
+  internName: name,
+  status: InternshipStatus.inProgress,
+  type: InternshipType.perfectionnement,
+  startDate: DateTime(2026, 1, 1),
+  endDate: DateTime(2026, 3, 31),
+  departmentName: 'DSI',
+  tasksCompleted: 0,
+  tasksTotal: 0,
+  pendingJournal: 0,
+  pendingDeliverables: 0,
+  evaluationsCount: 0,
+);
 
 Future<ProviderContainer> makeContainer({
   FakeInternshipRepository? fake,
   bool online = true,
 }) async {
-  final container = ProviderContainer(overrides: [
-    authRepositoryProvider.overrideWithValue(_FakeAuth()),
-    internshipRepositoryProvider
-        .overrideWithValue(fake ?? FakeInternshipRepository()),
-    isOnlineProvider.overrideWith((ref) => online),
-  ]);
+  final container = ProviderContainer(
+    overrides: [
+      authRepositoryProvider.overrideWithValue(_FakeAuth()),
+      internshipRepositoryProvider.overrideWithValue(
+        fake ?? FakeInternshipRepository(),
+      ),
+      isOnlineProvider.overrideWith((ref) => online),
+    ],
+  );
   addTearDown(container.dispose);
   await container.read(authControllerProvider.notifier).bootstrap();
   return container;
@@ -112,44 +117,40 @@ Future<AppLocalizations> loadL10n(String code) =>
 
 void main() {
   group('T14 notify controller: scoped, single-flight, honest', () {
-    test('toggle selects and deselects; empty send dispatches nothing',
-        () async {
-      final fake = FakeInternshipRepository();
-      final container = await makeContainer(fake: fake);
-      final notifier =
-          container.read(notifyPreparationProvider.notifier);
+    test(
+      'toggle selects and deselects; empty send dispatches nothing',
+      () async {
+        final fake = FakeInternshipRepository();
+        final container = await makeContainer(fake: fake);
+        final notifier = container.read(notifyPreparationProvider.notifier);
 
-      notifier.toggle('i1');
-      notifier.toggle('i2');
-      notifier.toggle('i1');
-      expect(
-          container.read(notifyPreparationProvider).selected, {'i2'});
+        notifier.toggle('i1');
+        notifier.toggle('i2');
+        notifier.toggle('i1');
+        expect(container.read(notifyPreparationProvider).selected, {'i2'});
 
-      expect(await notifier.send(), 1);
-      expect(fake.notifyCalls, 1);
-      expect(fake.notifyIds.single, ['i2']);
-      expect(
-          container.read(notifyPreparationProvider).selected, isEmpty);
-      expect(
-          container.read(notifyPreparationProvider).lastNotified, 1);
-    });
+        expect(await notifier.send(), 1);
+        expect(fake.notifyCalls, 1);
+        expect(fake.notifyIds.single, ['i2']);
+        expect(container.read(notifyPreparationProvider).selected, isEmpty);
+        expect(container.read(notifyPreparationProvider).lastNotified, 1);
+      },
+    );
 
     test('empty selection never reaches the server', () async {
       final fake = FakeInternshipRepository();
       final container = await makeContainer(fake: fake);
       expect(
-          await container
-              .read(notifyPreparationProvider.notifier)
-              .send(),
-          isNull);
+        await container.read(notifyPreparationProvider.notifier).send(),
+        isNull,
+      );
       expect(fake.notifyCalls, 0);
     });
 
     test('concurrent sends collapse to one dispatch', () async {
       final fake = FakeInternshipRepository();
       final container = await makeContainer(fake: fake);
-      final notifier =
-          container.read(notifyPreparationProvider.notifier);
+      final notifier = container.read(notifyPreparationProvider.notifier);
       notifier.toggle('i1');
       final first = notifier.send();
       expect(await notifier.send(), isNull);
@@ -157,38 +158,36 @@ void main() {
       expect(fake.notifyCalls, 1);
     });
 
-    test('a failed batch reuses its key (server replays, never double-notifies)',
-        () async {
+    test(
+      'a failed batch reuses its key (server replays, never double-notifies)',
+      () async {
+        final fake = FakeInternshipRepository()..failWrites = true;
+        final container = await makeContainer(fake: fake);
+        final notifier = container.read(notifyPreparationProvider.notifier);
+        notifier.toggle('i1');
+        notifier.toggle('i2');
+        expect(await notifier.send(), isNull);
+        expect(container.read(notifyPreparationProvider).error, isNotNull);
+
+        // Same selection, resubmitted: the SAME key, so the server answers
+        // from the stored receipt instead of notifying twice when the first
+        // request actually landed (lost response / timeout).
+        fake.failWrites = false;
+        expect(await notifier.send(), 2);
+        expect(fake.notifyCalls, 1);
+        // Two attempts, ONE key: the retry is a replay, not a second batch.
+        expect(fake.notifyKeys, hasLength(2));
+        expect(fake.notifyKeys[0], isNotNull);
+        expect(fake.notifyKeys[0], fake.notifyKeys[1]);
+        expect(fake.notifyIds[0].toSet(), {'i1', 'i2'});
+        expect(fake.notifyIds[1].toSet(), {'i1', 'i2'});
+      },
+    );
+
+    test('editing the selection after a failure mints a new key ', () async {
       final fake = FakeInternshipRepository()..failWrites = true;
       final container = await makeContainer(fake: fake);
-      final notifier =
-          container.read(notifyPreparationProvider.notifier);
-      notifier.toggle('i1');
-      notifier.toggle('i2');
-      expect(await notifier.send(), isNull);
-      expect(
-          container.read(notifyPreparationProvider).error, isNotNull);
-
-      // Same selection, resubmitted: the SAME key, so the server answers
-      // from the stored receipt instead of notifying twice when the first
-      // request actually landed (lost response / timeout).
-      fake.failWrites = false;
-      expect(await notifier.send(), 2);
-      expect(fake.notifyCalls, 1);
-      // Two attempts, ONE key: the retry is a replay, not a second batch.
-      expect(fake.notifyKeys, hasLength(2));
-      expect(fake.notifyKeys[0], isNotNull);
-      expect(fake.notifyKeys[0], fake.notifyKeys[1]);
-      expect(fake.notifyIds[0].toSet(), {'i1', 'i2'});
-      expect(fake.notifyIds[1].toSet(), {'i1', 'i2'});
-    });
-
-    test('editing the selection after a failure mints a new key ',
-        () async {
-      final fake = FakeInternshipRepository()..failWrites = true;
-      final container = await makeContainer(fake: fake);
-      final notifier =
-          container.read(notifyPreparationProvider.notifier);
+      final notifier = container.read(notifyPreparationProvider.notifier);
       notifier.toggle('i1');
       expect(await notifier.send(), isNull);
       final failedKey = fake.notifyKeys.single;
@@ -206,8 +205,7 @@ void main() {
     test('a new batch after a success always mints a new key', () async {
       final fake = FakeInternshipRepository();
       final container = await makeContainer(fake: fake);
-      final notifier =
-          container.read(notifyPreparationProvider.notifier);
+      final notifier = container.read(notifyPreparationProvider.notifier);
       notifier.toggle('i1');
       expect(await notifier.send(), 1);
       notifier.toggle('i1');
@@ -221,8 +219,7 @@ void main() {
     test('offline fails honestly without dispatching', () async {
       final fake = FakeInternshipRepository();
       final container = await makeContainer(fake: fake, online: false);
-      final notifier =
-          container.read(notifyPreparationProvider.notifier);
+      final notifier = container.read(notifyPreparationProvider.notifier);
       notifier.toggle('i1');
       expect(await notifier.send(), isNull);
       final state = container.read(notifyPreparationProvider);
@@ -233,24 +230,20 @@ void main() {
       expect(fake.notifyCalls, 0);
     });
 
-    test('single-student shortcut leaves the shared selection alone',
-        () async {
+    test('single-student shortcut leaves the shared selection alone', () async {
       final fake = FakeInternshipRepository();
       final container = await makeContainer(fake: fake);
-      final notifier =
-          container.read(notifyPreparationProvider.notifier);
+      final notifier = container.read(notifyPreparationProvider.notifier);
       notifier.toggle('i9');
       expect(await notifier.sendTo('i1'), 1);
       expect(fake.notifyCalls, 1);
       expect(fake.notifyIds.single, ['i1']);
-      expect(
-          container.read(notifyPreparationProvider).selected, {'i9'});
+      expect(container.read(notifyPreparationProvider).selected, {'i9'});
     });
 
     test('clearSelection resets rows, error and result', () async {
       final container = await makeContainer();
-      final notifier =
-          container.read(notifyPreparationProvider.notifier);
+      final notifier = container.read(notifyPreparationProvider.notifier);
       notifier.toggle('i1');
       await notifier.send();
       notifier.clearSelection();
@@ -263,6 +256,11 @@ void main() {
 
   group('T14 notify UI: multi-select, feedback, offline', () {
     testWidgets('select mode, send, success feedback', (tester) async {
+      // A phone-sized surface: the send bar sits below the selected cards.
+      tester.view.physicalSize = const Size(1200, 2000);
+      tester.view.devicePixelRatio = 2.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
       final fake = FakeInternshipRepository()
         ..supervisedOverride = [
           _row('a', 'Amira Ben Salah'),
@@ -279,6 +277,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text(l10n.notifySelected(2)), findsOneWidget);
 
+      await tester.ensureVisible(find.text(l10n.notifyPrepareAsk).last);
       await tester.tap(find.text(l10n.notifyPrepareAsk).last);
       await tester.pumpAndSettle();
       expect(fake.notifyCalls, 1);
@@ -291,23 +290,28 @@ void main() {
       await tester.tap(find.byTooltip(l10n.notifyPrepareAsk));
       await tester.pumpAndSettle();
       expect(find.text(l10n.notifyEmptyHint), findsOneWidget);
-      final button = tester.widget<StegButton>(find.byWidgetPredicate(
-          (w) => w is StegButton && w.label == l10n.notifyPrepareAsk));
+      final button = tester.widget<StegButton>(
+        find.byWidgetPredicate(
+          (w) => w is StegButton && w.label == l10n.notifyPrepareAsk,
+        ),
+      );
       expect(button.onPressed, isNull);
     });
 
     testWidgets('rate limit surfaces the wait hint with retry', (tester) async {
       final fake = FakeInternshipRepository()
         ..notifyError = const ApiException(
-            kind: ApiErrorKind.unknown,
-            message: 'slow down',
-            statusCode: 429);
+          kind: ApiErrorKind.unknown,
+          message: 'slow down',
+          statusCode: 429,
+        );
       final l10n = await loadL10n('fr');
       await pumpSupervised(tester, fake: fake);
       await tester.tap(find.byTooltip(l10n.notifyPrepareAsk));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Amira Ben Salah'));
       await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text(l10n.notifyPrepareAsk).last);
       await tester.tap(find.text(l10n.notifyPrepareAsk).last);
       await tester.pumpAndSettle();
       expect(find.text(l10n.errRateLimited), findsOneWidget);
@@ -321,8 +325,11 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Amira Ben Salah'));
       await tester.pumpAndSettle();
-      final send = tester.widget<StegButton>(find.byWidgetPredicate(
-          (w) => w is StegButton && w.label == l10n.notifyPrepareAsk));
+      final send = tester.widget<StegButton>(
+        find.byWidgetPredicate(
+          (w) => w is StegButton && w.label == l10n.notifyPrepareAsk,
+        ),
+      );
       expect(send.onPressed, isNull);
       expect(find.text(l10n.notifyNeedsConnection), findsOneWidget);
     });
@@ -348,8 +355,9 @@ void main() {
       expect(find.text(l10n.notifySuccess(1)), findsWidgets);
     });
 
-    testWidgets('arabic renders the selection flow (RTL smoke)',
-        (tester) async {
+    testWidgets('arabic renders the selection flow (RTL smoke)', (
+      tester,
+    ) async {
       final l10n = await loadL10n('ar');
       await pumpSupervised(tester, locale: const Locale('ar'));
       await tester.tap(find.byTooltip(l10n.notifyPrepareAsk));

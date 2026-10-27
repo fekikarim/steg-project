@@ -59,8 +59,9 @@ Future<void> pumpAuthGate(
         prefsStoreProvider.overrideWithValue(prefs),
         authRepositoryProvider.overrideWithValue(HarnessAuthRepository(user)),
         isOnlineProvider.overrideWith((ref) => true),
-        internshipRepositoryProvider
-            .overrideWithValue(FakeInternshipRepository()),
+        internshipRepositoryProvider.overrideWithValue(
+          FakeInternshipRepository(),
+        ),
       ],
       child: MaterialApp(
         locale: locale,
@@ -80,8 +81,7 @@ Future<void> pumpAuthGate(
           builder: (context) {
             if (!reduceMotion) return const AuthGate();
             return MediaQuery(
-              data: MediaQuery.of(context)
-                  .copyWith(disableAnimations: true),
+              data: MediaQuery.of(context).copyWith(disableAnimations: true),
               child: const AuthGate(),
             );
           },

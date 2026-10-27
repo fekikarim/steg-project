@@ -34,14 +34,13 @@ void main() {
     });
 
     test('maps status codes without body', () {
-      expect(ApiException.fromStatus(401, null).kind,
-          ApiErrorKind.unauthorized);
       expect(
-          ApiException.fromStatus(404, null).kind, ApiErrorKind.notFound);
-      expect(
-          ApiException.fromStatus(409, null).kind, ApiErrorKind.conflict);
-      expect(
-          ApiException.fromStatus(500, null).kind, ApiErrorKind.server);
+        ApiException.fromStatus(401, null).kind,
+        ApiErrorKind.unauthorized,
+      );
+      expect(ApiException.fromStatus(404, null).kind, ApiErrorKind.notFound);
+      expect(ApiException.fromStatus(409, null).kind, ApiErrorKind.conflict);
+      expect(ApiException.fromStatus(500, null).kind, ApiErrorKind.server);
     });
 
     test('network factory', () {

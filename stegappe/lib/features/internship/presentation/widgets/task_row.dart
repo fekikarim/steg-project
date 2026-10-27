@@ -6,6 +6,7 @@ import '../../../../core/l10n/app_localizations.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/network/error_messages.dart';
 import '../../../../core/offline/pending_writes.dart';
+import '../../../../core/theme/steg_colors.dart';
 import '../../../../core/theme/steg_spacing.dart';
 import '../../../../core/widgets/steg_status_chip.dart';
 import '../../domain/entities/task_classification.dart';
@@ -177,127 +178,162 @@ class _TaskRowState extends ConsumerState<TaskRow> {
         padding: EdgeInsets.symmetric(
           vertical: widget.compact ? StegSpacing.xxs : StegSpacing.xs,
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(
-                  width: StegSpacing.minTouchTarget,
-                  height: StegSpacing.minTouchTarget,
-                  child: Tooltip(
-                    message: target == null
-                        ? taskStatusLabel(shown, l10n)
-                        : taskTransitionLabel(shown, target, l10n),
-                    child: Checkbox(
-                      value: finished,
-                      onChanged: widget.editable && target != null
-                          ? (_) => _toggle()
-                          : null,
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(
-                        widget.task.title,
-                        maxLines: widget.compact ? 1 : 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          decoration: finished
-                              ? TextDecoration.lineThrough
-                              : null,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        widget.task.dueDate == null
-                            ? l10n.noDueDate
-                            : formatDay(widget.task.dueDate!, locale),
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: overdue
-                              ? Theme.of(context).colorScheme.error
-                              : null,
-                          fontWeight: overdue ? FontWeight.w700 : null,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: StegSpacing.xs),
-                Flexible(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      StegStatusChip(
-                        label: taskStatusLabel(shown, l10n),
-                        kind: taskStatusKind(shown, overdue: overdue),
-                      ),
-                      // T06/D12: a visibly pending queued write — never shown
-                      // as sent. The chip disappears when the flush lands.
-                      if (ref.watch(
-                        pendingWritesProvider.select(
-                          (s) => s.hasQueuedStatus(widget.task.id),
-                        ),
-                      ))
-                        Padding(
-                          padding: const EdgeInsets.only(top: 2),
-                          child: StegStatusChip(
-                            label: l10n.pendingLabel,
-                            kind: StegStatusKind.info,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                if (widget.onOpen != null)
-                  Semantics(
-                    button: true,
-                    label: widget.task.title,
-                    child: IconButton(
-                      tooltip: widget.task.title,
-                      icon: const Icon(Icons.chevron_right),
-                      onPressed: widget.onOpen,
-                    ),
-                  ),
-              ],
+        child: Container(
+          padding: widget.compact
+              ? const EdgeInsets.symmetric(
+                  horizontal: StegSpacing.sm,
+                  vertical: StegSpacing.xxs,
+                )
+              : const EdgeInsets.all(StegSpacing.sm),
+          decoration: BoxDecoration(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? StegColors.darkSurface
+                : Colors.white,
+            borderRadius: BorderRadius.circular(StegSpacing.radiusLg),
+            border: Border.all(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? StegColors.darkBorder
+                  : StegColors.lightBorder,
             ),
-            if (shown == TaskStatus.awaitingApproval)
-              _Notice(
-                icon: Icons.hourglass_top_outlined,
-                text: l10n.taskWaitingReview,
-                kind: StegStatusKind.warning,
-              ),
-            if (category != null || showUnclassified)
-              Padding(
-                padding: const EdgeInsetsDirectional.only(
-                  start: StegSpacing.minTouchTarget,
-                  top: 4,
-                ),
-                child: Align(
-                  alignment: AlignmentDirectional.centerStart,
-                  child: category != null
-                      ? CategoryChip(category: category)
-                      : const UnclassifiedMarker(),
-                ),
-              ),
-            if (denialReason != null)
-              _Notice(
-                icon: Icons.report_outlined,
-                label: l10n.taskDenialReason,
-                text: denialReason,
-                caption: widget.task.reviewedAt == null
-                    ? null
-                    : l10n.taskReviewedOn(
-                        formatDay(widget.task.reviewedAt!, locale),
+            boxShadow: StegColors.cardShadow(
+              Theme.of(context).brightness == Brightness.dark,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: StegSpacing.minTouchTarget,
+                    height: StegSpacing.minTouchTarget,
+                    child: Tooltip(
+                      message: target == null
+                          ? taskStatusLabel(shown, l10n)
+                          : taskTransitionLabel(shown, target, l10n),
+                      child: Checkbox(
+                        value: finished,
+                        onChanged: widget.editable && target != null
+                            ? (_) => _toggle()
+                            : null,
                       ),
-                kind: StegStatusKind.error,
+                    ),
+                  ),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          widget.task.title,
+                          maxLines: widget.compact ? 1 : 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodyLarge
+                              ?.copyWith(
+                                decoration: finished
+                                    ? TextDecoration.lineThrough
+                                    : null,
+                              ),
+                        ),
+                        if (!widget.compact &&
+                            widget.task.description?.trim().isNotEmpty == true)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Text(
+                              widget.task.description!.trim(),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ),
+                        const SizedBox(height: 2),
+                        Text(
+                          widget.task.dueDate == null
+                              ? l10n.noDueDate
+                              : formatDay(widget.task.dueDate!, locale),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: overdue
+                                    ? Theme.of(context).colorScheme.error
+                                    : null,
+                                fontWeight: overdue ? FontWeight.w700 : null,
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: StegSpacing.xs),
+                  Flexible(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        StegStatusChip(
+                          label: taskStatusLabel(shown, l10n),
+                          kind: taskStatusKind(shown, overdue: overdue),
+                        ),
+                        // T06/D12: a visibly pending queued write — never shown
+                        // as sent. The chip disappears when the flush lands.
+                        if (ref.watch(
+                          pendingWritesProvider.select(
+                            (s) => s.hasQueuedStatus(widget.task.id),
+                          ),
+                        ))
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: StegStatusChip(
+                              label: l10n.pendingLabel,
+                              kind: StegStatusKind.info,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  if (widget.onOpen != null)
+                    Semantics(
+                      button: true,
+                      label: widget.task.title,
+                      child: IconButton(
+                        tooltip: widget.task.title,
+                        icon: const Icon(Icons.chevron_right),
+                        onPressed: widget.onOpen,
+                      ),
+                    ),
+                ],
               ),
-          ],
+              if (shown == TaskStatus.awaitingApproval)
+                _Notice(
+                  icon: Icons.hourglass_top_outlined,
+                  text: l10n.taskWaitingReview,
+                  kind: StegStatusKind.warning,
+                ),
+              if (category != null || showUnclassified)
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(
+                    start: StegSpacing.minTouchTarget,
+                    top: 4,
+                  ),
+                  child: Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: category != null
+                        ? CategoryChip(category: category)
+                        : const UnclassifiedMarker(),
+                  ),
+                ),
+              if (denialReason != null)
+                _Notice(
+                  icon: Icons.report_outlined,
+                  label: l10n.taskDenialReason,
+                  text: denialReason,
+                  caption: widget.task.reviewedAt == null
+                      ? null
+                      : l10n.taskReviewedOn(
+                          formatDay(widget.task.reviewedAt!, locale),
+                        ),
+                  kind: StegStatusKind.error,
+                ),
+            ],
+          ),
         ),
       ),
     );

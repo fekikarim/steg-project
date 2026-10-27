@@ -19,12 +19,12 @@ void main() {
   }
 
   PendingWrite write(String key, {String task = 't1'}) => PendingWrite(
-        key: key,
-        kind: PendingWriteKind.taskStatus,
-        taskId: task,
-        targetStatus: 'COMPLETED',
-        createdAtMs: 1,
-      );
+    key: key,
+    kind: PendingWriteKind.taskStatus,
+    taskId: task,
+    targetStatus: 'COMPLETED',
+    createdAtMs: 1,
+  );
 
   group('PendingWrite codec', () {
     test('round-trips both kinds', () {
@@ -54,23 +54,25 @@ void main() {
       expect(PendingWrite.fromJson('nope'), isNull);
       expect(PendingWrite.fromJson({'kind': 'taskStatus'}), isNull);
       expect(
-          PendingWrite.fromJson(
-              {'key': 'k', 'kind': 'nope', 'taskId': 't'}),
-          isNull);
+        PendingWrite.fromJson({'key': 'k', 'kind': 'nope', 'taskId': 't'}),
+        isNull,
+      );
       expect(
-          PendingWrite.fromJson({
-            'key': 'k',
-            'kind': 'taskStatus',
-            'taskId': 't',
-          }),
-          isNull);
+        PendingWrite.fromJson({
+          'key': 'k',
+          'kind': 'taskStatus',
+          'taskId': 't',
+        }),
+        isNull,
+      );
       expect(
-          PendingWrite.fromJson({
-            'key': 'k',
-            'kind': 'message',
-            'conversationId': 'c',
-          }),
-          isNull);
+        PendingWrite.fromJson({
+          'key': 'k',
+          'kind': 'message',
+          'conversationId': 'c',
+        }),
+        isNull,
+      );
     });
   });
 
@@ -81,8 +83,7 @@ void main() {
       await first.push(write('k2', task: 't2'));
 
       final second = await reopenStore();
-      expect(
-          second.load().map((w) => w.key), orderedEquals(['k1', 'k2']));
+      expect(second.load().map((w) => w.key), orderedEquals(['k1', 'k2']));
     });
 
     test('corrupt storage degrades to empty', () async {
@@ -93,8 +94,7 @@ void main() {
       expect(PendingWriteStore(PrefsStore(prefs)).load(), isEmpty);
     });
 
-    test('bound refuses the 51st push (honest, never silent drop)',
-        () async {
+    test('bound refuses the 51st push (honest, never silent drop)', () async {
       final s = await freshStore();
       for (var i = 0; i < PendingWriteStore.maxItems; i++) {
         expect(await s.push(write('k$i')), isTrue);

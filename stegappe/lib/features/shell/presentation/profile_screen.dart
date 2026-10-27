@@ -6,6 +6,7 @@ import '../../../core/network/error_messages.dart';
 import '../../../core/theme/steg_colors.dart';
 import '../../../core/theme/steg_spacing.dart';
 import '../../../core/widgets/steg_card.dart';
+import '../../../core/widgets/steg_modern.dart';
 import '../../../core/widgets/steg_states.dart';
 import '../../../core/widgets/steg_status_chip.dart';
 import '../../../core/widgets/user_avatar.dart';
@@ -13,17 +14,22 @@ import '../../auth/domain/entities/app_user.dart';
 import '../../auth/presentation/providers/auth_providers.dart';
 import '../../auth/presentation/role_label.dart';
 import '../../auth/presentation/screens/change_password_screen.dart';
+import '../../community/presentation/screens/community_feed_screen.dart';
+import '../../community/presentation/screens/community_reports_screen.dart';
 import '../../internship/presentation/providers/workspace_providers.dart';
+import '../../internship/presentation/screens/deliverables_screen.dart';
+import '../../internship/presentation/screens/journal_list_screen.dart';
+import '../../internship/presentation/screens/supervisor_validations_screen.dart';
 import '../../internship/presentation/widgets/status_labels.dart';
-import '../../../core/widgets/steg_modern.dart';
+import 'about_screen.dart';
+import 'account_settings_section.dart';
 
-/// Read-only identity screen (T14 SH-SET-01/SH-PRO-01).
+/// Profile tab (STEG design: "Profil — Compte et préférences").
 ///
-/// There is no server-side profile update capability for any field
-/// (no intern/supervisor self-service endpoint exists), so every field
-/// renders explicitly read-only — editability is never faked. Identity
-/// comes from JWT claims plus the internship payload; CIN, passwords and
-/// tokens never enter the widget tree (BR-59).
+/// Identity is read-only: no backend endpoint lets an intern or supervisor
+/// edit their own profile, so editing is never offered. The identity comes
+/// from the authenticated session and the scoped internship payload; CIN,
+/// passwords and tokens never enter the widget tree (BR-59).
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
@@ -41,73 +47,136 @@ class ProfileScreen extends ConsumerWidget {
         ),
       );
     }
-    return Scaffold(
-      // Gradient app bar so the hero blends into the app bar
-      appBar: AppBar(
-        title: Text(l10n.profileTitle),
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: StegColors.brandGradientWide,
-              begin: AlignmentDirectional.centerStart,
-              end: AlignmentDirectional.centerEnd,
+    final isIntern = user.mobileRole == UserRole.intern;
+    final internship = isIntern
+        ? ref.watch(internshipDetailProvider).valueOrNull
+        : null;
+    final fullName = internship?.candidateFullName;
+    final displayName = fullName != null && fullName.isNotEmpty
+        ? fullName
+        : user.email;
+
+    return ListView(
+      padding: StegSpacing.screenPadding.copyWith(
+        top: StegSpacing.md + StegGlassBarInset.of(context),
+      ),
+      children: [
+        Text(
+          l10n.profileTitle,
+          style: Theme.of(context).textTheme.headlineSmall
+              ?.copyWith(fontWeight: FontWeight.w800),
+        ),
+        Text(
+          l10n.profileSubtitle,
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+        const SizedBox(height: StegSpacing.md),
+        _ProfileHero(
+          displayName: displayName,
+          roleText: roleLabel(l10n, user.mobileRole),
+        ),
+        const SizedBox(height: StegSpacing.md),
+        _IdentityCard(email: user.email),
+        const SizedBox(height: StegSpacing.md),
+        const _ReadOnlyNotice(),
+        const SizedBox(height: StegSpacing.md),
+        if (isIntern) const _InternshipCard() else const _SupervisedCountCard(),
+        const SizedBox(height: StegSpacing.md),
+        _MySpaceCard(isIntern: isIntern),
+        const SizedBox(height: StegSpacing.md),
+        const AccountSettingsSection(),
+        const SizedBox(height: StegSpacing.md),
+        _ChangePasswordTile(),
+        SizedBox(height: 110 + MediaQuery.paddingOf(context).bottom),
+      ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Identity hero: initials avatar, name, role and the active-profile status.
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ProfileHero extends StatelessWidget {
+  const _ProfileHero({required this.displayName, required this.roleText});
+
+  final String displayName;
+  final String roleText;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(StegSpacing.lg),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: StegColors.heroGradientDiagonalLight,
+          begin: AlignmentDirectional.topStart,
+          end: AlignmentDirectional.bottomEnd,
+        ),
+        borderRadius: BorderRadius.circular(StegSpacing.radiusLg),
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+            ),
+            child: UserAvatar(
+              displayName: displayName,
+              radius: 32,
+              ring: false,
             ),
           ),
-        ),
-      ),
-      body: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          // ── Full-bleed gradient hero ──────────────────────────────────
-          _ProfileHero(user: user),
-          // ── Content cards ─────────────────────────────────────────────
-          Padding(
-            padding: StegSpacing.screenPadding,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+          const SizedBox(height: StegSpacing.md),
+          Text(
+            displayName,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            roleText,
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.white.withValues(alpha: 0.8)),
+          ),
+          const SizedBox(height: StegSpacing.sm),
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: StegSpacing.md,
+              vertical: 5,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(StegSpacing.radiusFull),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                if (user.mobileRole == UserRole.intern)
-                  _InternshipCard()
-                else
-                  _SupervisedCountCard(),
-                const SizedBox(height: StegSpacing.md),
-                _AccountCard(l10n: l10n),
-                const SizedBox(height: StegSpacing.md),
-                // Read-only notice card
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: StegSpacing.md,
-                    vertical: StegSpacing.sm,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary.withValues(
-                      alpha: Theme.of(context).brightness == Brightness.dark
-                          ? 0.12
-                          : 0.06,
+                const Icon(
+                  Icons.circle,
+                  size: 8,
+                  color: StegColors.successDark,
+                ),
+                const SizedBox(width: StegSpacing.xs),
+                Flexible(
+                  child: Text(
+                    l10n.profileActive,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
                     ),
-                    borderRadius: BorderRadius.circular(StegSpacing.radiusMd),
-                    border: Border.all(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.primary.withValues(alpha: 0.25),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.lock_outline,
-                        size: 16,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                      const SizedBox(width: StegSpacing.sm),
-                      Expanded(
-                        child: Text(
-                          l10n.profileReadOnly,
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                    ],
                   ),
                 ),
               ],
@@ -119,181 +188,31 @@ class ProfileScreen extends ConsumerWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Gradient hero with large avatar, name, role — extends the app bar gradient.
-// ─────────────────────────────────────────────────────────────────────────────
+/// Account identity: the sign-in e-mail (read-only).
+class _IdentityCard extends StatelessWidget {
+  const _IdentityCard({required this.email});
 
-class _ProfileHero extends StatelessWidget {
-  const _ProfileHero({required this.user});
-
-  final AppUser user;
+  final String email;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: dark
-              ? StegColors.heroGradientDiagonalDark
-              : StegColors.heroGradientDiagonalLight,
-          begin: AlignmentDirectional.topStart,
-          end: AlignmentDirectional.bottomEnd,
-        ),
-      ),
-      child: Stack(
+    return StegCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Decorative orbs
-          PositionedDirectional(
-            top: -50,
-            end: -50,
-            child: Container(
-              width: 200,
-              height: 200,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.06),
-              ),
-            ),
-          ),
-          PositionedDirectional(
-            bottom: -60,
-            start: -40,
-            child: Container(
-              width: 180,
-              height: 180,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.04),
-              ),
-            ),
-          ),
-          SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                StegSpacing.xl,
-                StegSpacing.xl,
-                StegSpacing.xl,
-                StegSpacing.xxl,
-              ),
-              child: Column(
-                children: [
-                  // Large bordered avatar
-                  Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.6),
-                        width: 3,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.25),
-                          blurRadius: 20,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
-                    ),
-                    child: UserAvatar(
-                      displayName: user.email,
-                      radius: 40,
-                      ring: false,
-                    ),
-                  ),
-                  const SizedBox(height: StegSpacing.md),
-                  // Email — isolated LTR technical run inside RTL paragraph.
-                  Directionality(
-                    textDirection: TextDirection.ltr,
-                    child: Text(
-                      user.email,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.2,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: StegSpacing.xs),
-                  // Role pill
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: StegSpacing.md,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(
-                        StegSpacing.radiusFull,
-                      ),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.3),
-                      ),
-                    ),
-                    child: Text(
-                      roleLabel(l10n, user.mobileRole),
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.95),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+          Text(l10n.profileEmail, style: Theme.of(context).textTheme.bodySmall),
+          const SizedBox(height: 2),
+          // E-mail is a technical LTR run even inside an RTL paragraph.
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: Text(
+              email,
+              style: Theme.of(context).textTheme.bodyLarge
+                  ?.copyWith(fontWeight: FontWeight.w700),
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Account actions card
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _AccountCard extends StatelessWidget {
-  const _AccountCard({required this.l10n});
-
-  final AppLocalizations l10n;
-
-  @override
-  Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      decoration: BoxDecoration(
-        color: dark ? StegColors.darkSurface : Colors.white,
-        borderRadius: BorderRadius.circular(StegSpacing.radiusMd),
-        border: Border.all(
-          color: dark ? StegColors.darkBorder : StegColors.lightBorder,
-        ),
-        boxShadow: StegColors.cardShadow(dark),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: StegSpacing.sm,
-          vertical: StegSpacing.xs,
-        ),
-        child: Column(
-          children: [
-            StegMenuTile(
-              icon: Icons.lock_outline,
-              title: l10n.profileChangePassword,
-              gradient: [StegColors.aiAccent, StegColors.primaryBright],
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const ChangePasswordScreen(),
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -303,6 +222,8 @@ class _AccountCard extends StatelessWidget {
 /// from the scoped internship payload. No linked internship renders
 /// nothing — the identity above already covers that case.
 class _InternshipCard extends ConsumerWidget {
+  const _InternshipCard();
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
@@ -350,8 +271,10 @@ class _InternshipCard extends ConsumerWidget {
   }
 }
 
-/// Supervisor's scope at a glance (count only — the Interns tab owns rows).
+/// Supervisor's scope at a glance (count only — the Stagiaires tab owns rows).
 class _SupervisedCountCard extends ConsumerWidget {
+  const _SupervisedCountCard();
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
@@ -364,39 +287,125 @@ class _SupervisedCountCard extends ConsumerWidget {
       ),
       data: (interns) => StegCard(
         title: l10n.myInterns,
-        child: Row(
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: StegColors.brandGradientBright,
-                  begin: AlignmentDirectional.topStart,
-                  end: AlignmentDirectional.bottomEnd,
-                ),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: const Icon(
-                Icons.people_outline,
-                color: Colors.white,
-                size: 22,
-              ),
+        child: Text(
+          '${interns.length}',
+          style: Theme.of(context).textTheme.headlineSmall
+              ?.copyWith(fontWeight: FontWeight.w800),
+        ),
+      ),
+    );
+  }
+}
+
+/// "Mon espace": the screens this role reaches from its profile.
+class _MySpaceCard extends StatelessWidget {
+  const _MySpaceCard({required this.isIntern});
+
+  final bool isIntern;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return StegCard(
+      title: l10n.profileMySpace,
+      child: Column(
+        children: [
+          if (isIntern) ...[
+            StegMenuTile(
+              icon: Icons.upload_file_outlined,
+              title: l10n.deliverablesTitle,
+              gradient: StegColors.brandGradientBright,
+              onTap: () => _push(context, const DeliverablesScreen()),
             ),
-            const SizedBox(width: StegSpacing.md),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${interns.length}',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ],
+            StegMenuTile(
+              icon: Icons.book_outlined,
+              title: l10n.qaJournal,
+              gradient: StegColors.brandGradientBright,
+              onTap: () => _push(context, const JournalListScreen()),
+            ),
+          ] else ...[
+            StegMenuTile(
+              icon: Icons.fact_check_outlined,
+              title: l10n.validationsTitle,
+              gradient: StegColors.brandGradientBright,
+              onTap: () => _push(context, const SupervisorValidationsScreen()),
+            ),
+            StegMenuTile(
+              icon: Icons.forum_outlined,
+              title: l10n.communityTitle,
+              gradient: StegColors.communityGradient,
+              onTap: () => _push(context, const CommunityFeedScreen()),
+            ),
+            StegMenuTile(
+              icon: Icons.flag_outlined,
+              title: l10n.communityReports,
+              gradient: StegColors.dangerGradient,
+              onTap: () => _push(context, const CommunityReportsScreen()),
             ),
           ],
-        ),
+          StegMenuTile(
+            icon: Icons.help_outline,
+            title: l10n.profileSupport,
+            subtitle: l10n.profileSupportHint,
+            gradient: const [StegColors.journalViolet, StegColors.journalTeal],
+            onTap: () => _push(context, const AboutScreen()),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _push(BuildContext context, Widget screen) =>
+      Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
+}
+
+class _ChangePasswordTile extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return StegCard(
+      child: StegMenuTile(
+        icon: Icons.lock_outline,
+        title: l10n.profileChangePassword,
+        gradient: [StegColors.aiAccent, StegColors.primaryBright],
+        onTap: () => Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const ChangePasswordScreen())),
+      ),
+    );
+  }
+}
+
+/// States plainly that identity fields cannot be changed from the app.
+class _ReadOnlyNotice extends StatelessWidget {
+  const _ReadOnlyNotice();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: StegSpacing.md,
+        vertical: StegSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: scheme.primary.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(StegSpacing.radiusMd),
+        border: Border.all(color: scheme.primary.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.lock_outline, size: 16, color: scheme.primary),
+          const SizedBox(width: StegSpacing.sm),
+          Expanded(
+            child: Text(
+              l10n.profileReadOnly,
+              style: Theme.of(context).textTheme.bodySmall
+                  ?.copyWith(fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
       ),
     );
   }

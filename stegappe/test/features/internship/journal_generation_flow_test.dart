@@ -81,48 +81,50 @@ Future<_Workspace> _pumpSheet(
 }
 
 ButtonStyleButton _actionLabelled(WidgetTester tester, String label) =>
-    tester.widget<ButtonStyleButton>(
-      find.widgetWithText(FilledButton, label),
-    );
+    tester.widget<ButtonStyleButton>(find.widgetWithText(FilledButton, label));
 
 void main() {
   group('journal generation flow (ST-JRN-04/06, AC2/AC5)', () {
     testWidgets(
-        'from my tasks: opens the dedicated page, progress then a real result',
-        (tester) async {
-      final repo = FakeInternshipRepository();
-      final gate = Completer<void>();
-      repo.journalEntriesGate = gate;
-      final ws = await _pumpSheet(tester, fake: repo);
+      'from my tasks: opens the dedicated page, progress then a real result',
+      (tester) async {
+        final repo = FakeInternshipRepository();
+        final gate = Completer<void>();
+        repo.journalEntriesGate = gate;
+        final ws = await _pumpSheet(tester, fake: repo);
 
-      // S8: the chooser no longer generates in the sheet, it routes to the
-      // dedicated page that owns the shared entries workflow.
-      await tester.tap(find.text('À partir de mes tâches'));
-      await tester.pump();
-      await tester.pump();
+        // S8: the chooser no longer generates in the sheet, it routes to the
+        // dedicated page that owns the shared entries workflow.
+        await tester.tap(find.text('À partir de mes tâches'));
+        await tester.pump();
+        await tester.pump();
 
-      expect(find.byType(JournalAiGenerateScreen), findsOneWidget);
-      expect(find.text('Génération du document…'), findsOneWidget);
+        expect(find.byType(JournalAiGenerateScreen), findsOneWidget);
+        expect(find.text('Génération du document…'), findsOneWidget);
 
-      gate.complete();
-      await tester.pumpAndSettle();
+        gate.complete();
+        await tester.pumpAndSettle();
 
-      expect(ws.repo.journalEntriesGenerations, ['ENTRIES']);
-      expect(ws.repo.journalGenerations, isEmpty);
-      expect(find.text('Document prêt'), findsOneWidget);
-      expect(find.text('Entrées incluses'), findsOneWidget);
-      expect(find.text('Télécharger le document'), findsOneWidget);
-      // Keeping notifies nobody (ST-JRN-06) — stated, not implied. It sits
-      // below the fold, so the list is scrolled before asserting.
-      await tester.scrollUntilVisible(
-          find.textContaining('personne n’est notifié'), 200,
-          scrollable: find.byType(Scrollable).first);
-      expect(find.textContaining('personne n’est notifié'), findsOneWidget);
-      expect(find.text('Régénérer'), findsOneWidget);
-    });
+        expect(ws.repo.journalEntriesGenerations, ['ENTRIES']);
+        expect(ws.repo.journalGenerations, isEmpty);
+        expect(find.text('Document prêt'), findsOneWidget);
+        expect(find.text('Entrées incluses'), findsOneWidget);
+        expect(find.text('Télécharger le document'), findsOneWidget);
+        // Keeping notifies nobody (ST-JRN-06) — stated, not implied. It sits
+        // below the fold, so the list is scrolled before asserting.
+        await tester.scrollUntilVisible(
+          find.textContaining('personne n’est notifié'),
+          200,
+          scrollable: find.byType(Scrollable).first,
+        );
+        expect(find.textContaining('personne n’est notifié'), findsOneWidget);
+        expect(find.text('Régénérer'), findsOneWidget);
+      },
+    );
 
-    testWidgets('preview downloads the authenticated artifact and shares it',
-        (tester) async {
+    testWidgets('preview downloads the authenticated artifact and shares it', (
+      tester,
+    ) async {
       final ws = await _pumpSheet(tester);
       await tester.tap(find.text('À partir de mes tâches'));
       await tester.pumpAndSettle();
@@ -135,19 +137,25 @@ void main() {
       expect(ws.shared.single.$1, Uint8List.fromList([0x25, 0x50, 0x44, 0x46]));
     });
 
-    testWidgets('regenerating from the result runs the same workflow again',
-        (tester) async {
+    testWidgets('regenerating from the result runs the same workflow again', (
+      tester,
+    ) async {
       final ws = await _pumpSheet(tester);
       await tester.tap(find.text('À partir de mes tâches'));
       await tester.pumpAndSettle();
       expect(ws.repo.journalEntriesGenerations, ['ENTRIES']);
 
-      await tester.scrollUntilVisible(find.text('Régénérer'), 200,
-          scrollable: find.byType(Scrollable).first);
+      await tester.scrollUntilVisible(
+        find.text('Régénérer'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tester.ensureVisible(find.text('Régénérer'));
       await tester.pumpAndSettle();
-      expect(tester.getCenter(find.text('Régénérer')),
-          isNot(equals(tester.getCenter(find.byType(Scaffold)))));
+      expect(
+        tester.getCenter(find.text('Régénérer')),
+        isNot(equals(tester.getCenter(find.byType(Scaffold)))),
+      );
       await tester.tap(find.text('Régénérer'), warnIfMissed: true);
       await tester.pumpAndSettle();
 
@@ -155,8 +163,9 @@ void main() {
       expect(find.text('Document prêt'), findsOneWidget);
     });
 
-    testWidgets('leaving the page submits nothing and notifies nobody',
-        (tester) async {
+    testWidgets('leaving the page submits nothing and notifies nobody', (
+      tester,
+    ) async {
       final ws = await _pumpSheet(tester);
       await tester.tap(find.text('À partir de mes tâches'));
       await tester.pumpAndSettle();
@@ -164,12 +173,16 @@ void main() {
       // No submit call is made by the generation flow itself.
       expect(ws.repo.submitted, isEmpty);
       await tester.scrollUntilVisible(
-          find.textContaining('n’envoie rien'), 200,
-          scrollable: find.byType(Scrollable).first);
+        find.textContaining('n’envoie rien'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.textContaining('n’envoie rien'), findsOneWidget);
     });
 
-    testWidgets('abandoning the wait never shows a late success', (tester) async {
+    testWidgets('abandoning the wait never shows a late success', (
+      tester,
+    ) async {
       final repo = FakeInternshipRepository();
       final gate = Completer<void>();
       repo.journalEntriesGate = gate;
@@ -193,8 +206,9 @@ void main() {
       expect(find.text('Génération du document…'), findsNothing);
     });
 
-    testWidgets('degraded AI: localized message, manual path one tap away',
-        (tester) async {
+    testWidgets('degraded AI: localized message, manual path one tap away', (
+      tester,
+    ) async {
       final repo = FakeInternshipRepository()
         ..journalEntriesError = const ApiException(
           kind: ApiErrorKind.server,
@@ -209,51 +223,65 @@ void main() {
 
       expect(
         find.text(
-            "L’assistant IA n’est pas activé sur le serveur pour le moment. "
-            "Réessayez plus tard ou écrivez votre journal manuellement."),
+          "L’assistant IA n’est pas activé sur le serveur pour le moment. "
+          "Réessayez plus tard ou écrivez votre journal manuellement.",
+        ),
         findsOneWidget,
       );
       // The manual escape hatch is still one tap away.
-      expect(find.text('Écrire une entrée de journal manuellement'),
-          findsOneWidget);
+      expect(
+        find.text('Écrire une entrée de journal manuellement'),
+        findsOneWidget,
+      );
       expect(find.text('Réessayer'), findsOneWidget);
       // The raw provider message is never rendered.
       expect(find.text('AI unavailable'), findsNothing);
     });
 
-    testWidgets('text path: own screen, counter, bounded start, same pipeline',
-        (tester) async {
-      final ws = await _pumpSheet(tester);
-      // "From my text" no longer opens a bare field in the sheet: it opens
-      // the dedicated chatbot-style generation screen.
-      await tester.tap(find.text('À partir de mon texte'));
-      await tester.pumpAndSettle();
-      expect(find.byType(JournalTextGenScreen), findsOneWidget);
-      expect(find.text('Génération IA du journal'), findsOneWidget);
+    testWidgets(
+      'text path: own screen, counter, bounded start, same pipeline',
+      (tester) async {
+        final ws = await _pumpSheet(tester);
+        // "From my text" no longer opens a bare field in the sheet: it opens
+        // the dedicated chatbot-style generation screen.
+        await tester.tap(find.text('À partir de mon texte'));
+        await tester.pumpAndSettle();
+        expect(find.byType(JournalTextGenScreen), findsOneWidget);
+        expect(find.text('Génération IA du journal'), findsOneWidget);
 
-      final field = find.byType(TextField);
-      expect(field, findsOneWidget);
-      expect(find.text('0 / 8000'), findsOneWidget);
-      // Too short → the action is honestly disabled with the reason.
-      expect(_actionLabelled(tester, 'Démarrer la génération').onPressed, isNull);
-      expect(find.text('Au moins 40 caractères sont requis.'), findsOneWidget);
+        final field = find.byType(TextField);
+        expect(field, findsOneWidget);
+        expect(find.text('0 / 8000'), findsOneWidget);
+        // Too short → the action is honestly disabled with the reason.
+        expect(
+          _actionLabelled(tester, 'Démarrer la génération').onPressed,
+          isNull,
+        );
+        expect(
+          find.text('Au moins 40 caractères sont requis.'),
+          findsOneWidget,
+        );
 
-      await tester.enterText(field, 'x' * 60);
-      await tester.pumpAndSettle();
-      expect(find.text('60 / 8000'), findsOneWidget);
-      expect(_actionLabelled(tester, 'Démarrer la génération').onPressed,
-          isNotNull);
+        await tester.enterText(field, 'x' * 60);
+        await tester.pumpAndSettle();
+        expect(find.text('60 / 8000'), findsOneWidget);
+        expect(
+          _actionLabelled(tester, 'Démarrer la génération').onPressed,
+          isNotNull,
+        );
 
-      await tester.tap(find.text('Démarrer la génération'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Démarrer la génération'));
+        await tester.pumpAndSettle();
 
-      // Same server pipeline as before, and the document is downloadable.
-      expect(ws.repo.journalGenerations.single, 'TEXT:${'x' * 60}');
-      expect(find.text('Télécharger le document'), findsOneWidget);
-    });
+        // Same server pipeline as before, and the document is downloadable.
+        expect(ws.repo.journalGenerations.single, 'TEXT:${'x' * 60}');
+        expect(find.text('Télécharger le document'), findsOneWidget);
+      },
+    );
 
-    testWidgets('generated document can be downloaded from the text screen',
-        (tester) async {
+    testWidgets('generated document can be downloaded from the text screen', (
+      tester,
+    ) async {
       final ws = await _pumpSheet(tester);
       await tester.tap(find.text('À partir de mon texte'));
       await tester.pumpAndSettle();
@@ -269,8 +297,9 @@ void main() {
       expect(ws.shared, isNotEmpty);
     });
 
-    testWidgets('a failed generation keeps the text and offers retry',
-        (tester) async {
+    testWidgets('a failed generation keeps the text and offers retry', (
+      tester,
+    ) async {
       final repo = FakeInternshipRepository()
         ..journalGenerationError = const ApiException(
           kind: ApiErrorKind.server,
@@ -290,15 +319,18 @@ void main() {
       // A format failure is NO LONGER reported as "service unavailable":
       // it keeps its own, actionable sentence.
       expect(find.textContaining('format'), findsWidgets);
-      expect(find.textContaining('Le service IA est indisponible'),
-          findsNothing);
+      expect(
+        find.textContaining('Le service IA est indisponible'),
+        findsNothing,
+      );
       expect(find.text('Réessayer'), findsWidgets);
       // The description is never lost.
       expect(find.text('z' * 60), findsOneWidget);
     });
 
-    testWidgets('a warning from the backend is repeated on the result',
-        (tester) async {
+    testWidgets('a warning from the backend is repeated on the result', (
+      tester,
+    ) async {
       final repo = FakeInternshipRepository()
         ..journalEntriesResult = const JournalEntriesResult(
           deliverableId: 'del-journal-entries',
@@ -325,14 +357,12 @@ void main() {
       expect(find.text('Entrées incluses'), findsOneWidget);
       expect(find.text('Jours documentés'), findsOneWidget);
       expect(find.text('05/01/2026 → 09/01/2026'), findsOneWidget);
-      expect(
-        find.textContaining('Seulement 1 sur 3 tâches'),
-        findsNothing,
-      );
+      expect(find.textContaining('Seulement 1 sur 3 tâches'), findsNothing);
     });
 
-    testWidgets('a submitted journal stays immutable and the student is told',
-        (tester) async {
+    testWidgets('a submitted journal stays immutable and the student is told', (
+      tester,
+    ) async {
       final repo = FakeInternshipRepository()
         ..journalEntriesResult = const JournalEntriesResult(
           deliverableId: 'del-journal-entries-2',
@@ -356,7 +386,8 @@ void main() {
 
       expect(
         find.text(
-            'Un journal avait déjà été soumis : cette version est un nouveau brouillon.'),
+          'Un journal avait déjà été soumis : cette version est un nouveau brouillon.',
+        ),
         findsOneWidget,
       );
     });

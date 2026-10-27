@@ -6,7 +6,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
 import '../../support/queue_harness.dart';
+
 import 'package:stegappe/core/connectivity/connectivity_service.dart';
 import 'package:stegappe/core/l10n/app_localizations.dart';
 import 'package:stegappe/core/network/paged.dart';
@@ -20,7 +22,9 @@ import 'package:stegappe/features/messaging/domain/entities/notification_item.da
 import 'package:stegappe/features/messaging/domain/repositories/messaging_repository.dart';
 import 'package:stegappe/features/messaging/domain/repositories/notification_repository.dart';
 import 'package:stegappe/features/messaging/presentation/providers/messaging_providers.dart';
+
 import '../../test_fixtures.dart';
+
 import 'package:stegappe/features/messaging/presentation/screens/chat_screen.dart';
 import 'package:stegappe/features/messaging/presentation/screens/conversations_screen.dart';
 import 'package:stegappe/features/messaging/presentation/screens/notifications_screen.dart';
@@ -100,8 +104,7 @@ class FakeStomp implements StompChatService {
   void communityInbound(String body) => communityHandler?.call(body);
 
   @override
-  Future<void Function()> subscribeCommunity(
-          ChatFrameCallback onFrame) async {
+  Future<void Function()> subscribeCommunity(ChatFrameCallback onFrame) async {
     communityHandler = onFrame;
     return () {
       communityHandler = null;
@@ -209,8 +212,11 @@ class FakeMessagingRepo implements MessagingRepository {
       conversationId == 'c1' ? _m(3) : null;
 
   @override
-  Future<SentMessage?> send(String conversationId, String content,
-      {String? idempotencyKey}) async {
+  Future<SentMessage?> send(
+    String conversationId,
+    String content, {
+    String? idempotencyKey,
+  }) async {
     if (failSends) throw Exception('send failed');
     sentKeys.add(idempotencyKey);
     final stompRef = stomp;
@@ -247,8 +253,11 @@ class FakeMessagingRepo implements MessagingRepository {
   }
 
   @override
-  Future<ChatMessage> sendRest(String conversationId, String content,
-      {String? idempotencyKey}) async {
+  Future<ChatMessage> sendRest(
+    String conversationId,
+    String content, {
+    String? idempotencyKey,
+  }) async {
     if (failSends) throw Exception('send failed');
     sentKeys.add(idempotencyKey);
     return _m(101, sender: 'me');
@@ -256,13 +265,14 @@ class FakeMessagingRepo implements MessagingRepository {
 
   @override
   Future<Conversation> getConversation(String conversationId) async {
-    return convos.firstWhere((c) => c.id == conversationId,
-        orElse: () => convos.first);
+    return convos.firstWhere(
+      (c) => c.id == conversationId,
+      orElse: () => convos.first,
+    );
   }
 
   @override
-  Future<ChatMessage> editMessage(
-      String messageId, String content) async {
+  Future<ChatMessage> editMessage(String messageId, String content) async {
     return ChatMessage(
       id: messageId,
       conversationId: 'c1',
@@ -507,9 +517,9 @@ void main() {
       expect(find.byTooltip('Supprimer'), findsOneWidget);
     });
 
-    testWidgets(
-        'no real-time banner when the socket drops (silent presence)',
-        (tester) async {
+    testWidgets('no real-time banner when the socket drops (silent presence)', (
+      tester,
+    ) async {
       final s = FakeStomp();
       await pumpMsg(
         tester,
@@ -549,31 +559,32 @@ void main() {
       expect(notifs.read, contains('n1'));
     });
 
-    testWidgets('document rejection shows the rejection comment to the intern (S8-d)', (
-      tester,
-    ) async {
-      const comment = 'Ajouter la semaine 4 manquante';
-      final notifs = FakeNotifRepo(
-        extraItems: [
-          NotificationItem(
-            id: 'n-rej',
-            title: 'Document refusé — action requise',
-            message:
-                'Votre journal pour le stage INT-2026-00001 a été refusé par '
-                "l'administration.\n\nMotif : $comment\n\nVeuillez soumettre une version corrigée.",
-            priority: 'HIGH',
-            createdAt: DateTime(2026, 9, 16, 9),
-            isRead: false,
-            relatedEntityType: 'Internship',
-            relatedEntityId: 'int-1',
-          ),
-        ],
-      );
-      await pumpMsg(tester, const NotificationsScreen(), notifs: notifs);
+    testWidgets(
+      'document rejection shows the rejection comment to the intern (S8-d)',
+      (tester) async {
+        const comment = 'Ajouter la semaine 4 manquante';
+        final notifs = FakeNotifRepo(
+          extraItems: [
+            NotificationItem(
+              id: 'n-rej',
+              title: 'Document refusé — action requise',
+              message:
+                  'Votre journal pour le stage INT-2026-00001 a été refusé par '
+                  "l'administration.\n\nMotif : $comment\n\nVeuillez soumettre une version corrigée.",
+              priority: 'HIGH',
+              createdAt: DateTime(2026, 9, 16, 9),
+              isRead: false,
+              relatedEntityType: 'Internship',
+              relatedEntityId: 'int-1',
+            ),
+          ],
+        );
+        await pumpMsg(tester, const NotificationsScreen(), notifs: notifs);
 
-      expect(find.text('Document refusé — action requise'), findsOneWidget);
-      expect(find.textContaining(comment), findsOneWidget);
-    });
+        expect(find.text('Document refusé — action requise'), findsOneWidget);
+        expect(find.textContaining(comment), findsOneWidget);
+      },
+    );
   });
 
   group('large history performance smoke (task 11)', () {

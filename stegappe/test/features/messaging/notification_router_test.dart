@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:stegappe/core/navigation/app_destination.dart';
 import 'package:stegappe/features/auth/domain/entities/app_user.dart';
 import 'package:stegappe/features/messaging/domain/entities/notification_item.dart';
 import 'package:stegappe/features/messaging/domain/notification_router.dart';
@@ -8,23 +9,25 @@ NotificationItem row(
   NotificationType type, {
   String? entity,
   String? entityId,
-}) =>
-    NotificationItem(
-      id: 'n-${type.name}',
-      title: 'titre',
-      message: 'message',
-      priority: 'NORMAL',
-      createdAt: DateTime(2026, 9, 15, 10),
-      isRead: false,
-      type: type,
-      relatedEntityType: entity,
-      relatedEntityId: entityId,
-    );
+}) => NotificationItem(
+  id: 'n-${type.name}',
+  title: 'titre',
+  message: 'message',
+  priority: 'NORMAL',
+  createdAt: DateTime(2026, 9, 15, 10),
+  isRead: false,
+  type: type,
+  relatedEntityType: entity,
+  relatedEntityId: entityId,
+);
 
 const intern = UserRole.intern;
 const supervisor = UserRole.supervisor;
 const adminSupervisor = UserRole.adminSupervisor;
 const unsupported = UserRole.unsupported;
+
+NotificationRoute to(AppDestination destination, {bool? hint}) =>
+    NotificationRoute(destination: destination, hint: hint);
 
 void main() {
   group('typed destinations (D11)', () {
@@ -38,12 +41,15 @@ void main() {
         NotificationType.welcome,
       ];
       for (final type in required) {
-        expect(resolveNotificationRoute(row(type), intern), isNotNull,
-            reason: '$type must deep-link for the student');
+        expect(
+          resolveNotificationRoute(row(type), intern),
+          isNotNull,
+          reason: '$type must deep-link for the student',
+        );
       }
     });
 
-    test('the task family lands on the task board', () {
+    test('the task family lands on the task board for both roles', () {
       const tasks = [
         NotificationType.taskAssigned,
         NotificationType.taskUpdated,
@@ -53,16 +59,16 @@ void main() {
       for (final type in tasks) {
         expect(
           resolveNotificationRoute(row(type), intern),
-          const NotificationRoute(tab: 1),
+          to(AppDestination.tasks),
         );
         expect(
           resolveNotificationRoute(row(type), supervisor),
-          const NotificationRoute(tab: 1),
+          to(AppDestination.tasks),
         );
       }
     });
 
-    test('documents and journal reach the follow-up tab', () {
+    test('intern documents and journal reach the journal screen', () {
       for (final type in [
         NotificationType.documentRejected,
         NotificationType.documentVerified,
@@ -70,7 +76,20 @@ void main() {
       ]) {
         expect(
           resolveNotificationRoute(row(type), intern),
-          const NotificationRoute(tab: 2),
+          to(AppDestination.journal),
+        );
+      }
+    });
+
+    test('supervisor documents and journal reach the validations queue', () {
+      for (final type in [
+        NotificationType.documentRejected,
+        NotificationType.documentVerified,
+        NotificationType.journalEntryValidated,
+      ]) {
+        expect(
+          resolveNotificationRoute(row(type), supervisor),
+          to(AppDestination.validations),
         );
       }
     });
@@ -80,25 +99,30 @@ void main() {
       // a supervisor lands on the interns list owning the students.
       expect(
         resolveNotificationRoute(
-            row(NotificationType.documentsPreparationRequested), intern),
-        const NotificationRoute(tab: 0),
+          row(NotificationType.documentsPreparationRequested),
+          intern,
+        ),
+        to(AppDestination.home),
       );
       expect(
         resolveNotificationRoute(
-            row(NotificationType.documentsPreparationRequested),
-            supervisor),
-        const NotificationRoute(tab: 1),
+          row(NotificationType.documentsPreparationRequested),
+          supervisor,
+        ),
+        to(AppDestination.interns),
       );
       expect(
         resolveNotificationRoute(
-            row(NotificationType.documentsPreparationRequested),
-            adminSupervisor),
-        const NotificationRoute(tab: 1),
+          row(NotificationType.documentsPreparationRequested),
+          adminSupervisor,
+        ),
+        to(AppDestination.interns),
       );
       expect(
         resolveNotificationRoute(
-            row(NotificationType.documentsPreparationRequested),
-            unsupported),
+          row(NotificationType.documentsPreparationRequested),
+          unsupported,
+        ),
         isNull,
       );
     });
@@ -106,8 +130,10 @@ void main() {
     test('messages open the conversation list', () {
       expect(
         resolveNotificationRoute(
-            row(NotificationType.messageReceived), supervisor),
-        const NotificationRoute(tab: 3),
+          row(NotificationType.messageReceived),
+          supervisor,
+        ),
+        to(AppDestination.messages),
       );
     });
 
@@ -120,13 +146,13 @@ void main() {
       ]) {
         expect(
           resolveNotificationRoute(row(type), intern),
-          const NotificationRoute(tab: 0),
+          to(AppDestination.home),
         );
       }
     });
 
-    test('workflow facts without a mobile tab stay in the center', () {
-      // No shell tab exists for them: the honest destination is "no route".
+    test('workflow facts without a mobile screen stay in the center', () {
+      // No shell destination exists for them: the honest answer is "no route".
       for (final type in [
         NotificationType.applicationSubmitted,
         NotificationType.applicationResubmitted,
@@ -137,15 +163,18 @@ void main() {
         NotificationType.finalEvaluationRequired,
         NotificationType.paymentApproved,
         NotificationType.certificateAvailable,
-        // T08 community rows have no tab either: the center pushes the
+        // T08 community rows have no destination either: the center pushes the
         // post detail through onOpenCommunityPost instead (see
-        // NotificationsScreen), so the tab router stays silent.
+        // NotificationsScreen), so the router stays silent.
         NotificationType.communityComment,
         NotificationType.communityPostRemoved,
         NotificationType.communityCommentRemoved,
       ]) {
-        expect(resolveNotificationRoute(row(type), intern), isNull,
-            reason: '$type must not fake a destination');
+        expect(
+          resolveNotificationRoute(row(type), intern),
+          isNull,
+          reason: '$type must not fake a destination',
+        );
       }
     });
 
@@ -154,15 +183,19 @@ void main() {
       // catalogue key is the contract, the entity string is only a fallback.
       expect(
         resolveNotificationRoute(
-            row(NotificationType.welcome, entity: 'Task'), intern),
-        const NotificationRoute(tab: 0),
+          row(NotificationType.welcome, entity: 'Task'),
+          intern,
+        ),
+        to(AppDestination.home),
       );
     });
 
     test('a role without a shell never routes', () {
       for (final type in NotificationType.values) {
-        expect(resolveNotificationRoute(row(type, entity: 'TASK'), unsupported),
-            isNull);
+        expect(
+          resolveNotificationRoute(row(type, entity: 'TASK'), unsupported),
+          isNull,
+        );
       }
     });
 
@@ -180,32 +213,51 @@ void main() {
     test('an unknown type falls back to the backend entity vocabulary', () {
       expect(
         resolveNotificationRoute(
-            row(NotificationType.unknown, entity: 'TASK'), intern),
-        const NotificationRoute(tab: 1),
+          row(NotificationType.unknown, entity: 'TASK'),
+          intern,
+        ),
+        to(AppDestination.tasks),
       );
       expect(
         resolveNotificationRoute(
-            row(NotificationType.unknown, entity: 'journalentry'), intern),
-        const NotificationRoute(tab: 2),
+          row(NotificationType.unknown, entity: 'journalentry'),
+          intern,
+        ),
+        to(AppDestination.journal),
       );
       expect(
         resolveNotificationRoute(
-            row(NotificationType.unknown, entity: 'Conversation'), intern),
-        const NotificationRoute(tab: 3),
+          row(NotificationType.unknown, entity: 'Conversation'),
+          intern,
+        ),
+        to(AppDestination.messages),
+      );
+      expect(
+        resolveNotificationRoute(
+          row(NotificationType.unknown, entity: 'deliverable'),
+          supervisor,
+        ),
+        to(AppDestination.validations),
       );
     });
 
     test('an unknown type with an unknown entity stays in the center', () {
-      expect(resolveNotificationRoute(row(NotificationType.unknown), intern),
-          isNull);
       expect(
-        resolveNotificationRoute(
-            row(NotificationType.unknown, entity: 'SOMETHING_NEW'), intern),
+        resolveNotificationRoute(row(NotificationType.unknown), intern),
         isNull,
       );
       expect(
         resolveNotificationRoute(
-            row(NotificationType.unknown, entity: ''), intern),
+          row(NotificationType.unknown, entity: 'SOMETHING_NEW'),
+          intern,
+        ),
+        isNull,
+      );
+      expect(
+        resolveNotificationRoute(
+          row(NotificationType.unknown, entity: ''),
+          intern,
+        ),
         isNull,
       );
     });
@@ -213,26 +265,34 @@ void main() {
     test('an internship entity only routes for staff roles', () {
       expect(
         resolveNotificationRoute(
-            row(NotificationType.unknown, entity: 'INTERNSHIP'), supervisor),
-        const NotificationRoute(tab: 0),
+          row(NotificationType.unknown, entity: 'INTERNSHIP'),
+          supervisor,
+        ),
+        to(AppDestination.home),
       );
       expect(
         resolveNotificationRoute(
-            row(NotificationType.unknown, entity: 'INTERNSHIP'), intern),
+          row(NotificationType.unknown, entity: 'INTERNSHIP'),
+          intern,
+        ),
         isNull,
       );
     });
 
-    test('equality is by value so a route can be compared in tests and keys',
-        () {
-      expect(const NotificationRoute(tab: 1),
-          const NotificationRoute(tab: 1));
-      expect(const NotificationRoute(tab: 1).hashCode,
-          const NotificationRoute(tab: 1).hashCode);
-      expect(const NotificationRoute(tab: 1),
-          isNot(const NotificationRoute(tab: 2)));
-      expect(const NotificationRoute(tab: 1, hint: true),
-          isNot(const NotificationRoute(tab: 1)));
-    });
+    test(
+      'equality is by value so a route can be compared in tests and keys',
+      () {
+        expect(to(AppDestination.tasks), to(AppDestination.tasks));
+        expect(
+          to(AppDestination.tasks).hashCode,
+          to(AppDestination.tasks).hashCode,
+        );
+        expect(to(AppDestination.tasks), isNot(to(AppDestination.messages)));
+        expect(
+          to(AppDestination.tasks, hint: true),
+          isNot(to(AppDestination.tasks)),
+        );
+      },
+    );
   });
 }

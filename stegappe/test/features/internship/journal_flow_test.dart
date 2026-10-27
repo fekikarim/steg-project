@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
 import '../../support/queue_harness.dart';
+
 import 'package:stegappe/core/connectivity/connectivity_service.dart';
 import 'package:stegappe/core/l10n/app_localizations.dart';
 import 'package:stegappe/core/realtime/document_sync.dart';
@@ -51,7 +53,7 @@ class _FakeAuth implements AuthRepository {
 /// Pumps a journal surface the way the shell hosts it, with a controllable
 /// repository, role, connectivity and a memory-backed composer draft store.
 Future<({FakeInternshipRepository repo, MemoryComposerDraftStore drafts})>
-    pumpJournal(
+pumpJournal(
   WidgetTester tester,
   Widget page, {
   AppUser user = _intern,
@@ -116,7 +118,11 @@ void main() {
 
     test('lifecycle predicates mirror the server transition table', () {
       JournalEntry entry(JournalStatus s) => JournalEntry(
-          id: 'j', title: 't', status: s, entryDate: DateTime(2026, 1, 1));
+        id: 'j',
+        title: 't',
+        status: s,
+        entryDate: DateTime(2026, 1, 1),
+      );
       // Server: only DRAFT/REJECTED accept submit; only SUBMITTED accepts
       // validate/reject; entries are immutable (no update endpoint).
       expect(entry(JournalStatus.draft).canSubmit, isTrue);
@@ -132,81 +138,92 @@ void main() {
       expect(kJournalTitleMaxLength, 255);
     });
 
-    test('write payload mirrors JournalEntryRequest (title/description/ymd)', () {
-      final body = journalWriteJson(
-        title: '  Jour  ',
-        description: 'fait',
-        entryDate: DateTime(2026, 10, 5),
-      );
-      expect(body['title'], '  Jour  ');
-      expect(body['description'], 'fait');
-      expect(body['entryDate'], '2026-10-05');
-      expect(body.keys.toSet(), {'title', 'description', 'entryDate'});
-    });
-
-    test('journalTitleTooLong is localized in fr/en/ar with the bound', () async {
-      for (final locale in ['fr', 'en', 'ar']) {
-        final l10n = await loadL10n(locale);
-        final text = l10n.journalTitleTooLong(255);
-        expect(text.trim(), isNotEmpty);
-        expect(text, contains('255'));
-      }
-    });
-  });
-
-  group('T09 realtime: validated-entry frames invalidate the journal queues',
+    test(
+      'write payload mirrors JournalEntryRequest (title/description/ymd)',
       () {
-    NotificationItem itemOf(String wireType) {
-      final parsed = notificationItemFromFrame(jsonEncode({
-        'notificationId': 'n1',
-        'type': wireType,
-        'title': 't',
-        'message': 'm',
-        'priority': 'NORMAL',
-        'relatedEntityType': 'JournalEntry',
-        'relatedEntityId': 'j1',
-        'createdAt': DateTime.now().toUtc().toIso8601String(),
-      }));
-      return parsed!;
-    }
+        final body = journalWriteJson(
+          title: '  Jour  ',
+          description: 'fait',
+          entryDate: DateTime(2026, 10, 5),
+        );
+        expect(body['title'], '  Jour  ');
+        expect(body['description'], 'fait');
+        expect(body['entryDate'], '2026-10-05');
+        expect(body.keys.toSet(), {'title', 'description', 'entryDate'});
+      },
+    );
 
-    test('JOURNAL_ENTRY_VALIDATED maps to the documents category', () {
-      expect(
-        documentSyncCategoryFor(itemOf('JOURNAL_ENTRY_VALIDATED')),
-        RealtimeCategory.documents,
-      );
-    });
-
-    test('task/community/unknown frames never touch the journal queues', () {
-      expect(documentSyncCategoryFor(itemOf('TASK_STATUS_CHANGED')), isNull);
-      expect(documentSyncCategoryFor(itemOf('COMMUNITY_COMMENT')), isNull);
-      expect(
-        documentSyncCategoryFor(
-          NotificationItem(
-            id: 'n',
-            title: 't',
-            message: 'm',
-            priority: 'NORMAL',
-            createdAt: DateTime.now(),
-            isRead: false,
-          ),
-        ),
-        isNull,
-      );
-    });
-
-    test('documents category covers the journal list + supervisor queue', () {
-      final targets = RiverpodRealtimeSync((_) {})
-          .targetsFor(RealtimeCategory.documents);
-      expect(targets, contains(journalListProvider));
-      expect(targets, contains(pendingValidationsProvider));
-      expect(targets, contains(dashboardProvider));
-    });
+    test(
+      'journalTitleTooLong is localized in fr/en/ar with the bound',
+      () async {
+        for (final locale in ['fr', 'en', 'ar']) {
+          final l10n = await loadL10n(locale);
+          final text = l10n.journalTitleTooLong(255);
+          expect(text.trim(), isNotEmpty);
+          expect(text, contains('255'));
+        }
+      },
+    );
   });
+
+  group(
+    'T09 realtime: validated-entry frames invalidate the journal queues',
+    () {
+      NotificationItem itemOf(String wireType) {
+        final parsed = notificationItemFromFrame(
+          jsonEncode({
+            'notificationId': 'n1',
+            'type': wireType,
+            'title': 't',
+            'message': 'm',
+            'priority': 'NORMAL',
+            'relatedEntityType': 'JournalEntry',
+            'relatedEntityId': 'j1',
+            'createdAt': DateTime.now().toUtc().toIso8601String(),
+          }),
+        );
+        return parsed!;
+      }
+
+      test('JOURNAL_ENTRY_VALIDATED maps to the documents category', () {
+        expect(
+          documentSyncCategoryFor(itemOf('JOURNAL_ENTRY_VALIDATED')),
+          RealtimeCategory.documents,
+        );
+      });
+
+      test('task/community/unknown frames never touch the journal queues', () {
+        expect(documentSyncCategoryFor(itemOf('TASK_STATUS_CHANGED')), isNull);
+        expect(documentSyncCategoryFor(itemOf('COMMUNITY_COMMENT')), isNull);
+        expect(
+          documentSyncCategoryFor(
+            NotificationItem(
+              id: 'n',
+              title: 't',
+              message: 'm',
+              priority: 'NORMAL',
+              createdAt: DateTime.now(),
+              isRead: false,
+            ),
+          ),
+          isNull,
+        );
+      });
+
+      test('documents category covers the journal list + supervisor queue', () {
+        final targets = RiverpodRealtimeSync((_) {})
+            .targetsFor(RealtimeCategory.documents);
+        expect(targets, contains(journalListProvider));
+        expect(targets, contains(pendingValidationsProvider));
+        expect(targets, contains(dashboardProvider));
+      });
+    },
+  );
 
   group('T09 composer: student input stays student input', () {
-    testWidgets('empty submit shows both required errors and creates nothing',
-        (tester) async {
+    testWidgets('empty submit shows both required errors and creates nothing', (
+      tester,
+    ) async {
       final h = await pumpJournal(
         tester,
         JournalComposerScreen(
@@ -221,8 +238,9 @@ void main() {
       expect(h.repo.createdJournals, isEmpty);
     });
 
-    testWidgets('over-long title is refused client-side with the bound',
-        (tester) async {
+    testWidgets('over-long title is refused client-side with the bound', (
+      tester,
+    ) async {
       final h = await pumpJournal(
         tester,
         JournalComposerScreen(
@@ -232,29 +250,33 @@ void main() {
       );
       final l10n = await loadL10n('fr');
       await tester.enterText(
-          find.byType(TextField).first, 'x' * (kJournalTitleMaxLength + 1));
-      await tester.enterText(
-          find.byType(TextField).last, 'description valide');
+        find.byType(TextField).first,
+        'x' * (kJournalTitleMaxLength + 1),
+      );
+      await tester.enterText(find.byType(TextField).last, 'description valide');
       await tester.tap(find.text(l10n.journalSaveDraft));
       await tester.pumpAndSettle();
       expect(
-          find.text(l10n.journalTitleTooLong(kJournalTitleMaxLength)),
-          findsOneWidget);
+        find.text(l10n.journalTitleTooLong(kJournalTitleMaxLength)),
+        findsOneWidget,
+      );
       expect(h.repo.createdJournals, isEmpty);
     });
 
-    testWidgets('valid entry is created trimmed for the selected day',
-        (tester) async {
+    testWidgets('valid entry is created trimmed for the selected day', (
+      tester,
+    ) async {
       final day = DateTime(2026, 10, 5);
       final h = await pumpJournal(
         tester,
         JournalComposerScreen(internshipId: 'internship-1', day: day),
       );
       final l10n = await loadL10n('fr');
+      await tester.enterText(find.byType(TextField).first, '  Mise en place  ');
       await tester.enterText(
-          find.byType(TextField).first, '  Mise en place  ');
-      await tester.enterText(
-          find.byType(TextField).last, '  Activités du jour  ');
+        find.byType(TextField).last,
+        '  Activités du jour  ',
+      );
       await tester.tap(find.text(l10n.journalSaveDraft));
       await tester.pumpAndSettle();
       expect(h.repo.createdJournals, hasLength(1));
@@ -267,17 +289,20 @@ void main() {
       expect(find.byType(JournalComposerScreen), findsNothing);
     });
 
-    testWidgets('a saved local draft is restored on reopen (never lost)',
-        (tester) async {
+    testWidgets('a saved local draft is restored on reopen (never lost)', (
+      tester,
+    ) async {
       final day = DateTime(2026, 10, 5);
       final drafts = MemoryComposerDraftStore();
       await drafts.save(
-          'internship-1',
-          day,
-          ComposerDraft(
-              title: 'Brouillon',
-              description: 'Suite demain',
-              updatedAt: DateTime(2026, 10, 5, 14, 30)));
+        'internship-1',
+        day,
+        ComposerDraft(
+          title: 'Brouillon',
+          description: 'Suite demain',
+          updatedAt: DateTime(2026, 10, 5, 14, 30),
+        ),
+      );
       await pumpJournal(
         tester,
         JournalComposerScreen(internshipId: 'internship-1', day: day),
@@ -286,26 +311,31 @@ void main() {
       expect(find.text('Brouillon'), findsOneWidget);
       expect(find.text('Suite demain'), findsOneWidget);
       final l10n = await loadL10n('fr');
-      expect(find.textContaining(l10n.journalDraftSavedAt('').split('{')[0]),
-          findsOneWidget);
-    });
-
-    testWidgets('quick back-navigation flushes keystrokes inside the debounce',
-        (tester) async {
-      final day = DateTime(2026, 10, 5);
-      final h = await pumpJournal(
-        tester,
-        JournalComposerScreen(internshipId: 'internship-1', day: day),
+      expect(
+        find.textContaining(l10n.journalDraftSavedAt('').split('{')[0]),
+        findsOneWidget,
       );
-      await tester.enterText(find.byType(TextField).first, 'queue');
-      // Dispose before the 600 ms debounce fires.
-      await tester.pumpWidget(Container());
-      final restored = await h.drafts.load('internship-1', day);
-      expect(restored?.title, 'queue');
     });
 
-    testWidgets('offline create fails honestly without faking persistence',
-        (tester) async {
+    testWidgets(
+      'quick back-navigation flushes keystrokes inside the debounce',
+      (tester) async {
+        final day = DateTime(2026, 10, 5);
+        final h = await pumpJournal(
+          tester,
+          JournalComposerScreen(internshipId: 'internship-1', day: day),
+        );
+        await tester.enterText(find.byType(TextField).first, 'queue');
+        // Dispose before the 600 ms debounce fires.
+        await tester.pumpWidget(Container());
+        final restored = await h.drafts.load('internship-1', day);
+        expect(restored?.title, 'queue');
+      },
+    );
+
+    testWidgets('offline create fails honestly without faking persistence', (
+      tester,
+    ) async {
       final fake = FakeInternshipRepository()..failWrites = true;
       final h = await pumpJournal(
         tester,
@@ -328,25 +358,33 @@ void main() {
   });
 
   group('T09 list + detail: lifecycle states are honest', () {
-    testWidgets('today entries render with status chips; stale when offline',
-        (tester) async {
+    testWidgets('today entries render with status chips; stale when offline', (
+      tester,
+    ) async {
       await pumpJournal(tester, const JournalListScreen(), online: false);
       // The month calendar is the screen's main surface, so the day's entries
       // sit below it — scroll to them (that IS the shipped layout).
-      await tester.scrollUntilVisible(find.text('Draft entry'), 240,
-          scrollable: find.byType(Scrollable).first);
+      await tester.scrollUntilVisible(
+        find.text('Draft entry'),
+        240,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tester.pumpAndSettle();
       // Fixture: draft entry dated today renders even offline (stale cache).
       expect(find.text('Draft entry'), findsOneWidget);
       expect(find.byType(SnackBar), findsNothing);
     });
 
-    testWidgets('intern submits a draft once despite a double tap',
-        (tester) async {
+    testWidgets('intern submits a draft once despite a double tap', (
+      tester,
+    ) async {
       final h = await pumpJournal(tester, const JournalListScreen());
       final l10n = await loadL10n('fr');
-      await tester.scrollUntilVisible(find.text('Draft entry'), 240,
-          scrollable: find.byType(Scrollable).first);
+      await tester.scrollUntilVisible(
+        find.text('Draft entry'),
+        240,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tester.pumpAndSettle();
       await tester.tap(find.text('Draft entry'));
       await tester.pumpAndSettle();
@@ -359,7 +397,9 @@ void main() {
       expect(find.text('Draft entry'), findsOneWidget);
     });
 
-    testWidgets('validated entries offer no action (immutable)', (tester) async {
+    testWidgets('validated entries offer no action (immutable)', (
+      tester,
+    ) async {
       await pumpJournal(
         tester,
         Builder(
@@ -385,8 +425,9 @@ void main() {
       expect(find.text(l10n.rejectAction), findsNothing);
     });
 
-    testWidgets('supervisor reject requires a comment (server rule mirrored)',
-        (tester) async {
+    testWidgets('supervisor reject requires a comment (server rule mirrored)', (
+      tester,
+    ) async {
       final h = await pumpJournal(
         tester,
         Builder(
@@ -460,8 +501,11 @@ void main() {
       );
       // The "Generate Journal with AI" action sits above the list, so the
       // first entry may start below the fold in a short viewport.
-      await tester.scrollUntilVisible(find.text('Draft entry'), 200,
-          scrollable: find.byType(Scrollable).first);
+      await tester.scrollUntilVisible(
+        find.text('Draft entry'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
       // Data titles are locale-independent; rendering under an RTL
       // Directionality without overflow is the assertion (throws otherwise).
       expect(find.text('Draft entry'), findsOneWidget);

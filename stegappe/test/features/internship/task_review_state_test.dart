@@ -79,8 +79,11 @@ void main() {
         dueDate: DateTime(2026, 10, 10),
         status: TaskStatus.unknown,
       );
-      expect(base.containsKey('status'), isFalse,
-          reason: 'unknown is not backend vocabulary — never sent');
+      expect(
+        base.containsKey('status'),
+        isFalse,
+        reason: 'unknown is not backend vocabulary — never sent',
+      );
       expect(
         taskWriteJson(
           title: 'T',
@@ -121,8 +124,10 @@ void main() {
         taskStatusLabel(TaskStatus.awaitingApproval, fr),
         'En attente de validation',
       );
-      expect(taskStatusLabel(TaskStatus.awaitingApproval, en),
-          isNot(taskStatusLabel(TaskStatus.approved, en)));
+      expect(
+        taskStatusLabel(TaskStatus.awaitingApproval, en),
+        isNot(taskStatusLabel(TaskStatus.approved, en)),
+      );
       expect(
         taskStatusLabel(TaskStatus.awaitingApproval, ar),
         isNot(taskStatusLabel(TaskStatus.approved, ar)),
@@ -146,7 +151,10 @@ void main() {
       // Submitting for review must not read as "mark done".
       expect(
         taskTransitionLabel(
-            TaskStatus.inProgress, TaskStatus.awaitingApproval, fr),
+          TaskStatus.inProgress,
+          TaskStatus.awaitingApproval,
+          fr,
+        ),
         isNot('Terminée'),
       );
       expect(

@@ -49,6 +49,32 @@ class ConversationsScreen extends ConsumerWidget {
             child: StegGlassBarSpacer(extra: StegSpacing.sm),
           ),
           SliverPadding(
+            padding: StegSpacing.screenPadding.copyWith(bottom: 0),
+            sliver: SliverToBoxAdapter(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.msgInboxTitle,
+                    style: Theme.of(context).textTheme.headlineSmall
+                        ?.copyWith(fontWeight: FontWeight.w800),
+                  ),
+                  Text(
+                    l10n.msgInboxSubtitle,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: StegSpacing.md),
+                  Text(
+                    l10n.msgSectionConversations,
+                    style: Theme.of(context).textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: StegSpacing.sm),
+                ],
+              ),
+            ),
+          ),
+          SliverPadding(
             padding: StegSpacing.screenPadding,
             sliver: async.when(
               loading: () => const SliverFillRemaining(
@@ -94,14 +120,24 @@ class ConversationsScreen extends ConsumerWidget {
             ),
           ),
           SliverToBoxAdapter(
-            child: SizedBox(
-              height: 100 + MediaQuery.paddingOf(context).bottom,
-            ),
+            child: SizedBox(height: 100 + MediaQuery.paddingOf(context).bottom),
           ),
         ],
       ),
     );
   }
+}
+
+/// Initials for the avatar tile: the first letter of up to two name parts.
+String _initials(String name) {
+  final initials = name
+      .trim()
+      .split(RegExp(r'\s+'))
+      .where((p) => p.isNotEmpty)
+      .take(2)
+      .map((p) => p[0].toUpperCase())
+      .join();
+  return initials.isEmpty ? '#' : initials;
 }
 
 class _ConversationTile extends ConsumerWidget {
@@ -164,21 +200,24 @@ class _ConversationTile extends ConsumerWidget {
           leading: Container(
             width: 50,
             height: 50,
+            alignment: Alignment.center,
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: conversation.unreadCount > 0
-                    ? StegColors.brandGradientBright
-                    : [Colors.grey.shade400, Colors.grey.shade300],
-                begin: AlignmentDirectional.topStart,
-                end: AlignmentDirectional.bottomEnd,
+              color: StegColors.brandPrimary.withValues(
+                alpha: Theme.of(context).brightness == Brightness.dark
+                    ? 0.25
+                    : 0.12,
               ),
               borderRadius: BorderRadius.circular(16),
             ),
-            child: Icon(
-              conversation.isPrivate
-                  ? Icons.person_outline_rounded
-                  : Icons.group_outlined,
-              color: Colors.white,
+            child: Text(
+              _initials(title),
+              style: TextStyle(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white
+                    : StegColors.brandNavy,
+                fontWeight: FontWeight.w800,
+                fontSize: 16,
+              ),
             ),
           ),
           title: Text(

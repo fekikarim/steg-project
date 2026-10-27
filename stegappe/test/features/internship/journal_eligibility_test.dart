@@ -27,16 +27,15 @@ JournalEligibility _eligibility({
   int taskCount = 4,
   int approvedTasks = 4,
   bool belowThreshold = false,
-}) =>
-    JournalEligibility(
-      eligible: eligible,
-      reason: reason,
-      daysUntilOpen: daysUntilOpen,
-      windowDays: windowDays,
-      taskCount: taskCount,
-      approvedTasks: approvedTasks,
-      belowThreshold: belowThreshold,
-    );
+}) => JournalEligibility(
+  eligible: eligible,
+  reason: reason,
+  daysUntilOpen: daysUntilOpen,
+  windowDays: windowDays,
+  taskCount: taskCount,
+  approvedTasks: approvedTasks,
+  belowThreshold: belowThreshold,
+);
 
 Future<FakeInternshipRepository> _pumpBar(
   WidgetTester tester, {
@@ -78,40 +77,52 @@ StegButton _button(WidgetTester tester) =>
 
 void main() {
   group('JournalGenerationBar (ST-JRN-03, AC1)', () {
-    testWidgets('inside the window the red action is enabled and opens the flow',
-        (tester) async {
-      final repo = await _pumpBar(tester, eligibility: _eligibility());
+    testWidgets(
+      'inside the window the red action is enabled and opens the flow',
+      (tester) async {
+        final repo = await _pumpBar(tester, eligibility: _eligibility());
 
-      expect(find.text('Générer le journal de stage'), findsOneWidget);
-      expect(_button(tester).onPressed, isNotNull);
-      expect(_button(tester).variant, StegButtonVariant.destructive);
+        expect(find.text('Générer le journal de stage'), findsOneWidget);
+        expect(_button(tester).onPressed, isNotNull);
+        expect(_button(tester).variant, StegButtonVariant.destructive);
 
-      await tester.tap(find.text('Générer le journal de stage'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Générer le journal de stage'));
+        await tester.pumpAndSettle();
 
-      // The chooser offers both paths and explains them; the AI advisory note
-      // is visible (BR-48).
-      expect(find.text('À partir de mes tâches'), findsOneWidget);
-      expect(find.text('À partir de mon texte'), findsOneWidget);
-      expect(find.text('Le document est produit par le serveur en PDF : période du stage et tableau des tâches.'),
-          findsOneWidget);
-      expect(repo.eligibilityCalls, greaterThanOrEqualTo(1));
-    });
+        // The chooser offers both paths and explains them; the AI advisory note
+        // is visible (BR-48).
+        expect(find.text('À partir de mes tâches'), findsOneWidget);
+        expect(find.text('À partir de mon texte'), findsOneWidget);
+        expect(
+          find.text(
+            'Le document est produit par le serveur en PDF : période du stage et tableau des tâches.',
+          ),
+          findsOneWidget,
+        );
+        expect(repo.eligibilityCalls, greaterThanOrEqualTo(1));
+      },
+    );
 
-    testWidgets('before the window the action is disabled WITH the remaining days',
-        (tester) async {
-      await _pumpBar(
-        tester,
-        eligibility: _eligibility(
-            eligible: false, reason: 'BEFORE_WINDOW', daysUntilOpen: 12),
-      );
+    testWidgets(
+      'before the window the action is disabled WITH the remaining days',
+      (tester) async {
+        await _pumpBar(
+          tester,
+          eligibility: _eligibility(
+            eligible: false,
+            reason: 'BEFORE_WINDOW',
+            daysUntilOpen: 12,
+          ),
+        );
 
-      expect(_button(tester).onPressed, isNull);
-      expect(find.text('Disponible dans 12 jour(s)'), findsOneWidget);
-    });
+        expect(_button(tester).onPressed, isNull);
+        expect(find.text('Disponible dans 12 jour(s)'), findsOneWidget);
+      },
+    );
 
-    testWidgets('a late internship keeps the action enabled and says so',
-        (tester) async {
+    testWidgets('a late internship keeps the action enabled and says so', (
+      tester,
+    ) async {
       await _pumpBar(
         tester,
         eligibility: _eligibility(reason: 'ELIGIBLE_LATE'),
@@ -120,61 +131,81 @@ void main() {
       expect(_button(tester).onPressed, isNotNull);
       await tester.tap(find.text('Générer le journal de stage'));
       await tester.pumpAndSettle();
-      expect(find.text('Période terminée : génération possible (en retard).'),
-          findsOneWidget);
+      expect(
+        find.text('Période terminée : génération possible (en retard).'),
+        findsOneWidget,
+      );
     });
 
-    testWidgets('cancelled and period-less internships explain the refusal',
-        (tester) async {
+    testWidgets('cancelled and period-less internships explain the refusal', (
+      tester,
+    ) async {
       await _pumpBar(
         tester,
         eligibility: _eligibility(eligible: false, reason: 'CANCELLED'),
       );
       expect(_button(tester).onPressed, isNull);
-      expect(find.text('Stage annulé : génération impossible.'), findsOneWidget);
+      expect(
+        find.text('Stage annulé : génération impossible.'),
+        findsOneWidget,
+      );
 
       await _pumpBar(
         tester,
         eligibility: _eligibility(eligible: false, reason: 'NO_PERIOD'),
       );
       expect(_button(tester).onPressed, isNull);
-      expect(find.text('Aucune période de stage : génération impossible.'),
-          findsOneWidget);
+      expect(
+        find.text('Aucune période de stage : génération impossible.'),
+        findsOneWidget,
+      );
     });
 
-    testWidgets('offline the action is disabled and asks for connectivity (D12)',
-        (tester) async {
-      await _pumpBar(tester, eligibility: _eligibility(), online: false);
+    testWidgets(
+      'offline the action is disabled and asks for connectivity (D12)',
+      (tester) async {
+        await _pumpBar(tester, eligibility: _eligibility(), online: false);
 
-      expect(_button(tester).onPressed, isNull);
-      expect(find.text('Connexion requise pour générer le journal.'),
-          findsOneWidget);
-    });
+        expect(_button(tester).onPressed, isNull);
+        expect(
+          find.text('Connexion requise pour générer le journal.'),
+          findsOneWidget,
+        );
+      },
+    );
 
-    testWidgets('an eligibility read failure never crashes the screen',
-        (tester) async {
+    testWidgets('an eligibility read failure never crashes the screen', (
+      tester,
+    ) async {
       final repo = FakeInternshipRepository()
-        ..eligibilityError =
-            const ApiException(kind: ApiErrorKind.server, message: 'boom');
+        ..eligibilityError = const ApiException(
+          kind: ApiErrorKind.server,
+          message: 'boom',
+        );
       await _pumpBar(tester, eligibility: _eligibility(), fake: repo);
 
       expect(_button(tester).onPressed, isNull);
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('the <75 % warning is shown before generating (BR-24)',
-        (tester) async {
+    testWidgets('the <75 % warning is shown before generating (BR-24)', (
+      tester,
+    ) async {
       await _pumpBar(
         tester,
         eligibility: _eligibility(
-            taskCount: 9, approvedTasks: 5, belowThreshold: true),
+          taskCount: 9,
+          approvedTasks: 5,
+          belowThreshold: true,
+        ),
       );
 
       await tester.tap(find.text('Générer le journal de stage'));
       await tester.pumpAndSettle();
       expect(
         find.text(
-            'Seulement 5 sur 9 tâches approuvées : le journal peut échouer la vérification.'),
+          'Seulement 5 sur 9 tâches approuvées : le journal peut échouer la vérification.',
+        ),
         findsOneWidget,
       );
     });
@@ -187,15 +218,24 @@ void main() {
 
       await tester.tap(find.text('Générer le journal de stage'));
       await tester.pumpAndSettle();
-      expect(find.text('Aucune tâche enregistrée : le tableau du journal sera vide.'),
-          findsOneWidget);
+      expect(
+        find.text(
+          'Aucune tâche enregistrée : le tableau du journal sera vide.',
+        ),
+        findsOneWidget,
+      );
     });
 
-    testWidgets('every state is localized (en + ar, RTL renders)', (tester) async {
+    testWidgets('every state is localized (en + ar, RTL renders)', (
+      tester,
+    ) async {
       await _pumpBar(
         tester,
-        eligibility:
-            _eligibility(eligible: false, reason: 'BEFORE_WINDOW', daysUntilOpen: 3),
+        eligibility: _eligibility(
+          eligible: false,
+          reason: 'BEFORE_WINDOW',
+          daysUntilOpen: 3,
+        ),
         locale: const Locale('en'),
       );
       expect(find.text('Generate the internship journal'), findsOneWidget);
@@ -203,8 +243,11 @@ void main() {
 
       await _pumpBar(
         tester,
-        eligibility:
-            _eligibility(eligible: false, reason: 'BEFORE_WINDOW', daysUntilOpen: 3),
+        eligibility: _eligibility(
+          eligible: false,
+          reason: 'BEFORE_WINDOW',
+          daysUntilOpen: 3,
+        ),
         locale: const Locale('ar'),
       );
       expect(find.text('إنشاء دفتر التربص'), findsOneWidget);

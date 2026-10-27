@@ -11,14 +11,14 @@ import 'package:stegappe/features/messaging/presentation/providers/messaging_pro
 /// Frames are triggers, never state — so duplicates are harmless.
 void main() {
   NotificationItem sampleItem(NotificationType type) => NotificationItem(
-        id: 'n-${type.name}',
-        title: 't',
-        message: 'm',
-        priority: 'NORMAL',
-        createdAt: DateTime.utc(2026, 1, 1),
-        isRead: false,
-        type: type,
-      );
+    id: 'n-${type.name}',
+    title: 't',
+    message: 'm',
+    priority: 'NORMAL',
+    createdAt: DateTime.utc(2026, 1, 1),
+    isRead: false,
+    type: type,
+  );
 
   group('taskSyncCategoryFor', () {
     test('every task-class type maps to the tasks category', () {
@@ -29,8 +29,11 @@ void main() {
         NotificationType.taskStatusChanged,
         NotificationType.scheduledTaskVisible,
       ]) {
-        expect(taskSyncCategoryFor(sampleItem(type)), RealtimeCategory.tasks,
-            reason: '$type');
+        expect(
+          taskSyncCategoryFor(sampleItem(type)),
+          RealtimeCategory.tasks,
+          reason: '$type',
+        );
       }
     });
 
@@ -47,12 +50,11 @@ void main() {
   });
 
   group('frame-driven invalidation (RealtimeSync seam)', () {
-    ProviderContainer containerWithLog(
-        List<ProviderOrFamily> log) {
+    ProviderContainer containerWithLog(List<ProviderOrFamily> log) {
       final sync = RiverpodRealtimeSync(log.add);
-      final container = ProviderContainer(overrides: [
-        realtimeSyncProvider.overrideWithValue(sync),
-      ]);
+      final container = ProviderContainer(
+        overrides: [realtimeSyncProvider.overrideWithValue(sync)],
+      );
       addTearDown(container.dispose);
       return container;
     }
@@ -62,16 +64,18 @@ void main() {
       final container = containerWithLog(log);
       final sync = container.read(realtimeSyncProvider);
 
-      sync.invalidate(taskSyncCategoryFor(
-          sampleItem(NotificationType.taskUpdated))!);
+      sync.invalidate(
+        taskSyncCategoryFor(sampleItem(NotificationType.taskUpdated))!,
+      );
       expect(
-          log,
-          orderedEquals([
-            taskListProvider,
-            internshipTasksProvider,
-            supervisedInternsProvider,
-            dashboardProvider,
-          ]));
+        log,
+        orderedEquals([
+          taskListProvider,
+          internshipTasksProvider,
+          supervisedInternsProvider,
+          dashboardProvider,
+        ]),
+      );
     });
 
     test('duplicate frames only repeat the same invalidations', () {
@@ -79,7 +83,8 @@ void main() {
       final container = containerWithLog(log);
       final sync = container.read(realtimeSyncProvider);
       final category = taskSyncCategoryFor(
-          sampleItem(NotificationType.taskStatusChanged))!;
+        sampleItem(NotificationType.taskStatusChanged),
+      )!;
 
       sync.invalidate(category);
       sync.invalidate(category);

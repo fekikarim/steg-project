@@ -9,8 +9,10 @@ import 'package:stegappe/features/shell/presentation/about_screen.dart';
 Future<AppLocalizations> loadL10n(String code) =>
     AppLocalizations.delegate.load(Locale(code));
 
-Future<void> pumpAbout(WidgetTester tester,
-    {Locale locale = const Locale('fr')}) async {
+Future<void> pumpAbout(
+  WidgetTester tester, {
+  Locale locale = const Locale('fr'),
+}) async {
   await tester.pumpWidget(
     ProviderScope(
       child: MaterialApp(
@@ -32,8 +34,9 @@ Future<void> pumpAbout(WidgetTester tester,
 
 void main() {
   group('T14 about: safe public information only', () {
-    testWidgets('brand, version, licences, support and privacy render',
-        (tester) async {
+    testWidgets('brand, version, licences, support and privacy render', (
+      tester,
+    ) async {
       final l10n = await loadL10n('fr');
       await pumpAbout(tester);
       expect(find.text(l10n.aboutTitle), findsWidgets);
@@ -82,8 +85,11 @@ void main() {
         'gemini',
         '@',
       ]) {
-        expect(texts.contains(needle), isFalse,
-            reason: 'about screen leaks "$needle"');
+        expect(
+          texts.contains(needle),
+          isFalse,
+          reason: 'about screen leaks "$needle"',
+        );
       }
     });
 

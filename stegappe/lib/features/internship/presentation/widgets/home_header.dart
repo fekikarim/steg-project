@@ -98,9 +98,7 @@ class QuickActionsGrid extends StatelessWidget {
   /// quick actions and the sections around them, and it never clips a long
   /// French/Arabic label either.
   double _cellExtent(BuildContext context, double cellWidth) {
-    final style = Theme.of(context)
-        .textTheme
-        .bodySmall
+    final style = Theme.of(context).textTheme.bodySmall
         ?.copyWith(fontWeight: FontWeight.w700, fontSize: 11.5);
     final scaler = MediaQuery.textScalerOf(context);
     final lineHeight =
@@ -120,8 +118,11 @@ class QuickActionsGrid extends StatelessWidget {
     }
     // The tile centres its content, so the grid can never be taller than
     // what it paints; the +1 is rounding slack.
-    return StegSpacing.sm * 2 + _medallion + _medallionGap +
-        lineHeight * lines + 1;
+    return StegSpacing.sm * 2 +
+        _medallion +
+        _medallionGap +
+        lineHeight * lines +
+        1;
   }
 
   static const double _medallion = 40;
@@ -148,100 +149,105 @@ class QuickActionsGrid extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           StegSectionHeader(
-              title: l10n.homeQuickActions,
-              icon: Icons.bolt_rounded),
+            title: l10n.homeQuickActions,
+            icon: Icons.bolt_rounded,
+          ),
           const SizedBox(height: StegSpacing.xs),
           // The cell height follows the real labels, so the grid is always
           // exactly as tall as its tiles — no reserved band above or below.
-          LayoutBuilder(builder: (context, constraints) {
-            final cellWidth =
-                (constraints.maxWidth - StegSpacing.sm * 3) / 4;
-            return GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 4,
-                mainAxisSpacing: StegSpacing.sm,
-                crossAxisSpacing: StegSpacing.sm,
-                mainAxisExtent: _cellExtent(context, cellWidth),
-              ),
-              itemCount: actions.length,
-              itemBuilder: (context, i) {
-                final a = actions[i];
-                final palette = a.gradient ??
-                    _defaultGradients[i % _defaultGradients.length];
-                // On dark surfaces the deep brand tones disappear, so the
-                // tile speaks with the palette's bright tone instead.
-                final accent = dark ? palette.last : palette.first;
-                // The tile *is* the grid cell: it fills the reserved height
-                // and centres its content.
-                return SizedBox.expand(
-                  child: Semantics(
-                    button: true,
-                    label: a.label,
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: a.onTap,
-                        borderRadius:
-                            BorderRadius.circular(StegSpacing.radiusMd),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: accent.withValues(alpha: dark ? 0.10 : 0.07),
-                            borderRadius:
-                                BorderRadius.circular(StegSpacing.radiusMd),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final cellWidth = (constraints.maxWidth - StegSpacing.sm * 3) / 4;
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 4,
+                  mainAxisSpacing: StegSpacing.sm,
+                  crossAxisSpacing: StegSpacing.sm,
+                  mainAxisExtent: _cellExtent(context, cellWidth),
+                ),
+                itemCount: actions.length,
+                itemBuilder: (context, i) {
+                  final a = actions[i];
+                  final palette =
+                      a.gradient ??
+                      _defaultGradients[i % _defaultGradients.length];
+                  // On dark surfaces the deep brand tones disappear, so the
+                  // tile speaks with the palette's bright tone instead.
+                  final accent = dark ? palette.last : palette.first;
+                  // The tile *is* the grid cell: it fills the reserved height
+                  // and centres its content.
+                  return SizedBox.expand(
+                    child: Semantics(
+                      button: true,
+                      label: a.label,
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: a.onTap,
+                          borderRadius: BorderRadius.circular(
+                            StegSpacing.radiusMd,
                           ),
-                          padding: const EdgeInsets.symmetric(
-                            vertical: StegSpacing.sm,
-                            horizontal: StegSpacing.xs,
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                width: _medallion,
-                                height: _medallion,
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      accent.withValues(alpha: dark ? 0.30 : 0.16),
-                                      accent.withValues(alpha: dark ? 0.18 : 0.09),
-                                    ],
-                                    begin: AlignmentDirectional.topStart,
-                                    end: AlignmentDirectional.bottomEnd,
-                                  ),
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                                child: Icon(
-                                  a.icon,
-                                  size: 20,
-                                  color: accent,
-                                ),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: accent.withValues(
+                                alpha: dark ? 0.10 : 0.07,
                               ),
-                              const SizedBox(height: _medallionGap),
-                              Text(
-                                a.label,
-                                textAlign: TextAlign.center,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall
-                                    ?.copyWith(
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 11.5,
+                              borderRadius: BorderRadius.circular(
+                                StegSpacing.radiusMd,
+                              ),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              vertical: StegSpacing.sm,
+                              horizontal: StegSpacing.xs,
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Container(
+                                  width: _medallion,
+                                  height: _medallion,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        accent.withValues(
+                                          alpha: dark ? 0.30 : 0.16,
+                                        ),
+                                        accent.withValues(
+                                          alpha: dark ? 0.18 : 0.09,
+                                        ),
+                                      ],
+                                      begin: AlignmentDirectional.topStart,
+                                      end: AlignmentDirectional.bottomEnd,
                                     ),
-                              ),
-                            ],
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                  child: Icon(a.icon, size: 20, color: accent),
+                                ),
+                                const SizedBox(height: _medallionGap),
+                                Text(
+                                  a.label,
+                                  textAlign: TextAlign.center,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 11.5,
+                                      ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                );
-              },
-            );
-          }),
+                  );
+                },
+              );
+            },
+          ),
         ],
       ),
     );

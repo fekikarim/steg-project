@@ -16,16 +16,23 @@ import 'package:stegappe/features/messaging/data/services/stomp_chat_service_imp
 ///  2. STOMP send → server persist → broadcast echo (round trip);
 ///  3. REST send → broadcast received (simulates the second device);
 ///  4. unauthorized conversation access rejected (error frame, no leak).
-const _live =
-    bool.fromEnvironment('LIVE_BACKEND', defaultValue: false);
-const _httpBase = String.fromEnvironment('LIVE_HTTP_BASE',
-    defaultValue: 'http://localhost:8080');
-const _wsBase =
-    String.fromEnvironment('LIVE_WS_BASE', defaultValue: 'ws://localhost:8080');
-const _email = String.fromEnvironment('LIVE_EMAIL',
-    defaultValue: 'supervisor.steg@steg.tn');
-const _password = String.fromEnvironment('LIVE_PASSWORD',
-    defaultValue: 'Supervisor#2026');
+const _live = bool.fromEnvironment('LIVE_BACKEND', defaultValue: false);
+const _httpBase = String.fromEnvironment(
+  'LIVE_HTTP_BASE',
+  defaultValue: 'http://localhost:8080',
+);
+const _wsBase = String.fromEnvironment(
+  'LIVE_WS_BASE',
+  defaultValue: 'ws://localhost:8080',
+);
+const _email = String.fromEnvironment(
+  'LIVE_EMAIL',
+  defaultValue: 'supervisor.steg@steg.tn',
+);
+const _password = String.fromEnvironment(
+  'LIVE_PASSWORD',
+  defaultValue: 'Supervisor#2026',
+);
 
 Future<String> _login(ApiClient client) async {
   final tokens = await client.post(
@@ -52,14 +59,12 @@ void main() {
     () async {
       final httpClient = http.Client();
       addTearDown(httpClient.close);
-      final api =
-          ApiClient(baseUrl: _httpBase, httpClient: httpClient);
+      final api = ApiClient(baseUrl: _httpBase, httpClient: httpClient);
       addTearDown(api.close);
 
       final access = await _login(api);
       final tokens = InMemoryTokenStorage();
-      await tokens.saveTokens(
-          accessToken: access, refreshToken: 'live-unused');
+      await tokens.saveTokens(accessToken: access, refreshToken: 'live-unused');
       final stomp = StompChatServiceImpl(
         tokens: tokens,
         wsBaseUrl: _wsBase,
@@ -74,33 +79,27 @@ void main() {
       final errors = <String>[];
       await stomp.ensureConnected();
       // Wait for CONNECT (library dials asynchronously).
-      final deadline =
-          DateTime.now().add(const Duration(seconds: 10));
-      while (stomp.currentState !=
-              ChatConnectionState.connected &&
+      final deadline = DateTime.now().add(const Duration(seconds: 10));
+      while (stomp.currentState != ChatConnectionState.connected &&
           DateTime.now().isBefore(deadline)) {
-        await Future<void>.delayed(
-            const Duration(milliseconds: 100));
+        await Future<void>.delayed(const Duration(milliseconds: 100));
       }
       expect(stomp.currentState, ChatConnectionState.connected);
 
       await stomp.subscribeConversation(convId, received.add);
       await stomp.subscribeErrors(
-          (code, message) => errors.add('$code:$message'));
-      await Future<void>.delayed(
-          const Duration(milliseconds: 500));
+        (code, message) => errors.add('$code:$message'),
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 500));
 
       // 1. STOMP send → broadcast echo (listen BEFORE sending:
       //    broadcast streams never replay).
-      const marker =
-          'live-stomp-probe-${0xC0FFEE}';
+      const marker = 'live-stomp-probe-${0xC0FFEE}';
       final echoFuture = received.stream
           .map((b) => jsonDecode(b) as Map<String, dynamic>)
-          .firstWhere(
-              (m) => (m['content'] ?? '').toString().contains(marker));
+          .firstWhere((m) => (m['content'] ?? '').toString().contains(marker));
       await stomp.sendMessage(convId, 'hello $marker');
-      final echo =
-          await echoFuture.timeout(const Duration(seconds: 10));
+      final echo = await echoFuture.timeout(const Duration(seconds: 10));
       expect(echo['conversationId'], convId);
       expect(echo['sequenceNumber'], isA<int>());
 
@@ -108,8 +107,7 @@ void main() {
       const marker2 = 'live-rest-probe-4451';
       final echo2Future = received.stream
           .map((b) => jsonDecode(b) as Map<String, dynamic>)
-          .firstWhere(
-              (m) => (m['content'] ?? '').toString().contains(marker2));
+          .firstWhere((m) => (m['content'] ?? '').toString().contains(marker2));
 
       await api.post(
         '/api/conversations/$convId/messages',
@@ -117,8 +115,7 @@ void main() {
         body: {'content': 'hello $marker2'},
         decode: (_) {},
       );
-      final echo2 =
-          await echo2Future.timeout(const Duration(seconds: 10));
+      final echo2 = await echo2Future.timeout(const Duration(seconds: 10));
       expect(echo2['sequenceNumber'], isA<int>());
 
       // 3. Unauthorized conversation: REST 403 (no leak).
@@ -136,14 +133,17 @@ void main() {
 
       // 4. Unauthorized STOMP send → error frame, no broadcast.
       await stomp.sendMessage(
-          '00000000-0000-0000-0000-000000000000', 'intrude');
+        '00000000-0000-0000-0000-000000000000',
+        'intrude',
+      );
       await Future<void>.delayed(const Duration(seconds: 2));
       expect(
-          errors.any((e) =>
-              e.startsWith('ACCESS_DENIED') ||
-              e.startsWith('NOT_FOUND')),
-          isTrue,
-          reason: 'expected ACCESS_DENIED/NOT_FOUND, got $errors');
+        errors.any(
+          (e) => e.startsWith('ACCESS_DENIED') || e.startsWith('NOT_FOUND'),
+        ),
+        isTrue,
+        reason: 'expected ACCESS_DENIED/NOT_FOUND, got $errors',
+      );
     },
     skip: !_live
         ? 'needs a local backend: flutter test test/live --dart-define=LIVE_BACKEND=true'

@@ -25,14 +25,17 @@ void main() {
   Future<ProviderContainer> container() async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
-    final c = ProviderContainer(overrides: [
-      prefsStoreProvider.overrideWithValue(PrefsStore(prefs)),
-      authRepositoryProvider.overrideWithValue(FakeAuthRepository()),
-      internshipRepositoryProvider
-          .overrideWithValue(FakeInternshipRepository()),
-      messagingRepositoryProvider.overrideWithValue(repo),
-      stompChatServiceProvider.overrideWithValue(FakeStompService()),
-    ]);
+    final c = ProviderContainer(
+      overrides: [
+        prefsStoreProvider.overrideWithValue(PrefsStore(prefs)),
+        authRepositoryProvider.overrideWithValue(FakeAuthRepository()),
+        internshipRepositoryProvider.overrideWithValue(
+          FakeInternshipRepository(),
+        ),
+        messagingRepositoryProvider.overrideWithValue(repo),
+        stompChatServiceProvider.overrideWithValue(FakeStompService()),
+      ],
+    );
     addTearDown(c.dispose);
     return c;
   }
@@ -43,64 +46,67 @@ void main() {
 
   test('offline send enqueues and keeps the bubble queued', () async {
     final c = await container();
-    final controller =
-        c.read(chatControllerProvider('c1').notifier);
+    final controller = c.read(chatControllerProvider('c1').notifier);
 
     await controller.send('hello offline');
     expect(
-        c
-            .read(pendingWritesProvider)
-            .items
-            .where((w) =>
+      c
+          .read(pendingWritesProvider)
+          .items
+          .where(
+            (w) =>
                 w.kind == PendingWriteKind.message &&
-                w.content == 'hello offline'),
-        hasLength(1));
+                w.content == 'hello offline',
+          ),
+      hasLength(1),
+    );
     expect(
-        controller.state.pending.map((p) => p.content),
-        contains('hello offline'));
+      controller.state.pending.map((p) => p.content),
+      contains('hello offline'),
+    );
     // No failure surfacing: queued is a normal offline state, not an error.
     expect(controller.state.failed, isEmpty);
   });
 
-  test('flush persists once, merges the message and drops the bubble',
-      () async {
-    final c = await container();
-    final controller =
-        c.read(chatControllerProvider('c1').notifier);
+  test(
+    'flush persists once, merges the message and drops the bubble',
+    () async {
+      final c = await container();
+      final controller = c.read(chatControllerProvider('c1').notifier);
 
-    await controller.send('hello offline');
-    repo.networkDown = false;
-    await controller.flushQueued();
-    await c.read(pendingWritesProvider.notifier).flushAll();
+      await controller.send('hello offline');
+      repo.networkDown = false;
+      await controller.flushQueued();
+      await c.read(pendingWritesProvider.notifier).flushAll();
 
-    expect(
-        c.read(pendingWritesProvider).count, 0);
-    expect(
-        controller.state.pending
-            .where((p) => p.content == 'hello offline'),
-        isEmpty);
-    expect(
-        controller.state.messages
-            .where((m) => m.sequenceNumber == 101),
-        hasLength(1));
-    expect(repo.sentKeys.where((k) => k != null).length, 1);
-  });
+      expect(c.read(pendingWritesProvider).count, 0);
+      expect(
+        controller.state.pending.where((p) => p.content == 'hello offline'),
+        isEmpty,
+      );
+      expect(
+        controller.state.messages.where((m) => m.sequenceNumber == 101),
+        hasLength(1),
+      );
+      expect(repo.sentKeys.where((k) => k != null).length, 1);
+    },
+  );
 
   test('second flush does not duplicate (same key replays)', () async {
     final c = await container();
-    final controller =
-        c.read(chatControllerProvider('c1').notifier);
+    final controller = c.read(chatControllerProvider('c1').notifier);
 
     await controller.send('once only');
     repo.networkDown = false;
     await controller.flushQueued();
     await controller.flushQueued();
     expect(
-        c
-            .read(pendingWritesProvider)
-            .items
-            .where((w) => w.content == 'once only'),
-        isEmpty);
+      c
+          .read(pendingWritesProvider)
+          .items
+          .where((w) => w.content == 'once only'),
+      isEmpty,
+    );
   });
 }
 
@@ -108,13 +114,14 @@ class NetworkDownRepo extends FakeMessagingRepo {
   bool networkDown = true;
 
   @override
-  Future<SentMessage?> send(String conversationId, String content,
-      {String? idempotencyKey}) async {
+  Future<SentMessage?> send(
+    String conversationId,
+    String content, {
+    String? idempotencyKey,
+  }) async {
     if (networkDown) {
-      throw const ApiException(
-          kind: ApiErrorKind.network, message: 'down');
+      throw const ApiException(kind: ApiErrorKind.network, message: 'down');
     }
-    return super.send(conversationId, content,
-        idempotencyKey: idempotencyKey);
+    return super.send(conversationId, content, idempotencyKey: idempotencyKey);
   }
 }

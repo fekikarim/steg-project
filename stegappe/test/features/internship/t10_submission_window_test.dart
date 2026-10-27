@@ -108,8 +108,12 @@ class _CapturingClient implements ApiClient {
   }) async {
     lastPath = path;
     lastFields = fields;
-    return decode(
-        {'id': 'd1', 'title': 'T', 'status': 'DRAFT', 'currentVersion': 1});
+    return decode({
+      'id': 'd1',
+      'title': 'T',
+      'status': 'DRAFT',
+      'currentVersion': 1,
+    });
   }
 
   @override
@@ -122,8 +126,12 @@ class _CapturingClient implements ApiClient {
   }) async {
     lastPath = path;
     lastBody = body;
-    return decode(
-        {'id': 'd1', 'title': 'T', 'status': 'DRAFT', 'currentVersion': 1});
+    return decode({
+      'id': 'd1',
+      'title': 'T',
+      'status': 'DRAFT',
+      'currentVersion': 1,
+    });
   }
 
   @override
@@ -133,8 +141,9 @@ class _CapturingClient implements ApiClient {
 
 void main() {
   group('T10/B7 — the final-week window shows the submit action honestly', () {
-    testWidgets('closed (late) hides submit, explains, offers the chat',
-        (tester) async {
+    testWidgets('closed (late) hides submit, explains, offers the chat', (
+      tester,
+    ) async {
       final closesAt = DateTime(2026, 10, 1);
       final fake = FakeInternshipRepository()
         ..draftDetail = true
@@ -148,14 +157,18 @@ void main() {
         );
       final l10n = await loadL10n('fr');
       await pumpDetail(
-          tester, const DeliverableDetailScreen(deliverableId: 'd-sub'),
-          fake: fake);
+        tester,
+        const DeliverableDetailScreen(deliverableId: 'd-sub'),
+        fake: fake,
+      );
 
       expect(find.text(l10n.deliverableSubmitAction), findsNothing);
       expect(
-          find.text(l10n.submissionWindowLate(
-              formatDay(closesAt, const Locale('fr')))),
-          findsOneWidget);
+        find.text(
+          l10n.submissionWindowLate(formatDay(closesAt, const Locale('fr'))),
+        ),
+        findsOneWidget,
+      );
       expect(find.text(l10n.contactSupervisorAction), findsOneWidget);
     });
 
@@ -176,14 +189,18 @@ void main() {
         );
       final l10n = await loadL10n('fr');
       await pumpDetail(
-          tester, const DeliverableDetailScreen(deliverableId: 'd-sub'),
-          fake: fake);
+        tester,
+        const DeliverableDetailScreen(deliverableId: 'd-sub'),
+        fake: fake,
+      );
 
       expect(find.text(l10n.deliverableSubmitAction), findsNothing);
       expect(
-          find.text(l10n.submissionWindowOpens(
-              formatDay(opensAt, const Locale('fr')))),
-          findsOneWidget);
+        find.text(
+          l10n.submissionWindowOpens(formatDay(opensAt, const Locale('fr'))),
+        ),
+        findsOneWidget,
+      );
       expect(find.text(l10n.contactSupervisorAction), findsOneWidget);
     });
 
@@ -202,19 +219,24 @@ void main() {
         );
       final l10n = await loadL10n('fr');
       await pumpDetail(
-          tester, const DeliverableDetailScreen(deliverableId: 'd-sub'),
-          fake: fake);
+        tester,
+        const DeliverableDetailScreen(deliverableId: 'd-sub'),
+        fake: fake,
+      );
 
       expect(find.text(l10n.deliverableSubmitAction), findsOneWidget);
       expect(
-          find.text(l10n.submissionWindowUntil(
-              formatDay(closesAt, const Locale('fr')))),
-          findsOneWidget);
+        find.text(
+          l10n.submissionWindowUntil(formatDay(closesAt, const Locale('fr'))),
+        ),
+        findsOneWidget,
+      );
       expect(find.text(l10n.contactSupervisorAction), findsNothing);
     });
 
-    testWidgets('a free document (no declared kind) ignores the window',
-        (tester) async {
+    testWidgets('a free document (no declared kind) ignores the window', (
+      tester,
+    ) async {
       final fake = FakeInternshipRepository()
         ..draftDetail = true
         // documentKindFixture stays null: ordinary deliverables keep the
@@ -227,37 +249,43 @@ void main() {
         );
       final l10n = await loadL10n('fr');
       await pumpDetail(
-          tester, const DeliverableDetailScreen(deliverableId: 'd-sub'),
-          fake: fake);
+        tester,
+        const DeliverableDetailScreen(deliverableId: 'd-sub'),
+        fake: fake,
+      );
 
       expect(find.text(l10n.deliverableSubmitAction), findsOneWidget);
       expect(find.text(l10n.contactSupervisorAction), findsNothing);
     });
 
-    testWidgets('submit still works when the window read fails (server owns it)',
-        (tester) async {
-      final fake = FakeInternshipRepository()
-        ..draftDetail = true
-        ..documentKindFixture = 'REPORT'
-        ..submissionWindowError = Exception('window read failed');
-      final l10n = await loadL10n('fr');
-      await pumpDetail(
-          tester, const DeliverableDetailScreen(deliverableId: 'd-sub'),
-          fake: fake);
+    testWidgets(
+      'submit still works when the window read fails (server owns it)',
+      (tester) async {
+        final fake = FakeInternshipRepository()
+          ..draftDetail = true
+          ..documentKindFixture = 'REPORT'
+          ..submissionWindowError = Exception('window read failed');
+        final l10n = await loadL10n('fr');
+        await pumpDetail(
+          tester,
+          const DeliverableDetailScreen(deliverableId: 'd-sub'),
+          fake: fake,
+        );
 
-      // Honest fallback: the action stays available because the server
-      // enforces the window anyway; a refusal maps to a coded sentence.
-      expect(find.text(l10n.deliverableSubmitAction), findsOneWidget);
-    });
+        // Honest fallback: the action stays available because the server
+        // enforces the window anyway; a refusal maps to a coded sentence.
+        expect(find.text(l10n.deliverableSubmitAction), findsOneWidget);
+      },
+    );
   });
 
   group('T10/B7 — coded refusals map to honest sentences (never raw)', () {
     ApiException err(String code) => ApiException(
-          kind: ApiErrorKind.validation,
-          message: code,
-          statusCode: 422,
-          code: code,
-        );
+      kind: ApiErrorKind.validation,
+      message: code,
+      statusCode: 422,
+      code: code,
+    );
 
     test('SUBMISSION_NOT_IN_WINDOW explains in fr/en/ar', () async {
       for (final code in ['fr', 'en', 'ar']) {
@@ -283,8 +311,7 @@ void main() {
 
     test('a foreign conversation document is named as such', () async {
       final l10n = await loadL10n('fr');
-      final mapped =
-          userErrorOf(err('DELIVERABLE_NOT_IN_CONVERSATION'), l10n);
+      final mapped = userErrorOf(err('DELIVERABLE_NOT_IN_CONVERSATION'), l10n);
       expect(mapped.message, l10n.errDocumentNotInConversation);
       expect(mapped.retryable, isFalse);
     });
@@ -294,11 +321,14 @@ void main() {
     test('create sends the declared kind as a multipart field', () async {
       final client = _CapturingClient();
       final ds = InternshipRemoteDataSource(client);
-      await ds.createDeliverable('i1', 'bearer',
-          title: 'Rapport',
-          documentKind: 'REPORT',
-          fileName: 'r.pdf',
-          fileBytes: Uint8List.fromList([1, 2, 3]));
+      await ds.createDeliverable(
+        'i1',
+        'bearer',
+        title: 'Rapport',
+        documentKind: 'REPORT',
+        fileName: 'r.pdf',
+        fileBytes: Uint8List.fromList([1, 2, 3]),
+      );
       expect(client.lastPath, '/api/internships/i1/deliverables');
       expect(client.lastFields?['documentKind'], 'REPORT');
       expect(client.lastFields?['title'], 'Rapport');
@@ -307,10 +337,13 @@ void main() {
     test('a free document omits the field entirely', () async {
       final client = _CapturingClient();
       final ds = InternshipRemoteDataSource(client);
-      await ds.createDeliverable('i1', 'bearer',
-          title: 'Note',
-          fileName: 'n.pdf',
-          fileBytes: Uint8List.fromList([1]));
+      await ds.createDeliverable(
+        'i1',
+        'bearer',
+        title: 'Note',
+        fileName: 'n.pdf',
+        fileBytes: Uint8List.fromList([1]),
+      );
       expect(client.lastFields!.containsKey('documentKind'), isFalse);
     });
 
@@ -318,16 +351,19 @@ void main() {
       final client = _CapturingClient();
       final ds = InternshipRemoteDataSource(client);
       await ds.registerDocumentKind('d9', 'bearer', 'JOURNAL');
-      expect(client.lastPath,
-          '/api/internships/deliverables/d9/document-kind');
+      expect(client.lastPath, '/api/internships/deliverables/d9/document-kind');
       expect(client.lastBody, {'documentKind': 'JOURNAL'});
     });
 
     test('the window read hits the exact endpoint', () {
-      expect(Endpoints.submissionWindow('i1'),
-          '/api/internships/i1/submission-window');
-      expect(Endpoints.deliverableDocumentKind('d9'),
-          '/api/internships/deliverables/d9/document-kind');
+      expect(
+        Endpoints.submissionWindow('i1'),
+        '/api/internships/i1/submission-window',
+      );
+      expect(
+        Endpoints.deliverableDocumentKind('d9'),
+        '/api/internships/deliverables/d9/document-kind',
+      );
     });
   });
 }

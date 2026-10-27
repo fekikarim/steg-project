@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/l10n/app_localizations.dart';
+import '../../../../core/navigation/app_destination.dart';
 import '../../../../core/network/error_messages.dart';
 import '../../../../core/theme/steg_colors.dart';
 import '../../../../core/theme/steg_spacing.dart';
@@ -36,14 +37,10 @@ import '../../../../core/widgets/steg_skeleton.dart';
 /// refreshes via deduplicated socket payloads, app resume and pull-to-refresh
 /// instead — always foreground-honest.
 class NotificationsScreen extends ConsumerStatefulWidget {
-  const NotificationsScreen({
-    super.key,
-    this.onOpenTab,
-    this.onOpenCommunityPost,
-  });
+  const NotificationsScreen({super.key, this.onOpen, this.onOpenCommunityPost});
 
   /// Switch the underlying shell tab, then pop this screen.
-  final ValueChanged<int>? onOpenTab;
+  final ValueChanged<AppDestination>? onOpen;
 
   /// Push a community post detail, then pop this screen (T08: community
   /// rows have no shell tab — the detail push is their deep link).
@@ -274,7 +271,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
         ? communityPostId
         : null;
     final routable =
-        (route != null && widget.onOpenTab != null) || communityTarget != null;
+        (route != null && widget.onOpen != null) || communityTarget != null;
     final unread = !n.isRead;
     final typeLabel = notificationTypeLabel(n.type, l10n);
     final scheme = Theme.of(context).colorScheme;
@@ -433,7 +430,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
           .showSnackBar(SnackBar(content: Text(failure)));
     }
     Navigator.of(context).pop();
-    widget.onOpenTab?.call(route.tab);
+    widget.onOpen?.call(route.destination);
   }
 
   /// Community post id for the three T08 catalogue keys, else null.
@@ -542,7 +539,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
                       ?.copyWith(fontStyle: FontStyle.italic),
                 ),
               ],
-              if (route != null && widget.onOpenTab != null) ...[
+              if (route != null && widget.onOpen != null) ...[
                 const SizedBox(height: StegSpacing.md),
                 Align(
                   alignment: AlignmentDirectional.centerEnd,

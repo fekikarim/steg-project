@@ -3,7 +3,9 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/intl.dart';
+
 import '../../support/queue_harness.dart';
+
 import 'package:stegappe/core/connectivity/connectivity_service.dart';
 import 'package:stegappe/core/l10n/app_localizations.dart';
 import 'package:stegappe/core/realtime/realtime_sync.dart';
@@ -51,22 +53,21 @@ SupervisedIntern _intern({
   required DateTime start,
   required DateTime end,
   InternshipStatus status = InternshipStatus.inProgress,
-}) =>
-    SupervisedIntern(
-      internshipId: id,
-      reference: 'REF-$id',
-      internName: name,
-      status: status,
-      type: InternshipType.perfectionnement,
-      startDate: start,
-      endDate: end,
-      departmentName: 'DSI',
-      tasksCompleted: 1,
-      tasksTotal: 4,
-      pendingJournal: 0,
-      pendingDeliverables: 0,
-      evaluationsCount: 0,
-    );
+}) => SupervisedIntern(
+  internshipId: id,
+  reference: 'REF-$id',
+  internName: name,
+  status: status,
+  type: InternshipType.perfectionnement,
+  startDate: start,
+  endDate: end,
+  departmentName: 'DSI',
+  tasksCompleted: 1,
+  tasksTotal: 4,
+  pendingJournal: 0,
+  pendingDeliverables: 0,
+  evaluationsCount: 0,
+);
 
 Future<FakeInternshipRepository> pumpSupervised(
   WidgetTester tester, {
@@ -84,8 +85,7 @@ Future<FakeInternshipRepository> pumpSupervised(
         internshipRepositoryProvider.overrideWithValue(repo),
         isOnlineProvider.overrideWith((ref) => online),
         await queueOverride(),
-        if (month != null)
-          calendarMonthProvider.overrideWith((ref) => month),
+        if (month != null) calendarMonthProvider.overrideWith((ref) => month),
         ...extra,
       ],
       child: MaterialApp(
@@ -132,57 +132,133 @@ void main() {
     });
 
     test('periodOverlapsMonth is inclusive on both boundaries', () {
-      expect(periodOverlapsMonth(DateTime(2026, 1, 10), DateTime(2026, 4, 1), 2026, 3), isTrue);
-      expect(periodOverlapsMonth(DateTime(2026, 4, 1), DateTime(2026, 5, 1), 2026, 3), isFalse);
+      expect(
+        periodOverlapsMonth(
+          DateTime(2026, 1, 10),
+          DateTime(2026, 4, 1),
+          2026,
+          3,
+        ),
+        isTrue,
+      );
+      expect(
+        periodOverlapsMonth(
+          DateTime(2026, 4, 1),
+          DateTime(2026, 5, 1),
+          2026,
+          3,
+        ),
+        isFalse,
+      );
       // Ends exactly on the month start / starts exactly on the month end.
-      expect(periodOverlapsMonth(DateTime(2026, 1, 1), DateTime(2026, 3, 1), 2026, 3), isTrue);
-      expect(periodOverlapsMonth(DateTime(2026, 3, 31), DateTime(2026, 4, 30), 2026, 3), isTrue);
+      expect(
+        periodOverlapsMonth(
+          DateTime(2026, 1, 1),
+          DateTime(2026, 3, 1),
+          2026,
+          3,
+        ),
+        isTrue,
+      );
+      expect(
+        periodOverlapsMonth(
+          DateTime(2026, 3, 31),
+          DateTime(2026, 4, 30),
+          2026,
+          3,
+        ),
+        isTrue,
+      );
       // Adjacent but disjoint: ends Feb 28, starts Apr 1.
-      expect(periodOverlapsMonth(DateTime(2026, 1, 1), DateTime(2026, 2, 28), 2026, 3), isFalse);
-      expect(periodOverlapsMonth(DateTime(2026, 4, 1), DateTime(2026, 5, 1), 2026, 3), isFalse);
+      expect(
+        periodOverlapsMonth(
+          DateTime(2026, 1, 1),
+          DateTime(2026, 2, 28),
+          2026,
+          3,
+        ),
+        isFalse,
+      );
+      expect(
+        periodOverlapsMonth(
+          DateTime(2026, 4, 1),
+          DateTime(2026, 5, 1),
+          2026,
+          3,
+        ),
+        isFalse,
+      );
     });
 
     test('weekSegment clamps to the 7-day window', () {
       // Full week.
       expect(
-        weekSegment(DateTime(2026, 3, 1), DateTime(2026, 3, 31),
-            DateTime(2026, 3, 9)),
+        weekSegment(
+          DateTime(2026, 3, 1),
+          DateTime(2026, 3, 31),
+          DateTime(2026, 3, 9),
+        ),
         (offset: 0, length: 7),
       );
       // Starts Wednesday of the week.
       expect(
-        weekSegment(DateTime(2026, 3, 11), DateTime(2026, 3, 31),
-            DateTime(2026, 3, 9)),
+        weekSegment(
+          DateTime(2026, 3, 11),
+          DateTime(2026, 3, 31),
+          DateTime(2026, 3, 9),
+        ),
         (offset: 2, length: 5),
       );
       // Ends Tuesday of the week.
       expect(
-        weekSegment(DateTime(2026, 3, 1), DateTime(2026, 3, 10),
-            DateTime(2026, 3, 9)),
+        weekSegment(
+          DateTime(2026, 3, 1),
+          DateTime(2026, 3, 10),
+          DateTime(2026, 3, 9),
+        ),
         (offset: 0, length: 2),
       );
       // Disjoint weeks.
       expect(
-        weekSegment(DateTime(2026, 3, 1), DateTime(2026, 3, 7),
-            DateTime(2026, 3, 9)),
+        weekSegment(
+          DateTime(2026, 3, 1),
+          DateTime(2026, 3, 7),
+          DateTime(2026, 3, 9),
+        ),
         isNull,
       );
       expect(
-        weekSegment(DateTime(2026, 3, 20), DateTime(2026, 3, 31),
-            DateTime(2026, 3, 9)),
+        weekSegment(
+          DateTime(2026, 3, 20),
+          DateTime(2026, 3, 31),
+          DateTime(2026, 3, 9),
+        ),
         isNull,
       );
     });
 
     test('isSameDay compares calendar days only', () {
-      expect(isSameDay(DateTime(2026, 3, 1, 8), DateTime(2026, 3, 1, 20)), isTrue);
+      expect(
+        isSameDay(DateTime(2026, 3, 1, 8), DateTime(2026, 3, 1, 20)),
+        isTrue,
+      );
       expect(isSameDay(DateTime(2026, 3, 1), DateTime(2026, 3, 2)), isFalse);
     });
 
     test('filterSupervised matches name or reference, case-insensitive', () {
       final rows = [
-        _intern(id: 'a', name: 'Amira Ben Salah', start: DateTime(2026, 1, 1), end: DateTime(2026, 3, 31)),
-        _intern(id: 'b', name: 'Karim Gharbi', start: DateTime(2026, 1, 1), end: DateTime(2026, 3, 31)),
+        _intern(
+          id: 'a',
+          name: 'Amira Ben Salah',
+          start: DateTime(2026, 1, 1),
+          end: DateTime(2026, 3, 31),
+        ),
+        _intern(
+          id: 'b',
+          name: 'Karim Gharbi',
+          start: DateTime(2026, 1, 1),
+          end: DateTime(2026, 3, 31),
+        ),
       ];
       expect(filterSupervised(rows, ''), hasLength(2));
       expect(filterSupervised(rows, 'amira').single.internshipId, 'a');
@@ -192,12 +268,33 @@ void main() {
 
     test('sortSupervised orders by name, end date and status', () {
       final rows = [
-        _intern(id: 'b', name: 'Karim', start: DateTime(2026, 1, 1), end: DateTime(2026, 5, 31), status: InternshipStatus.validated),
-        _intern(id: 'a', name: 'Amira', start: DateTime(2026, 1, 1), end: DateTime(2026, 3, 31), status: InternshipStatus.inProgress),
+        _intern(
+          id: 'b',
+          name: 'Karim',
+          start: DateTime(2026, 1, 1),
+          end: DateTime(2026, 5, 31),
+          status: InternshipStatus.validated,
+        ),
+        _intern(
+          id: 'a',
+          name: 'Amira',
+          start: DateTime(2026, 1, 1),
+          end: DateTime(2026, 3, 31),
+          status: InternshipStatus.inProgress,
+        ),
       ];
-      expect(sortSupervised(rows, SupervisedSort.name).map((e) => e.internshipId), ['a', 'b']);
-      expect(sortSupervised(rows, SupervisedSort.endDate).map((e) => e.internshipId), ['a', 'b']);
-      expect(sortSupervised(rows, SupervisedSort.status).map((e) => e.internshipId), ['a', 'b']);
+      expect(
+        sortSupervised(rows, SupervisedSort.name).map((e) => e.internshipId),
+        ['a', 'b'],
+      );
+      expect(
+        sortSupervised(rows, SupervisedSort.endDate).map((e) => e.internshipId),
+        ['a', 'b'],
+      );
+      expect(
+        sortSupervised(rows, SupervisedSort.status).map((e) => e.internshipId),
+        ['a', 'b'],
+      );
     });
   });
 
@@ -221,8 +318,8 @@ void main() {
 
     test('blank names fall back, missing counts default to zero', () {
       final row = supervisedInternFromJson(
-          _row(internName: '  ', departmentName: null)
-            ..remove('tasksTotal'));
+        _row(internName: '  ', departmentName: null)..remove('tasksTotal'),
+      );
       expect(row.internName, '—');
       expect(row.departmentName, '—');
       expect(row.tasksTotal, 0);
@@ -243,8 +340,7 @@ void main() {
   group('T12 realtime: document frames converge the supervised list', () {
     test('documents targets include the supervised list', () {
       expect(
-        RiverpodRealtimeSync((_) {})
-            .targetsFor(RealtimeCategory.documents),
+        RiverpodRealtimeSync((_) {}).targetsFor(RealtimeCategory.documents),
         contains(supervisedInternsProvider),
       );
     });
@@ -255,15 +351,29 @@ void main() {
       await pumpSupervised(tester);
       expect(find.text('Amira Ben Salah'), findsOneWidget);
       // pendingJournal(1) + pendingDeliverables(1) = badge "2".
-      expect(find.text('2'), findsOneWidget);
+      expect(
+        find.text('2 ${(await loadL10n('fr')).internCardToProcess}'),
+        findsOneWidget,
+      );
     });
 
-    testWidgets('search filters by name; empty result is honest',
-        (tester) async {
+    testWidgets('search filters by name; empty result is honest', (
+      tester,
+    ) async {
       final fake = FakeInternshipRepository()
         ..supervisedOverride = [
-          _intern(id: 'a', name: 'Amira Ben Salah', start: DateTime(2026, 1, 1), end: DateTime(2026, 3, 31)),
-          _intern(id: 'b', name: 'Karim Gharbi', start: DateTime(2026, 1, 1), end: DateTime(2026, 3, 31)),
+          _intern(
+            id: 'a',
+            name: 'Amira Ben Salah',
+            start: DateTime(2026, 1, 1),
+            end: DateTime(2026, 3, 31),
+          ),
+          _intern(
+            id: 'b',
+            name: 'Karim Gharbi',
+            start: DateTime(2026, 1, 1),
+            end: DateTime(2026, 3, 31),
+          ),
         ];
       await pumpSupervised(tester, fake: fake);
       await tester.enterText(find.byType(TextField), 'karim');
@@ -279,12 +389,22 @@ void main() {
     testWidgets('sort by end date reorders the rows', (tester) async {
       final fake = FakeInternshipRepository()
         ..supervisedOverride = [
-          _intern(id: 'b', name: 'Karim Gharbi', start: DateTime(2026, 1, 1), end: DateTime(2026, 3, 31)),
-          _intern(id: 'a', name: 'Amira Ben Salah', start: DateTime(2026, 1, 1), end: DateTime(2026, 5, 31)),
+          _intern(
+            id: 'b',
+            name: 'Karim Gharbi',
+            start: DateTime(2026, 1, 1),
+            end: DateTime(2026, 3, 31),
+          ),
+          _intern(
+            id: 'a',
+            name: 'Amira Ben Salah',
+            start: DateTime(2026, 1, 1),
+            end: DateTime(2026, 5, 31),
+          ),
         ];
       await pumpSupervised(tester, fake: fake);
-      Finder row(String name) => find.ancestor(
-          of: find.text(name), matching: find.byType(Card));
+      Finder row(String name) =>
+          find.ancestor(of: find.text(name), matching: find.byType(InkWell));
       // Default sort is by name: Amira above Karim.
       expect(
         tester.getTopLeft(row('Amira Ben Salah')).dy,
@@ -303,8 +423,9 @@ void main() {
       );
     });
 
-    testWidgets('the list needs no conversation (single scoped source)',
-        (tester) async {
+    testWidgets('the list needs no conversation (single scoped source)', (
+      tester,
+    ) async {
       final fake = FakeInternshipRepository();
       await pumpSupervised(tester, fake: fake);
       // The fake models zero conversations; rows still render from the
@@ -315,15 +436,20 @@ void main() {
 
     testWidgets('offline shows the stale list with a label', (tester) async {
       final cached = [
-        _intern(id: 'a', name: 'Amira Ben Salah', start: DateTime(2026, 1, 1), end: DateTime(2026, 3, 31)),
+        _intern(
+          id: 'a',
+          name: 'Amira Ben Salah',
+          start: DateTime(2026, 1, 1),
+          end: DateTime(2026, 3, 31),
+        ),
       ];
       final fake = FakeInternshipRepository()..failSupervised = true;
-      await pumpSupervised(tester,
-          fake: fake,
-          online: false,
-          extra: [
-            lastSupervisedProvider.overrideWith((ref) => cached),
-          ]);
+      await pumpSupervised(
+        tester,
+        fake: fake,
+        online: false,
+        extra: [lastSupervisedProvider.overrideWith((ref) => cached)],
+      );
       // The live read failed offline, but the warm cache stays visible.
       expect(find.text('Amira Ben Salah'), findsOneWidget);
     });
@@ -341,23 +467,34 @@ void main() {
   });
 
   group('T12 calendar: month view of supervised periods', () {
-    testWidgets('bars render with names; toggle switches views',
-        (tester) async {
+    testWidgets('bars render with names; toggle switches views', (
+      tester,
+    ) async {
       final fake = FakeInternshipRepository()
         ..supervisedOverride = [
-          _intern(id: 'a', name: 'Amira Ben Salah', start: DateTime(2026, 3, 2), end: DateTime(2026, 3, 20)),
-          _intern(id: 'b', name: 'Karim Gharbi', start: DateTime(2026, 3, 10), end: DateTime(2026, 4, 30)),
+          _intern(
+            id: 'a',
+            name: 'Amira Ben Salah',
+            start: DateTime(2026, 3, 2),
+            end: DateTime(2026, 3, 20),
+          ),
+          _intern(
+            id: 'b',
+            name: 'Karim Gharbi',
+            start: DateTime(2026, 3, 10),
+            end: DateTime(2026, 4, 30),
+          ),
         ];
       final l10n = await loadL10n('fr');
-      await pumpSupervised(tester,
-          fake: fake, month: DateTime(2026, 3, 1));
+      await pumpSupervised(tester, fake: fake, month: DateTime(2026, 3, 1));
       // List view first.
       expect(find.text('Amira Ben Salah'), findsOneWidget);
       await tester.tap(find.text(l10n.supViewCalendar));
       await tester.pumpAndSettle();
       expect(
-          find.text(DateFormat.yMMMM('fr').format(DateTime(2026, 3, 1))),
-          findsOneWidget);
+        find.text(DateFormat.yMMMM('fr').format(DateTime(2026, 3, 1))),
+        findsOneWidget,
+      );
       // Overlapping periods stack: both names visible as lanes.
       expect(find.text('Amira Ben Salah'), findsWidgets);
       expect(find.text('Karim Gharbi'), findsWidgets);
@@ -366,10 +503,14 @@ void main() {
     testWidgets('tapping a lane opens the intern file', (tester) async {
       final fake = FakeInternshipRepository()
         ..supervisedOverride = [
-          _intern(id: 'a', name: 'Amira Ben Salah', start: DateTime(2026, 3, 2), end: DateTime(2026, 3, 20)),
+          _intern(
+            id: 'a',
+            name: 'Amira Ben Salah',
+            start: DateTime(2026, 3, 2),
+            end: DateTime(2026, 3, 20),
+          ),
         ];
-      await pumpSupervised(tester,
-          fake: fake, month: DateTime(2026, 3, 1));
+      await pumpSupervised(tester, fake: fake, month: DateTime(2026, 3, 1));
       final l10n = await loadL10n('fr');
       await tester.tap(find.text(l10n.supViewCalendar));
       await tester.pumpAndSettle();
@@ -381,12 +522,21 @@ void main() {
     testWidgets('month boundaries clip periods honestly', (tester) async {
       final fake = FakeInternshipRepository()
         ..supervisedOverride = [
-          _intern(id: 'a', name: 'Ends January', start: DateTime(2026, 1, 1), end: DateTime(2026, 1, 31)),
-          _intern(id: 'b', name: 'Starts February', start: DateTime(2026, 2, 1), end: DateTime(2026, 2, 28)),
+          _intern(
+            id: 'a',
+            name: 'Ends January',
+            start: DateTime(2026, 1, 1),
+            end: DateTime(2026, 1, 31),
+          ),
+          _intern(
+            id: 'b',
+            name: 'Starts February',
+            start: DateTime(2026, 2, 1),
+            end: DateTime(2026, 2, 28),
+          ),
         ];
       final l10n = await loadL10n('fr');
-      await pumpSupervised(tester,
-          fake: fake, month: DateTime(2026, 2, 1));
+      await pumpSupervised(tester, fake: fake, month: DateTime(2026, 2, 1));
       await tester.tap(find.text(l10n.supViewCalendar));
       await tester.pumpAndSettle();
       expect(find.text('Ends January'), findsNothing);
@@ -424,19 +574,20 @@ void main() {
       final fake = FakeInternshipRepository()
         ..supervisedOverride = [
           _intern(
-              id: 'a',
-              name: 'Amina Ben Salah Ep. Trabelsi Ep. Gharbi Ep. Mansouri',
-              start: DateTime(2026, 3, 2),
-              end: DateTime(2026, 3, 20)),
+            id: 'a',
+            name: 'Amina Ben Salah Ep. Trabelsi Ep. Gharbi Ep. Mansouri',
+            start: DateTime(2026, 3, 2),
+            end: DateTime(2026, 3, 20),
+          ),
         ];
       final l10n = await loadL10n('fr');
-      await pumpSupervised(tester,
-          fake: fake, month: DateTime(2026, 3, 1));
+      await pumpSupervised(tester, fake: fake, month: DateTime(2026, 3, 1));
       await tester.tap(find.text(l10n.supViewCalendar));
       await tester.pumpAndSettle();
       expect(
-          find.text('Amina Ben Salah Ep. Trabelsi Ep. Gharbi Ep. Mansouri'),
-          findsWidgets);
+        find.text('Amina Ben Salah Ep. Trabelsi Ep. Gharbi Ep. Mansouri'),
+        findsWidgets,
+      );
       expect(tester.takeException(), isNull);
     });
   });
@@ -465,19 +616,18 @@ Map<String, dynamic> _row({
   String? endDate = '2026-03-31',
   String? internName = 'Amira Ben Salah',
   String? departmentName = 'DSI',
-}) =>
-    {
-      'internshipId': 'i1',
-      'reference': 'STG-2026-0042',
-      'internName': internName,
-      'status': 'IN_PROGRESS',
-      'type': 'PFE',
-      'startDate': startDate,
-      'endDate': endDate,
-      'departmentName': departmentName,
-      'tasksTotal': 9,
-      'tasksCompleted': 3,
-      'pendingJournal': 2,
-      'pendingDeliverables': 1,
-      'evaluationsCount': 1,
-    };
+}) => {
+  'internshipId': 'i1',
+  'reference': 'STG-2026-0042',
+  'internName': internName,
+  'status': 'IN_PROGRESS',
+  'type': 'PFE',
+  'startDate': startDate,
+  'endDate': endDate,
+  'departmentName': departmentName,
+  'tasksTotal': 9,
+  'tasksCompleted': 3,
+  'pendingJournal': 2,
+  'pendingDeliverables': 1,
+  'evaluationsCount': 1,
+};

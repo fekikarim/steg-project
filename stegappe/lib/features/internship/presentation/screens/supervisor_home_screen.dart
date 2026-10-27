@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/navigation/app_destination.dart';
 import '../../../../core/connectivity/connectivity_service.dart';
 import '../../../../core/l10n/app_localizations.dart';
 import '../../../../core/network/error_messages.dart';
@@ -15,16 +16,15 @@ import '../providers/workspace_providers.dart';
 import '../widgets/dashboard_sections.dart';
 import '../widgets/home_header.dart';
 import '../widgets/intern_card.dart';
-import 'supervisor_tasks_screen.dart';
 
 /// Supervisor overview (T13): greeting + quick actions, queue totals from
 /// the T12 scoped rows (one call feeds the whole home), interns needing
 /// attention, then the full list. Formal, concise, actionable.
 class SupervisorHomeScreen extends ConsumerWidget {
-  const SupervisorHomeScreen({super.key, required this.user, this.onOpenTab});
+  const SupervisorHomeScreen({super.key, required this.user, this.onOpen});
 
   final AppUser user;
-  final void Function(int tab)? onOpenTab;
+  final ValueChanged<AppDestination>? onOpen;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -56,7 +56,8 @@ class SupervisorHomeScreen extends ConsumerWidget {
                       interns: last,
                       showStale: true,
                       user: user,
-                      onOpenTab: onOpenTab)
+                      onOpen: onOpen,
+                    )
                   : const SliverFillRemaining(
                       hasScrollBody: false,
                       child: StegLoading(),
@@ -64,10 +65,11 @@ class SupervisorHomeScreen extends ConsumerWidget {
               error: (e, _) {
                 if (last != null && !isOnline) {
                   return _HomeBody(
-                      interns: last,
-                      showStale: true,
-                      user: user,
-                      onOpenTab: onOpenTab);
+                    interns: last,
+                    showStale: true,
+                    user: user,
+                    onOpen: onOpen,
+                  );
                 }
                 return SliverFillRemaining(
                   hasScrollBody: false,
@@ -89,10 +91,11 @@ class SupervisorHomeScreen extends ConsumerWidget {
                   );
                 }
                 return _HomeBody(
-                    interns: interns,
-                    showStale: !isOnline,
-                    user: user,
-                    onOpenTab: onOpenTab);
+                  interns: interns,
+                  showStale: !isOnline,
+                  user: user,
+                  onOpen: onOpen,
+                );
               },
             ),
           ),
@@ -103,16 +106,17 @@ class SupervisorHomeScreen extends ConsumerWidget {
 }
 
 class _HomeBody extends ConsumerWidget {
-  const _HomeBody(
-      {required this.interns,
-      required this.showStale,
-      required this.user,
-      this.onOpenTab});
+  const _HomeBody({
+    required this.interns,
+    required this.showStale,
+    required this.user,
+    this.onOpen,
+  });
 
   final List<SupervisedIntern> interns;
   final bool showStale;
   final AppUser user;
-  final void Function(int tab)? onOpenTab;
+  final ValueChanged<AppDestination>? onOpen;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -136,76 +140,72 @@ class _HomeBody extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              HomeHeader(
-                displayName: user.email,
-                role: user.mobileRole,
-              ),
+              HomeHeader(displayName: user.email, role: user.mobileRole),
               const SizedBox(height: StegSpacing.md),
-              QuickActionsGrid(actions: [
-                QuickAction(
-                  icon: Icons.checklist_outlined,
-                  label: l10n.supManageTasks,
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                        builder: (_) => const SupervisorTasksScreen()),
+              QuickActionsGrid(
+                actions: [
+                  QuickAction(
+                    icon: Icons.add_task_outlined,
+                    label: l10n.qaAssignTask,
+                    onTap: onOpen == null
+                        ? null
+                        : () => onOpen!(AppDestination.tasks),
                   ),
-                ),
-                QuickAction(
-                  icon: Icons.fact_check_outlined,
-                  label: l10n.qaValidations,
-                  onTap:
-                      onOpenTab == null ? null : () => onOpenTab!(2),
-                ),
-                QuickAction(
-                  icon: Icons.calendar_month_outlined,
-                  label: l10n.qaCalendar,
-                  onTap: onOpenTab == null
+                  QuickAction(
+                    icon: Icons.groups_outlined,
+                    label: l10n.qaSeeInterns,
+                    onTap: onOpen == null
+                        ? null
+                        : () {
+                            ref.read(supervisedViewProvider.notifier).state =
+                                SupervisedView.list;
+                            onOpen!(AppDestination.interns);
+                          },
+                  ),
+                  QuickAction(
+                    icon: Icons.fact_check_outlined,
+                    label: l10n.qaVerifyDocs,
+                    onTap: onOpen == null
+                        ? null
+                        : () => onOpen!(AppDestination.validations),
+                  ),
+                  QuickAction(
+                    icon: Icons.calendar_month_outlined,
+                    label: l10n.qaCalendar,
+                    onTap: onOpen == null
+                        ? null
+                        : () {
+                            ref.read(supervisedViewProvider.notifier).state =
+                                SupervisedView.calendar;
+                            onOpen!(AppDestination.interns);
+                          },
+                  ),
+                ],
+              ),
+              // SU-HOME-02 (T14/D14): "notify for documents preparation". The
+              // action opens the scoped Interns list in multi-select mode, so
+              // the target set can only come from the server-scoped rows.
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: TextButton.icon(
+                  icon: const Icon(Icons.campaign_outlined, size: 18),
+                  label: Text(l10n.notifyPrepareAsk),
+                  onPressed: onOpen == null
                       ? null
                       : () {
-                          ref
-                              .read(supervisedViewProvider.notifier)
-                              .state = SupervisedView.calendar;
-                          onOpenTab!(1);
+                          ref.read(supervisedViewProvider.notifier).state =
+                              SupervisedView.list;
+                          ref.read(notifySelectModeProvider.notifier).state =
+                              true;
+                          onOpen!(AppDestination.interns);
                         },
                 ),
-                QuickAction(
-                  icon: Icons.people_outline,
-                  label: l10n.myInterns,
-                  onTap: onOpenTab == null
-                      ? null
-                      : () {
-                          ref
-                              .read(supervisedViewProvider.notifier)
-                              .state = SupervisedView.list;
-                          onOpenTab!(1);
-                        },
-                ),
-                // SU-HOME-02 (T14/D14): "notify for documents preparation".
-                // The action opens the scoped Interns list in multi-select
-                // mode — the picker *is* the students list, so the target set
-                // can never come from anywhere but the server-scoped rows
-                // (the endpoint re-checks scope anyway, BR-46/BR-03).
-                QuickAction(
-                  icon: Icons.campaign_outlined,
-                  label: l10n.notifyPrepareAsk,
-                  onTap: onOpenTab == null
-                      ? null
-                      : () {
-                          ref
-                              .read(supervisedViewProvider.notifier)
-                              .state = SupervisedView.list;
-                          ref
-                              .read(notifySelectModeProvider.notifier)
-                              .state = true;
-                          onOpenTab!(1);
-                        },
-                ),
-              ]),
+              ),
               const SizedBox(height: StegSpacing.sm),
               _QueueRow(
                 pendingJournal: submittedJournal,
                 pendingDeliverables: submittedDeliverables,
-                onOpenTab: onOpenTab,
+                onOpen: onOpen,
               ),
             ],
           ),
@@ -213,15 +213,17 @@ class _HomeBody extends ConsumerWidget {
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.only(
-                top: StegSpacing.md, bottom: StegSpacing.xs),
-            child: Text(l10n.needsAttention,
-                style: Theme.of(context).textTheme.titleMedium),
+              top: StegSpacing.md,
+              bottom: StegSpacing.xs,
+            ),
+            child: Text(
+              l10n.needsAttention,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
           ),
         ),
         if (attention.isEmpty)
-          SliverToBoxAdapter(
-            child: _Hint(text: l10n.allCaughtUp),
-          )
+          SliverToBoxAdapter(child: _Hint(text: l10n.allCaughtUp))
         else
           SliverList(
             delegate: SliverChildBuilderDelegate(
@@ -232,16 +234,19 @@ class _HomeBody extends ConsumerWidget {
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.only(
-                top: StegSpacing.md, bottom: StegSpacing.xs),
+              top: StegSpacing.md,
+              bottom: StegSpacing.xs,
+            ),
             child: Row(
               children: [
                 Expanded(
-                  child: Text(l10n.myInterns,
-                      style:
-                          Theme.of(context).textTheme.titleMedium),
+                  child: Text(
+                    l10n.myInterns,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                 ),
                 TextButton(
-                  onPressed: () => onOpenTab?.call(1),
+                  onPressed: () => onOpen?.call(AppDestination.interns),
                   child: Text(l10n.viewAll),
                 ),
               ],
@@ -263,12 +268,12 @@ class _QueueRow extends StatelessWidget {
   const _QueueRow({
     required this.pendingJournal,
     required this.pendingDeliverables,
-    this.onOpenTab,
+    this.onOpen,
   });
 
   final int pendingJournal;
   final int pendingDeliverables;
-  final void Function(int tab)? onOpenTab;
+  final ValueChanged<AppDestination>? onOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -280,7 +285,7 @@ class _QueueRow extends StatelessWidget {
             count: pendingJournal,
             label: l10n.pendingJournalTitle,
             icon: Icons.edit_note_outlined,
-            onTap: () => onOpenTab?.call(2),
+            onTap: () => onOpen?.call(AppDestination.validations),
           ),
         ),
         const SizedBox(width: StegSpacing.sm),
@@ -289,7 +294,7 @@ class _QueueRow extends StatelessWidget {
             count: pendingDeliverables,
             label: l10n.deliverablesTitle,
             icon: Icons.upload_file_outlined,
-            onTap: () => onOpenTab?.call(2),
+            onTap: () => onOpen?.call(AppDestination.validations),
           ),
         ),
       ],
@@ -323,10 +328,8 @@ class _QueueCard extends StatelessWidget {
             children: [
               Icon(icon),
               const SizedBox(height: StegSpacing.xs),
-              Text('$count',
-                  style: Theme.of(context).textTheme.headlineSmall),
-              Text(label,
-                  style: Theme.of(context).textTheme.bodySmall),
+              Text('$count', style: Theme.of(context).textTheme.headlineSmall),
+              Text(label, style: Theme.of(context).textTheme.bodySmall),
             ],
           ),
         ),
@@ -344,8 +347,7 @@ class _Hint extends StatelessWidget {
   Widget build(BuildContext context) {
     return Align(
       alignment: AlignmentDirectional.centerStart,
-      child: Text(text,
-          style: Theme.of(context).textTheme.bodyMedium),
+      child: Text(text, style: Theme.of(context).textTheme.bodyMedium),
     );
   }
 }

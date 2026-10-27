@@ -87,9 +87,9 @@ void main() {
       for (final label in [
         'Accueil',
         'Tâches',
-        'Journal',
+        'Communauté',
         'Messages',
-        'Plus',
+        'Profil',
       ]) {
         expect(find.text(label), findsWidgets);
       }
@@ -106,7 +106,7 @@ void main() {
       );
       expect(find.byType(SupervisorShell), findsOneWidget);
       expect(find.text('Stagiaires'), findsWidgets);
-      expect(find.text('Validations'), findsWidgets);
+      expect(find.text('Profil'), findsWidgets);
     });
 
     testWidgets('unsupported backend role shows access-denied', (tester) async {
@@ -125,7 +125,7 @@ void main() {
 
     testWidgets('no session shows login', (tester) async {
       await _pumpGate(tester);
-      expect(find.text('Connexion'), findsWidgets);
+      expect(find.text('Bienvenue'), findsWidgets);
       expect(find.text('Se connecter'), findsOneWidget);
     });
   });
@@ -167,8 +167,9 @@ void main() {
       // now lives on the Material button's own node (which carries the tap),
       // not on a wrapper, so `getSemantics(find.byType(StegButton))` would
       // resolve to the root (StegButton itself creates no semantics node).
-      final buttonSemantics =
-          tester.getSemantics(find.bySemanticsLabel('Save changes'));
+      final buttonSemantics = tester.getSemantics(
+        find.bySemanticsLabel('Save changes'),
+      );
       expect(
         buttonSemantics,
         matchesSemantics(

@@ -18,8 +18,7 @@ class _MockRemote extends Mock implements AuthRemoteDataSource {}
 String _jwt({required int expOffsetSeconds}) {
   String enc(Object o) =>
       base64Url.encode(utf8.encode(jsonEncode(o))).replaceAll('=', '');
-  final exp =
-      DateTime.now().millisecondsSinceEpoch ~/ 1000 + expOffsetSeconds;
+  final exp = DateTime.now().millisecondsSinceEpoch ~/ 1000 + expOffsetSeconds;
   return '${enc({'alg': 'HS512'})}.${enc({
     'sub': 'u1',
     'email': 'i@u.tn',
@@ -30,18 +29,18 @@ String _jwt({required int expOffsetSeconds}) {
 
 void main() {
   group('token refresh + logout (D7 gate)', () {
-    test('expired access token refreshes silently on restore',
-        () async {
+    test('expired access token refreshes silently on restore', () async {
       final remote = _MockRemote();
       final tokens = InMemoryTokenStorage();
       await tokens.saveTokens(
-          accessToken: _jwt(expOffsetSeconds: -60),
-          refreshToken: 'refresh-1');
+        accessToken: _jwt(expOffsetSeconds: -60),
+        refreshToken: 'refresh-1',
+      );
       final fresh = _jwt(expOffsetSeconds: 900);
-      when(() => remote.refresh(any())).thenAnswer((_) async =>
-          AuthTokens(accessToken: fresh, refreshToken: 'refresh-2'));
-      final repo =
-          AuthRepositoryImpl(remote: remote, tokens: tokens);
+      when(() => remote.refresh(any())).thenAnswer(
+        (_) async => AuthTokens(accessToken: fresh, refreshToken: 'refresh-2'),
+      );
+      final repo = AuthRepositoryImpl(remote: remote, tokens: tokens);
 
       final user = await repo.restoreSession();
       expect(user?.id, 'u1');
@@ -50,48 +49,40 @@ void main() {
       verify(() => remote.refresh('refresh-1')).called(1);
     });
 
-    test('dead refresh wipes tokens (clean re-login required)',
-        () async {
+    test('dead refresh wipes tokens (clean re-login required)', () async {
       final remote = _MockRemote();
       final tokens = InMemoryTokenStorage();
       await tokens.saveTokens(
-          accessToken: _jwt(expOffsetSeconds: -60),
-          refreshToken: 'bad');
+        accessToken: _jwt(expOffsetSeconds: -60),
+        refreshToken: 'bad',
+      );
       when(() => remote.refresh(any())).thenThrow(
-          const ApiException(
-              kind: ApiErrorKind.unauthorized,
-              message: 'expired'));
-      final repo =
-          AuthRepositoryImpl(remote: remote, tokens: tokens);
+        const ApiException(kind: ApiErrorKind.unauthorized, message: 'expired'),
+      );
+      final repo = AuthRepositoryImpl(remote: remote, tokens: tokens);
 
       expect(await repo.restoreSession(), isNull);
       expect(await tokens.readAccessToken(), isNull);
     });
 
-    test('logout revokes remotely then always clears locally',
-        () async {
+    test('logout revokes remotely then always clears locally', () async {
       final remote = _MockRemote();
       final tokens = InMemoryTokenStorage();
       await tokens.saveTokens(accessToken: 'a', refreshToken: 'r');
-      when(() => remote.logout(any()))
-          .thenAnswer((_) async {});
-      final repo =
-          AuthRepositoryImpl(remote: remote, tokens: tokens);
+      when(() => remote.logout(any())).thenAnswer((_) async {});
+      final repo = AuthRepositoryImpl(remote: remote, tokens: tokens);
 
       await repo.logout();
       verify(() => remote.logout('a')).called(1);
       expect(await tokens.readAccessToken(), isNull);
     });
 
-    test('logout clears locally even when revocation fails',
-        () async {
+    test('logout clears locally even when revocation fails', () async {
       final remote = _MockRemote();
       final tokens = InMemoryTokenStorage();
       await tokens.saveTokens(accessToken: 'a', refreshToken: 'r');
-      when(() => remote.logout(any()))
-          .thenThrow(ApiException.network());
-      final repo =
-          AuthRepositoryImpl(remote: remote, tokens: tokens);
+      when(() => remote.logout(any())).thenThrow(ApiException.network());
+      final repo = AuthRepositoryImpl(remote: remote, tokens: tokens);
 
       await repo.logout();
       expect(await tokens.readAccessToken(), isNull);
@@ -112,11 +103,14 @@ void main() {
           return http.Response('{"ok":true}', 200);
         }),
       );
-      final ok = await client.get('/ping',
-          decode: (j) => (j as Map)['ok'] as bool,
-          retry: const ReadRetryPolicy(
-              maxAttempts: 3,
-              baseDelay: Duration(milliseconds: 1)));
+      final ok = await client.get(
+        '/ping',
+        decode: (j) => (j as Map)['ok'] as bool,
+        retry: const ReadRetryPolicy(
+          maxAttempts: 3,
+          baseDelay: Duration(milliseconds: 1),
+        ),
+      );
       expect(ok, isTrue);
       expect(calls, 3);
     });
@@ -128,21 +122,23 @@ void main() {
         httpClient: MockClient((_) async {
           calls++;
           return http.Response(
-              '{"status":403,"error":"Denied","message":"nope"}',
-              403);
+            '{"status":403,"error":"Denied","message":"nope"}',
+            403,
+          );
         }),
       );
       await expectLater(
-          client.get('/x',
-              decode: (_) {},
-              retry:
-                  const ReadRetryPolicy(baseDelay: Duration.zero)),
-          throwsA(isA<ApiException>()));
+        client.get(
+          '/x',
+          decode: (_) {},
+          retry: const ReadRetryPolicy(baseDelay: Duration.zero),
+        ),
+        throwsA(isA<ApiException>()),
+      );
       expect(calls, 1);
     });
 
-    test('no policy means single attempt (writes unaffected)',
-        () async {
+    test('no policy means single attempt (writes unaffected)', () async {
       var calls = 0;
       final client = ApiClient(
         baseUrl: 'http://x',
@@ -151,8 +147,10 @@ void main() {
           throw http.ClientException('down');
         }),
       );
-      await expectLater(client.get('/x', decode: (_) {}),
-          throwsA(isA<ApiException>()));
+      await expectLater(
+        client.get('/x', decode: (_) {}),
+        throwsA(isA<ApiException>()),
+      );
       expect(calls, 1);
     });
   });
@@ -162,23 +160,26 @@ void main() {
       var called = false;
       final client = ApiClient(
         baseUrl: 'http://x',
-        onPasswordChangeRequired: () { called = true; },
+        onPasswordChangeRequired: () {
+          called = true;
+        },
         httpClient: MockClient((_) async {
           return http.Response(
-              '{"status":403,"error":"PASSWORD_CHANGE_REQUIRED","message":"PASSWORD_CHANGE_REQUIRED"}',
-              403);
+            '{"status":403,"error":"PASSWORD_CHANGE_REQUIRED","message":"PASSWORD_CHANGE_REQUIRED"}',
+            403,
+          );
         }),
       );
       await expectLater(
-          client.get('/x', decode: (_) {}),
-          throwsA(isA<ApiException>()));
+        client.get('/x', decode: (_) {}),
+        throwsA(isA<ApiException>()),
+      );
       expect(called, isTrue);
     });
   });
 
   group('multipart upload streams with progress', () {
-    test('progress climbs to total and server JSON decodes',
-        () async {
+    test('progress climbs to total and server JSON decodes', () async {
       final seen = <int>[];
       final client = ApiClient(
         baseUrl: 'http://x',
@@ -188,12 +189,13 @@ void main() {
           await bodyStream.drain();
           final body = jsonEncode({'id': 'd1'});
           return http.StreamedResponse(
-              Stream.value(utf8.encode(body)), 200,
-              contentLength: body.length);
+            Stream.value(utf8.encode(body)),
+            200,
+            contentLength: body.length,
+          );
         }),
       );
-      final bytes =
-          Uint8List.fromList(List.filled(200 * 1024, 7));
+      final bytes = Uint8List.fromList(List.filled(200 * 1024, 7));
       final id = await client.uploadMultipart(
         '/up',
         fileField: 'file',

@@ -461,10 +461,24 @@ class _SupervisorTaskCard extends ConsumerWidget {
     final scheduled = task.isScheduled(now);
     return Semantics(
       label: '${task.title}, ${taskStatusLabel(task.status, l10n)}',
-      child: Card(
-        margin: const EdgeInsetsDirectional.only(bottom: StegSpacing.xs),
+      child: Container(
+        margin: const EdgeInsetsDirectional.only(bottom: StegSpacing.sm),
+        decoration: BoxDecoration(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? StegColors.darkSurface
+              : Colors.white,
+          borderRadius: BorderRadius.circular(StegSpacing.radiusLg),
+          border: Border.all(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? StegColors.darkBorder
+                : StegColors.lightBorder,
+          ),
+          boxShadow: StegColors.cardShadow(
+            Theme.of(context).brightness == Brightness.dark,
+          ),
+        ),
         child: Padding(
-          padding: const EdgeInsets.all(StegSpacing.sm),
+          padding: const EdgeInsets.all(StegSpacing.md),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -481,10 +495,22 @@ class _SupervisorTaskCard extends ConsumerWidget {
                           overflow: TextOverflow.ellipsis,
                           style: Theme.of(context).textTheme.bodyLarge,
                         ),
-                        if (task.dueDate != null)
+                        if (task.description?.trim().isNotEmpty == true) ...[
+                          const SizedBox(height: StegSpacing.xxs),
                           Text(
-                            '${l10n.taskDueLabel} : ${formatDay(task.dueDate!, Localizations.localeOf(context))}',
+                            task.description!.trim(),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                             style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                        if (task.dueDate != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: StegSpacing.xs),
+                            child: Text(
+                              '${l10n.taskDueLabel} : ${formatDay(task.dueDate!, Localizations.localeOf(context))}',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
                           ),
                       ],
                     ),

@@ -32,22 +32,35 @@ void main() {
       const en = AppLocalizations(Locale('en'));
       const ar = AppLocalizations(Locale('ar'));
       ApiException code(String c) => ApiException(
-          kind: ApiErrorKind.validation,
-          message: 'raw backend text',
-          statusCode: 422,
-          code: c);
-      expect(userErrorOf(code('CONTACT_DATA_NOT_ALLOWED'), fr).message,
-          fr.errCommunityContactData);
-      expect(userErrorOf(code('DUPLICATE_POST'), en).message,
-          en.errCommunityDuplicate);
-      expect(userErrorOf(code('STUDENT_MUTED'), ar).message,
-          ar.errCommunityMuted);
-      expect(userErrorOf(code('REPORT_ALREADY_OPEN'), fr).message,
-          fr.errCommunityReportOpen);
-      expect(userErrorOf(code('POST_TOO_LONG'), fr).message,
-          fr.errCommunityTooLong);
-      expect(userErrorOf(code('COMMENT_TOO_LONG'), fr).message,
-          fr.errCommunityTooLong);
+        kind: ApiErrorKind.validation,
+        message: 'raw backend text',
+        statusCode: 422,
+        code: c,
+      );
+      expect(
+        userErrorOf(code('CONTACT_DATA_NOT_ALLOWED'), fr).message,
+        fr.errCommunityContactData,
+      );
+      expect(
+        userErrorOf(code('DUPLICATE_POST'), en).message,
+        en.errCommunityDuplicate,
+      );
+      expect(
+        userErrorOf(code('STUDENT_MUTED'), ar).message,
+        ar.errCommunityMuted,
+      );
+      expect(
+        userErrorOf(code('REPORT_ALREADY_OPEN'), fr).message,
+        fr.errCommunityReportOpen,
+      );
+      expect(
+        userErrorOf(code('POST_TOO_LONG'), fr).message,
+        fr.errCommunityTooLong,
+      );
+      expect(
+        userErrorOf(code('COMMENT_TOO_LONG'), fr).message,
+        fr.errCommunityTooLong,
+      );
     });
 
     test('merge dedupes by id, newest-first by (createdAt, id)', () {
@@ -67,59 +80,62 @@ void main() {
     testWidgets('loading then rows newest-first', (tester) async {
       final repo = FakeCommunityRepository()
         ..pages = [
-          CommunityFeedPage(items: [
-            communityPost('p2',
+          CommunityFeedPage(
+            items: [
+              communityPost(
+                'p2',
                 body: 'second',
-                at: DateTime(2026, 9, 15, 11, 0)),
-            communityPost('p1',
+                at: DateTime(2026, 9, 15, 11, 0),
+              ),
+              communityPost(
+                'p1',
                 body: 'first',
-                at: DateTime(2026, 9, 15, 10, 0)),
-          ], hasMore: false),
+                at: DateTime(2026, 9, 15, 10, 0),
+              ),
+            ],
+            hasMore: false,
+          ),
         ];
-      await pumpCommunity(tester, const CommunityFeedScreen(),
-          repo: repo);
+      await pumpCommunity(tester, const CommunityFeedScreen(), repo: repo);
       expect(find.text('second'), findsOneWidget);
       expect(find.text('first'), findsOneWidget);
       expect(find.text('Yasmine H.'), findsNWidgets(2));
     });
 
-    testWidgets('empty state explains and offers the composer',
-        (tester) async {
-      await pumpCommunity(tester, const CommunityFeedScreen(),
-          repo: FakeCommunityRepository());
-      expect(find.text('Aucune publication pour le moment.'),
-          findsOneWidget);
+    testWidgets('empty state explains and offers the composer', (tester) async {
+      await pumpCommunity(
+        tester,
+        const CommunityFeedScreen(),
+        repo: FakeCommunityRepository(),
+      );
+      expect(find.text('Aucune publication pour le moment.'), findsOneWidget);
       expect(find.text('Publier'), findsOneWidget);
     });
 
     testWidgets('error state retries', (tester) async {
       final repo = FakeCommunityRepository()..failFeed = true;
-      await pumpCommunity(tester, const CommunityFeedScreen(),
-          repo: repo);
-      expect(
-          find.text(
-              'Une erreur est survenue. Réessayez.'),
-          findsOneWidget);
+      await pumpCommunity(tester, const CommunityFeedScreen(), repo: repo);
+      expect(find.text('Une erreur est survenue. Réessayez.'), findsOneWidget);
       // Retry button present.
       expect(find.byType(ElevatedButton), findsOneWidget);
       repo.failFeed = false;
       await tester.tap(find.byType(ElevatedButton));
       await tester.pumpAndSettle();
       // Recovered into the empty state (feed loads, no rows).
-      expect(find.text('Aucune publication pour le moment.'),
-          findsOneWidget);
+      expect(find.text('Aucune publication pour le moment.'), findsOneWidget);
     });
 
-    testWidgets('offline cold start keeps the last snapshot honest',
-        (tester) async {
+    testWidgets('offline cold start keeps the last snapshot honest', (
+      tester,
+    ) async {
       final repo = FakeCommunityRepository()
         ..pages = [
-          CommunityFeedPage(items: [
-            communityPost('p1', body: 'cached post'),
-          ], hasMore: false),
+          CommunityFeedPage(
+            items: [communityPost('p1', body: 'cached post')],
+            hasMore: false,
+          ),
         ];
-      await pumpCommunity(tester, const CommunityFeedScreen(),
-          repo: repo);
+      await pumpCommunity(tester, const CommunityFeedScreen(), repo: repo);
       expect(find.text('cached post'), findsOneWidget);
       // Now offline with an empty-handed reload: stale rows stay.
       repo
@@ -137,19 +153,20 @@ void main() {
       final repo = FakeCommunityRepository()
         ..pages = [
           CommunityFeedPage(
-              items: [communityPost('p2', body: 'page one')],
-              hasMore: true,
-              nextCursorTs: DateTime(2026, 9, 15, 10, 0),
-              nextCursorId: 'p2'),
+            items: [communityPost('p2', body: 'page one')],
+            hasMore: true,
+            nextCursorTs: DateTime(2026, 9, 15, 10, 0),
+            nextCursorId: 'p2',
+          ),
           CommunityFeedPage(
-              items: [
-                communityPost('p2', body: 'page one'),
-                communityPost('p1', body: 'page two')
-              ],
-              hasMore: false),
+            items: [
+              communityPost('p2', body: 'page one'),
+              communityPost('p1', body: 'page two'),
+            ],
+            hasMore: false,
+          ),
         ];
-      await pumpCommunity(tester, const CommunityFeedScreen(),
-          repo: repo);
+      await pumpCommunity(tester, const CommunityFeedScreen(), repo: repo);
       final ctx = tester.element(find.byType(CommunityFeedScreen));
       await ProviderScope.containerOf(ctx)
           .read(communityFeedProvider.notifier)
@@ -160,11 +177,11 @@ void main() {
       expect(repo.feedCalls, 2);
     });
 
-    testWidgets('optimistic create swaps the pending card on success',
-        (tester) async {
+    testWidgets('optimistic create swaps the pending card on success', (
+      tester,
+    ) async {
       final repo = FakeCommunityRepository();
-      await pumpCommunity(tester, const CommunityFeedScreen(),
-          repo: repo);
+      await pumpCommunity(tester, const CommunityFeedScreen(), repo: repo);
       final ctx = tester.element(find.byType(CommunityFeedScreen));
       final controller = ProviderScope.containerOf(ctx)
           .read(communityFeedProvider.notifier);
@@ -175,11 +192,11 @@ void main() {
       expect(repo.createdKeys.single, isNotNull);
     });
 
-    testWidgets('failed create becomes a retryable card reusing the key',
-        (tester) async {
+    testWidgets('failed create becomes a retryable card reusing the key', (
+      tester,
+    ) async {
       final repo = FakeCommunityRepository()..failNextCreate = true;
-      await pumpCommunity(tester, const CommunityFeedScreen(),
-          repo: repo);
+      await pumpCommunity(tester, const CommunityFeedScreen(), repo: repo);
       final ctx = tester.element(find.byType(CommunityFeedScreen));
       final controller = ProviderScope.containerOf(ctx)
           .read(communityFeedProvider.notifier);
@@ -188,17 +205,15 @@ void main() {
       // Failed card offers retry (reopens the composer prefilled).
       expect(find.text('unlucky post'), findsOneWidget);
       expect(
-          ProviderScope.containerOf(ctx)
-              .read(communityFeedProvider)
-              .failed,
-          hasLength(1));
+        ProviderScope.containerOf(ctx).read(communityFeedProvider).failed,
+        hasLength(1),
+      );
       final key = ProviderScope.containerOf(ctx)
           .read(communityFeedProvider)
           .failed
           .single
           .localId;
-      await controller.createPost('unlucky post',
-          idempotencyKey: key);
+      await controller.createPost('unlucky post', idempotencyKey: key);
       await tester.pumpAndSettle();
       expect(repo.createdKeys.last, key);
     });
@@ -206,16 +221,14 @@ void main() {
     testWidgets('delete rolls back on failure', (tester) async {
       final repo = FakeCommunityRepository()
         ..pages = [
-          CommunityFeedPage(items: [
-            communityPost('p1', body: 'doomed', mine: true),
-          ], hasMore: false),
+          CommunityFeedPage(
+            items: [communityPost('p1', body: 'doomed', mine: true)],
+            hasMore: false,
+          ),
         ]
-        ..postsById = {
-          'p1': communityPost('p1', body: 'doomed', mine: true),
-        }
+        ..postsById = {'p1': communityPost('p1', body: 'doomed', mine: true)}
         ..failNextDelete = true;
-      await pumpCommunity(tester, const CommunityFeedScreen(),
-          repo: repo);
+      await pumpCommunity(tester, const CommunityFeedScreen(), repo: repo);
       expect(find.text('doomed'), findsOneWidget);
       final ctx = tester.element(find.byType(CommunityFeedScreen));
       await ProviderScope.containerOf(ctx)
@@ -225,30 +238,32 @@ void main() {
       // Rolled back + error announced once.
       expect(find.text('doomed'), findsOneWidget);
       expect(
-          ProviderScope.containerOf(ctx)
-              .read(communityFeedProvider)
-              .posts,
-          hasLength(1));
+        ProviderScope.containerOf(ctx).read(communityFeedProvider).posts,
+        hasLength(1),
+      );
     });
 
-    testWidgets('topic frame resyncs; malformed frames are ignored',
-        (tester) async {
+    testWidgets('topic frame resyncs; malformed frames are ignored', (
+      tester,
+    ) async {
       final repo = FakeCommunityRepository()
         ..pages = [
           CommunityFeedPage(
-              items: [communityPost('p1', body: 'v1')],
-              hasMore: false),
+            items: [communityPost('p1', body: 'v1')],
+            hasMore: false,
+          ),
         ];
       final stomp = FakeStomp();
       final container = await pumpCommunity(
-          tester, const CommunityFeedScreen(),
-          repo: repo, stomp: stomp);
+        tester,
+        const CommunityFeedScreen(),
+        repo: repo,
+        stomp: stomp,
+      );
       expect(repo.feedCalls, 1);
       // Mirror the session socket-slot ownership (foregroundSyncProvider):
       // topic frames land in the in-app sink, controllers resync from it.
-      await container
-          .read(stompChatServiceProvider)
-          .subscribeCommunity((body) {
+      await container.read(stompChatServiceProvider).subscribeCommunity((body) {
         container.read(communityFramesProvider).add(body);
       });
       stomp.communityInbound('not json{{{');
@@ -256,10 +271,13 @@ void main() {
       expect(repo.feedCalls, 1);
       repo.pages = [
         CommunityFeedPage(
-            items: [communityPost('p2', body: 'v2')], hasMore: false),
+          items: [communityPost('p2', body: 'v2')],
+          hasMore: false,
+        ),
       ];
       stomp.communityInbound(
-          '{"kind":"POST_CREATED","postId":"p2","at":"2026-09-15T12:00:00Z"}');
+        '{"kind":"POST_CREATED","postId":"p2","at":"2026-09-15T12:00:00Z"}',
+      );
       await tester.pump(const Duration(seconds: 2));
       expect(repo.feedCalls, greaterThanOrEqualTo(2));
       expect(find.text('v2'), findsOneWidget);

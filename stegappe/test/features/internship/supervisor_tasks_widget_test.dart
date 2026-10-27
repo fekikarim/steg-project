@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
 import '../../support/queue_harness.dart';
+
 import 'package:stegappe/core/connectivity/connectivity_service.dart';
 import 'package:stegappe/core/l10n/app_localizations.dart';
 import 'package:stegappe/core/network/paged.dart';
@@ -25,8 +27,11 @@ import 'package:stegappe/features/internship/presentation/screens/task_editor_sh
 
 import '../../test_fixtures.dart';
 
-const _supervisor =
-    AppUser(id: 'sup1', email: 'sup@steg.tn', roles: ['SUPERVISOR']);
+const _supervisor = AppUser(
+  id: 'sup1',
+  email: 'sup@steg.tn',
+  roles: ['SUPERVISOR'],
+);
 
 class _FakeAuthRepo implements AuthRepository {
   @override
@@ -46,45 +51,59 @@ class _FakeAuthRepo implements AuthRepository {
 }
 
 SupervisedIntern _intern(String id, String name) => SupervisedIntern(
-      internshipId: id,
-      reference: 'STG-$id',
-      internName: name,
-      status: InternshipStatus.inProgress,
-      type: InternshipType.perfectionnement,
-      startDate: DateTime(2026, 1, 1),
-      endDate: DateTime(2026, 6, 30),
-      departmentName: 'DSI',
-      tasksCompleted: 1,
-      tasksTotal: 3,
-      pendingJournal: 0,
-      pendingDeliverables: 0,
-      evaluationsCount: 0,
-    );
+  internshipId: id,
+  reference: 'STG-$id',
+  internName: name,
+  status: InternshipStatus.inProgress,
+  type: InternshipType.perfectionnement,
+  startDate: DateTime(2026, 1, 1),
+  endDate: DateTime(2026, 6, 30),
+  departmentName: 'DSI',
+  tasksCompleted: 1,
+  tasksTotal: 3,
+  pendingJournal: 0,
+  pendingDeliverables: 0,
+  evaluationsCount: 0,
+);
 
 /// Fake with two students and a review-ready task list (one COMPLETED, one
 /// scheduled-future, one plain).
 class _SupervisorFake extends FakeInternshipRepository {
   @override
-  Future<List<SupervisedIntern>> supervisedInterns() async =>
-      [_intern('internship-1', 'Amira Ben Salah'), _intern('internship-2', 'Yassine Trabelsi')];
+  Future<List<SupervisedIntern>> supervisedInterns() async => [
+    _intern('internship-1', 'Amira Ben Salah'),
+    _intern('internship-2', 'Yassine Trabelsi'),
+  ];
 
   @override
-  Future<Paged<InternTask>> listTasks(String internshipId,
-      {int page = 0, int size = 50, TaskStatus? status}) async {
+  Future<Paged<InternTask>> listTasks(
+    String internshipId, {
+    int page = 0,
+    int size = 50,
+    TaskStatus? status,
+  }) async {
     lastStatusFilter = status;
     final all = [
       const InternTask(
-          id: 't-review', title: 'Work to review', status: TaskStatus.awaitingApproval),
+        id: 't-review',
+        title: 'Work to review',
+        status: TaskStatus.awaitingApproval,
+      ),
       InternTask(
-          id: 't-future',
-          title: 'Future task',
-          status: TaskStatus.todo,
-          visibleFrom: DateTime.now().add(const Duration(days: 3))),
+        id: 't-future',
+        title: 'Future task',
+        status: TaskStatus.todo,
+        visibleFrom: DateTime.now().add(const Duration(days: 3)),
+      ),
       const InternTask(
-          id: 't-plain', title: 'Plain task', status: TaskStatus.todo),
+        id: 't-plain',
+        title: 'Plain task',
+        status: TaskStatus.todo,
+      ),
     ];
-    final items =
-        status == null ? all : all.where((t) => t.status == status).toList();
+    final items = status == null
+        ? all
+        : all.where((t) => t.status == status).toList();
     return pageOf(items, total: items.length);
   }
 }
@@ -129,7 +148,9 @@ Future<void> _pump(
 
 void main() {
   group('SupervisorTasksScreen', () {
-    testWidgets('student chips + review queue render separately', (tester) async {
+    testWidgets('student chips + review queue render separately', (
+      tester,
+    ) async {
       await _pump(tester, const SupervisorTasksScreen());
       expect(find.text('Amira Ben Salah'), findsOneWidget);
       expect(find.text('Yassine Trabelsi'), findsOneWidget);
@@ -139,14 +160,17 @@ void main() {
       expect(find.text('Refuser'), findsOneWidget);
     });
 
-    testWidgets('scheduled task carries a scheduled chip, not just color',
-        (tester) async {
+    testWidgets('scheduled task carries a scheduled chip, not just color', (
+      tester,
+    ) async {
       await _pump(tester, const SupervisorTasksScreen());
       expect(find.textContaining('Planifiée'), findsOneWidget);
       expect(find.textContaining('Visible le'), findsOneWidget);
     });
 
-    testWidgets('approve confirms with feedback and no raw text', (tester) async {
+    testWidgets('approve confirms with feedback and no raw text', (
+      tester,
+    ) async {
       final fake = _SupervisorFake();
       await _pump(tester, const SupervisorTasksScreen(), fake: fake);
       await tester.tap(find.text('Approuver'));
@@ -155,8 +179,9 @@ void main() {
       expect(find.text('Travail approuvé.'), findsOneWidget);
     });
 
-    testWidgets('deny requires a reason (client blocks empty first)',
-        (tester) async {
+    testWidgets('deny requires a reason (client blocks empty first)', (
+      tester,
+    ) async {
       final fake = _SupervisorFake();
       await _pump(tester, const SupervisorTasksScreen(), fake: fake);
       await tester.tap(find.text('Refuser'));
@@ -164,12 +189,13 @@ void main() {
       // Empty confirm → inline localized error, no backend call.
       await tester.tap(find.text('Refuser').last);
       await tester.pump();
-      expect(find.text('Un motif est obligatoire pour refuser un travail.'),
-          findsOneWidget);
+      expect(
+        find.text('Un motif est obligatoire pour refuser un travail.'),
+        findsOneWidget,
+      );
       expect(fake.reviewedTasks, isEmpty);
       // With a reason → denied with the reason stored.
-      await tester.enterText(
-          find.byType(TextField), 'Missing tests');
+      await tester.enterText(find.byType(TextField), 'Missing tests');
       await tester.tap(find.text('Refuser').last);
       await tester.pumpAndSettle();
       expect(fake.reviewedTasks.single['comment'], 'Missing tests');
@@ -187,35 +213,44 @@ void main() {
       expect(fake.deletedTasks, ['t-review']);
     });
 
-    testWidgets('offline disables mutations with an honest indicator',
-        (tester) async {
+    testWidgets('offline disables mutations with an honest indicator', (
+      tester,
+    ) async {
       await _pump(tester, const SupervisorTasksScreen(), online: false);
       final approve = tester.widget<StegButton>(
-          find.widgetWithText(StegButton, 'Approuver'));
+        find.widgetWithText(StegButton, 'Approuver'),
+      );
       expect(approve.onPressed, isNull);
     });
 
     testWidgets('no students renders the honest empty state', (tester) async {
-      await _pump(tester, const SupervisorTasksScreen(),
-          fake: _NoInternsFake());
+      await _pump(
+        tester,
+        const SupervisorTasksScreen(),
+        fake: _NoInternsFake(),
+      );
       expect(find.text('Aucun stagiaire suivi'), findsOneWidget);
     });
 
     testWidgets('arabic renders RTL with translated chrome', (tester) async {
-      await _pump(tester, const SupervisorTasksScreen(),
-          locale: const Locale('ar'), theme: StegTheme.dark());
+      await _pump(
+        tester,
+        const SupervisorTasksScreen(),
+        locale: const Locale('ar'),
+        theme: StegTheme.dark(),
+      );
       expect(find.text('مهام المتربصين'), findsOneWidget);
     });
   });
 
   group('BulkTaskSheet', () {
-    testWidgets('plan preview + per-item results, no silent partial',
-        (tester) async {
+    testWidgets('plan preview + per-item results, no silent partial', (
+      tester,
+    ) async {
       final fake = _SupervisorFake();
       await _pump(tester, const BulkTaskSheet(), fake: fake);
       expect(find.textContaining('× 2 stagiaire'), findsOneWidget);
-      await tester.enterText(
-          find.byType(TextField).first, 'Shared task');
+      await tester.enterText(find.byType(TextField).first, 'Shared task');
       await tester.pump();
       await tester.tap(find.text('Ajouter les tâches'));
       await tester.pumpAndSettle();
@@ -229,8 +264,7 @@ void main() {
     testWidgets('double submit is guarded (one backend call)', (tester) async {
       final fake = _SupervisorFake()..bulkGate = Completer<void>();
       await _pump(tester, const BulkTaskSheet(), fake: fake);
-      await tester.enterText(
-          find.byType(TextField).first, 'Shared task');
+      await tester.enterText(find.byType(TextField).first, 'Shared task');
       await tester.pump();
       // Drive the submit through the controller (a plain future, no tester
       // guard conflict) and hold it behind the gate: the sheet must show
@@ -239,9 +273,7 @@ void main() {
       final container = ProviderScope.containerOf(ctx);
       final pending = container
           .read(supervisorTaskControllerProvider.notifier)
-          .bulkTasks([
-        bulkMutationForTest('internship-1', 'Shared task'),
-      ]);
+          .bulkTasks([bulkMutationForTest('internship-1', 'Shared task')]);
       await tester.pump();
       // While in flight the submit shows a spinner instead of its label:
       // no enabled button exists for a second tap to land on.
@@ -256,12 +288,12 @@ void main() {
       expect(find.text('Ajouter les tâches'), findsOneWidget);
     });
 
-    testWidgets('failure shows a localized error and allows fix+resend',
-        (tester) async {
+    testWidgets('failure shows a localized error and allows fix+resend', (
+      tester,
+    ) async {
       final fake = _SupervisorFake()..failWrites = true;
       await _pump(tester, const BulkTaskSheet(), fake: fake);
-      await tester.enterText(
-          find.byType(TextField).first, 'Shared task');
+      await tester.enterText(find.byType(TextField).first, 'Shared task');
       await tester.pump();
       await tester.tap(find.text('Ajouter les tâches'));
       await tester.pumpAndSettle();
@@ -275,31 +307,39 @@ void main() {
       expect(find.textContaining('créée'), findsOneWidget);
     });
 
-    testWidgets('offline disables submit with an honest sentence',
-        (tester) async {
+    testWidgets('offline disables submit with an honest sentence', (
+      tester,
+    ) async {
       await _pump(tester, const BulkTaskSheet(), online: false);
-      expect(find.text('La connexion est nécessaire pour envoyer le lot.'),
-          findsOneWidget);
+      expect(
+        find.text('La connexion est nécessaire pour envoyer le lot.'),
+        findsOneWidget,
+      );
     });
   });
 
   group('TaskEditorSheet staff scheduling', () {
-    testWidgets('schedule row offers immediate by default (create)',
-        (tester) async {
-      await _pump(tester,
-          const TaskEditorSheet(internshipId: 'internship-1', staffMode: true));
+    testWidgets('schedule row offers immediate by default (create)', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        const TaskEditorSheet(internshipId: 'internship-1', staffMode: true),
+      );
       expect(find.textContaining('Immédiatement'), findsOneWidget);
       expect(find.text('Choisir la date'), findsOneWidget);
     });
 
-    testWidgets('picking a date+time schedules, saving sends the instant',
-        (tester) async {
+    testWidgets('picking a date+time schedules, saving sends the instant', (
+      tester,
+    ) async {
       final fake = _SupervisorFake();
-      await _pump(tester,
-          const TaskEditorSheet(internshipId: 'internship-1', staffMode: true),
-          fake: fake);
-      await tester.enterText(
-          find.byType(TextField).first, 'Scheduled by sup');
+      await _pump(
+        tester,
+        const TaskEditorSheet(internshipId: 'internship-1', staffMode: true),
+        fake: fake,
+      );
+      await tester.enterText(find.byType(TextField).first, 'Scheduled by sup');
       // Pick a day after today so the schedule is always in the future,
       // whatever date the suite runs on.
       final target = DateTime.now().add(const Duration(days: 2));
@@ -319,8 +359,9 @@ void main() {
       expect(sent!.isAfter(DateTime.now()), isTrue);
     });
 
-    testWidgets('existing schedule shows and clears to immediate (edit)',
-        (tester) async {
+    testWidgets('existing schedule shows and clears to immediate (edit)', (
+      tester,
+    ) async {
       final fake = _SupervisorFake();
       const existing = InternTask(
         id: 't-future',
@@ -328,15 +369,16 @@ void main() {
         status: TaskStatus.todo,
       );
       await _pump(
-          tester,
-          TaskEditorSheet(
-            internshipId: 'internship-1',
-            existing: existing.copyWith(
-                visibleFrom:
-                    DateTime.now().add(const Duration(days: 2))),
-            staffMode: true,
+        tester,
+        TaskEditorSheet(
+          internshipId: 'internship-1',
+          existing: existing.copyWith(
+            visibleFrom: DateTime.now().add(const Duration(days: 2)),
           ),
-          fake: fake);
+          staffMode: true,
+        ),
+        fake: fake,
+      );
       expect(find.textContaining('Apparaît le'), findsOneWidget);
     });
   });
@@ -349,8 +391,7 @@ class _NoInternsFake extends FakeInternshipRepository {
 
 Map<String, dynamic> bulkMutationForTest(String internshipId, String title) =>
     bulkMutationJson(
-        action: 'CREATE',
-        internshipId: internshipId,
-        task: taskWriteJson(title: title));
-
-
+      action: 'CREATE',
+      internshipId: internshipId,
+      task: taskWriteJson(title: title),
+    );

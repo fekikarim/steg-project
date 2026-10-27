@@ -47,4 +47,5 @@ flutter:
 
   assets:
     - assets/logo-steg-1200x327.png
+    - assets/android-chrome-192x192.png
     - assets/favicon.ico

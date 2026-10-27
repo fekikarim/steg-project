@@ -8,8 +8,11 @@ import 'package:stegappe/features/community/presentation/screens/community_repor
 
 import 'community_test_support.dart';
 
-const _supervisorUser =
-    AppUser(id: 'sup', email: 'sup@steg.tn', roles: ['SUPERVISOR']);
+const _supervisorUser = AppUser(
+  id: 'sup',
+  email: 'sup@steg.tn',
+  roles: ['SUPERVISOR'],
+);
 
 /// T08 moderation UX: role-gated menus, staff reports queue, confirm +
 /// reason sheets, mute/unmute calls.
@@ -17,27 +20,35 @@ void main() {
   FakeCommunityRepository moderatedRepo() {
     final repo = FakeCommunityRepository()
       ..pages = [
-        CommunityFeedPage(items: [
-          communityPost('p1',
+        CommunityFeedPage(
+          items: [
+            communityPost(
+              'p1',
               authorId: 'u9',
               authorDisplayName: 'Karim F.',
-              body: 'needs moderation'),
-        ], hasMore: false),
+              body: 'needs moderation',
+            ),
+          ],
+          hasMore: false,
+        ),
       ]
       ..postsById = {
-        'p1': communityPost('p1',
-            authorId: 'u9',
-            authorDisplayName: 'Karim F.',
-            body: 'needs moderation'),
+        'p1': communityPost(
+          'p1',
+          authorId: 'u9',
+          authorDisplayName: 'Karim F.',
+          body: 'needs moderation',
+        ),
       }
       ..reportRows = [
         CommunityReport(
-            id: 'r1',
-            targetType: 'POST',
-            targetPostId: 'p1',
-            reason: 'spammy',
-            status: CommunityReportStatus.open,
-            createdAt: DateTime(2026, 9, 15, 12, 0)),
+          id: 'r1',
+          targetType: 'POST',
+          targetPostId: 'p1',
+          reason: 'spammy',
+          status: CommunityReportStatus.open,
+          createdAt: DateTime(2026, 9, 15, 12, 0),
+        ),
       ];
     return repo;
   }
@@ -48,11 +59,9 @@ void main() {
   }
 
   group('role-gated menus', () {
-    testWidgets('intern sees report on others, delete on own',
-        (tester) async {
+    testWidgets('intern sees report on others, delete on own', (tester) async {
       final repo = moderatedRepo();
-      await pumpCommunity(tester, const CommunityFeedScreen(),
-          repo: repo);
+      await pumpCommunity(tester, const CommunityFeedScreen(), repo: repo);
       await openPostMenu(tester);
       // Other author's post: report only (no staff actions).
       expect(find.text('Signaler'), findsOneWidget);
@@ -60,11 +69,14 @@ void main() {
       expect(find.text('Couper l’accès'), findsNothing);
     });
 
-    testWidgets('supervisor sees remove + mute on others',
-        (tester) async {
+    testWidgets('supervisor sees remove + mute on others', (tester) async {
       final repo = moderatedRepo();
-      await pumpCommunity(tester, const CommunityFeedScreen(),
-          repo: repo, user: _supervisorUser);
+      await pumpCommunity(
+        tester,
+        const CommunityFeedScreen(),
+        repo: repo,
+        user: _supervisorUser,
+      );
       // No composer for staff (read + moderate only).
       expect(find.byType(FloatingActionButton), findsNothing);
       await openPostMenu(tester);
@@ -73,11 +85,16 @@ void main() {
       expect(find.text('Couper l’accès'), findsOneWidget);
     });
 
-    testWidgets('staff remove requires a reason and calls delete',
-        (tester) async {
+    testWidgets('staff remove requires a reason and calls delete', (
+      tester,
+    ) async {
       final repo = moderatedRepo();
-      await pumpCommunity(tester, const CommunityFeedScreen(),
-          repo: repo, user: _supervisorUser);
+      await pumpCommunity(
+        tester,
+        const CommunityFeedScreen(),
+        repo: repo,
+        user: _supervisorUser,
+      );
       await openPostMenu(tester);
       await tester.tap(find.text('Retirer (modération)'));
       await tester.pumpAndSettle();
@@ -93,13 +110,14 @@ void main() {
 
     testWidgets('report sends with the typed reason', (tester) async {
       final repo = moderatedRepo();
-      await pumpCommunity(tester, const CommunityFeedScreen(),
-          repo: repo);
+      await pumpCommunity(tester, const CommunityFeedScreen(), repo: repo);
       await openPostMenu(tester);
       await tester.tap(find.text('Signaler'));
       await tester.pumpAndSettle();
       await tester.enterText(
-          find.byType(TextField).last, 'contenu inapproprié');
+        find.byType(TextField).last,
+        'contenu inapproprié',
+      );
       await tester.tap(find.text('Signaler').last);
       await tester.pumpAndSettle();
       expect(repo.reportedPosts, ['p1']);
@@ -107,27 +125,28 @@ void main() {
   });
 
   group('staff reports queue', () {
-    testWidgets('open/all filter drives the server query',
-        (tester) async {
+    testWidgets('open/all filter drives the server query', (tester) async {
       final repo = moderatedRepo();
-      final container = await pumpCommunity(tester,
-          const CommunityReportsScreen(),
-          repo: repo, user: _supervisorUser);
+      final container = await pumpCommunity(
+        tester,
+        const CommunityReportsScreen(),
+        repo: repo,
+        user: _supervisorUser,
+      );
       expect(find.text('spammy'), findsOneWidget);
       await tester.tap(find.text('Tous'));
       await tester.pumpAndSettle();
-      expect(
-          container
-              .read(communityReportsProvider)
-              .openOnly,
-          isFalse);
+      expect(container.read(communityReportsProvider).openOnly, isFalse);
     });
 
     testWidgets('resolve closes the report', (tester) async {
       final repo = moderatedRepo();
-      await pumpCommunity(tester,
-          const CommunityReportsScreen(),
-          repo: repo, user: _supervisorUser);
+      await pumpCommunity(
+        tester,
+        const CommunityReportsScreen(),
+        repo: repo,
+        user: _supervisorUser,
+      );
       await tester.tap(find.text('Clore le signalement'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Clore le signalement').last);
@@ -135,18 +154,20 @@ void main() {
       expect(repo.resolvedReports, ['r1']);
     });
 
-    testWidgets('mute sheet offers durations and calls mute',
-        (tester) async {
+    testWidgets('mute sheet offers durations and calls mute', (tester) async {
       final repo = moderatedRepo();
-      await pumpCommunity(tester, const CommunityFeedScreen(),
-          repo: repo, user: _supervisorUser);
+      await pumpCommunity(
+        tester,
+        const CommunityFeedScreen(),
+        repo: repo,
+        user: _supervisorUser,
+      );
       await openPostMenu(tester);
       await tester.tap(find.text('Couper l’accès'));
       await tester.pumpAndSettle();
       expect(find.text('1 heure'), findsOneWidget);
       expect(find.text('30 jours'), findsOneWidget);
-      await tester.enterText(
-          find.byType(TextField).last, 'spam répété');
+      await tester.enterText(find.byType(TextField).last, 'spam répété');
       await tester.tap(find.text('Couper l’accès').last);
       await tester.pumpAndSettle();
       expect(repo.mutedUsers, ['u9']);

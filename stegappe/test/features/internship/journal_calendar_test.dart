@@ -36,12 +36,14 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          internshipRepositoryProvider
-              .overrideWithValue(FakeInternshipRepository()),
+          internshipRepositoryProvider.overrideWithValue(
+            FakeInternshipRepository(),
+          ),
           prefsStoreProvider.overrideWithValue(prefs),
           selectedDayProvider.overrideWith((ref) => selected ?? today),
           journalAccentProvider.overrideWith(
-              (ref) => JournalAccentController(null)..set(accent)),
+            (ref) => JournalAccentController(null)..set(accent),
+          ),
         ],
         child: MaterialApp(
           locale: locale,
@@ -76,8 +78,9 @@ void main() {
   }
 
   group('STEG-JRN month calendar', () {
-    testWidgets('paints the internship period and marks recorded days',
-        (tester) async {
+    testWidgets('paints the internship period and marks recorded days', (
+      tester,
+    ) async {
       await pumpJournalCalendar(
         tester,
         marked: {DateTime(today.year, today.month, 10)},
@@ -105,7 +108,8 @@ void main() {
           overrides: [
             prefsStoreProvider.overrideWithValue(prefs),
             journalAccentProvider.overrideWith(
-                (ref) => JournalAccentController(null)),
+              (ref) => JournalAccentController(null),
+            ),
           ],
           child: MaterialApp(
             locale: const Locale('fr'),
@@ -146,8 +150,9 @@ void main() {
         ProviderScope(
           overrides: [
             prefsStoreProvider.overrideWithValue(prefs),
-            journalAccentProvider
-                .overrideWith((ref) => JournalAccentController(null)),
+            journalAccentProvider.overrideWith(
+              (ref) => JournalAccentController(null),
+            ),
           ],
           child: MaterialApp(
             locale: const Locale('fr'),
@@ -188,20 +193,25 @@ void main() {
       expect(captured, [DateTime(2027, 1), DateTime(2026, 11)]);
     });
 
-    testWidgets('on the journal screen the arrows repaint the month',
-        (tester) async {
+    testWidgets('on the journal screen the arrows repaint the month', (
+      tester,
+    ) async {
       await pumpJournal(tester, const JournalListScreen());
       final now = DateTime.now();
 
       String monthTitle() {
         final texts = find
             .descendant(
-                of: find.byType(JournalMonthCalendar), matching: find.byType(Text))
+              of: find.byType(JournalMonthCalendar),
+              matching: find.byType(Text),
+            )
             .evaluate()
             .map((e) => (e.widget as Text).data ?? '')
             .toList();
-        return texts.firstWhere((t) => RegExp(r'\d{4}').hasMatch(t),
-            orElse: () => 'NONE');
+        return texts.firstWhere(
+          (t) => RegExp(r'\d{4}').hasMatch(t),
+          orElse: () => 'NONE',
+        );
       }
 
       final before = monthTitle();
@@ -219,8 +229,9 @@ void main() {
       expect(monthTitle(), before);
     });
 
-    testWidgets('the accent choice is persisted as a preference',
-        (tester) async {
+    testWidgets('the accent choice is persisted as a preference', (
+      tester,
+    ) async {
       SharedPreferences.setMockInitialValues({});
       final prefs = await PrefsStore.load();
       final container = ProviderContainer(
@@ -228,14 +239,15 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      final controller =
-          container.read(journalAccentProvider.notifier);
+      final controller = container.read(journalAccentProvider.notifier);
       expect(container.read(journalAccentProvider), JournalAccent.brand);
       await controller.set(JournalAccent.violet);
 
       // Same key the production store reads back on next launch.
-      expect(prefs.readRaw(kJournalAccentPrefsKey),
-          JournalAccent.violet.storageKey);
+      expect(
+        prefs.readRaw(kJournalAccentPrefsKey),
+        JournalAccent.violet.storageKey,
+      );
     });
   });
 }

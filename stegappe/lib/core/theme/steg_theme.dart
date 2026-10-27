@@ -197,10 +197,7 @@ abstract final class StegTheme {
             StegSpacing.minTouchTarget,
             StegSpacing.minTouchTarget,
           ),
-          side: const BorderSide(
-            color: StegColors.lightBorder,
-            width: 1.5,
-          ),
+          side: const BorderSide(color: StegColors.lightBorder, width: 1.5),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(StegSpacing.radiusMd),
           ),
@@ -281,8 +278,7 @@ abstract final class StegTheme {
       snackBarTheme: SnackBarThemeData(
         backgroundColor: StegColors.brandNavy,
         contentTextStyle: const TextStyle(color: Colors.white),
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         behavior: SnackBarBehavior.floating,
         elevation: 12,
       ),
@@ -486,8 +482,7 @@ abstract final class StegTheme {
       snackBarTheme: SnackBarThemeData(
         backgroundColor: StegColors.darkElevated,
         contentTextStyle: const TextStyle(color: Colors.white),
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         behavior: SnackBarBehavior.floating,
         elevation: 12,
       ),

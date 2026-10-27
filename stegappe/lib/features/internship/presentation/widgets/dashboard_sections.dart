@@ -53,10 +53,8 @@ class StaleNotice extends StatelessWidget {
             Expanded(
               child: Text(
                 l10n.staleData,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: fg,
-                ),
+                style: Theme.of(context).textTheme.bodySmall
+                    ?.copyWith(fontWeight: FontWeight.w700, color: fg),
               ),
             ),
           ],
@@ -93,7 +91,8 @@ class DashboardSection extends StatelessWidget {
     return StegCard(
       title: title,
       icon: icon,
-      action: action ??
+      action:
+          action ??
           (actionLabel != null
               ? TextButton(
                   onPressed: onAction,
@@ -148,10 +147,8 @@ class LabeledProgress extends StatelessWidget {
             children: [
               Text(
                 label,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
-                ),
+                style: Theme.of(context).textTheme.bodyMedium
+                    ?.copyWith(fontWeight: FontWeight.w600, fontSize: 13),
               ),
               // Counter is a technical value: keep LTR in RTL layouts.
               Directionality(
@@ -172,9 +169,7 @@ class LabeledProgress extends StatelessWidget {
           Container(
             height: 10,
             decoration: BoxDecoration(
-              color: dark
-                  ? StegColors.darkTrack
-                  : StegColors.lightTrack,
+              color: dark ? StegColors.darkTrack : StegColors.lightTrack,
               borderRadius: BorderRadius.circular(StegSpacing.radiusFull),
             ),
             child: LayoutBuilder(

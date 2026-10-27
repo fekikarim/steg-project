@@ -27,45 +27,40 @@ void main() {
       })!;
 
   group('sync triggers', () {
-    test('community notification types map to the community category',
-        () {
+    test('community notification types map to the community category', () {
       expect(
-          communitySyncCategoryFor(
-              frame('COMMUNITY_COMMENT', 'p1')),
-          RealtimeCategory.community);
+        communitySyncCategoryFor(frame('COMMUNITY_COMMENT', 'p1')),
+        RealtimeCategory.community,
+      );
       expect(
-          communitySyncCategoryFor(
-              frame('COMMUNITY_POST_REMOVED', 'p1')),
-          RealtimeCategory.community);
+        communitySyncCategoryFor(frame('COMMUNITY_POST_REMOVED', 'p1')),
+        RealtimeCategory.community,
+      );
       expect(
-          communitySyncCategoryFor(
-              frame('COMMUNITY_COMMENT_REMOVED', 'p1')),
-          RealtimeCategory.community);
+        communitySyncCategoryFor(frame('COMMUNITY_COMMENT_REMOVED', 'p1')),
+        RealtimeCategory.community,
+      );
     });
 
     test('other types never trigger the community surface', () {
+      expect(communitySyncCategoryFor(frame('MESSAGE_RECEIVED', 'c1')), isNull);
       expect(
-          communitySyncCategoryFor(
-              frame('MESSAGE_RECEIVED', 'c1')),
-          isNull);
+        communitySyncCategoryFor(frame('TASK_STATUS_CHANGED', 't1')),
+        isNull,
+      );
       expect(
-          communitySyncCategoryFor(
-              frame('TASK_STATUS_CHANGED', 't1')),
-          isNull);
-      expect(
-          communitySyncCategoryFor(
-              frame('SOMETHING_FROM_THE_FUTURE', 'x')),
-          isNull);
+        communitySyncCategoryFor(frame('SOMETHING_FROM_THE_FUTURE', 'x')),
+        isNull,
+      );
     });
 
     test('envelope parsing tolerates malformed frames', () {
       expect(parseCommunityEnvelope('not json'), isNull);
-      expect(parseCommunityEnvelope('{"kind":"POST_CREATED"}'),
-          isNull);
-      expect(
-          parseCommunityEnvelope(
-              '{"kind":"POST_CREATED","postId":"p1"}')!,
-          (kind: 'POST_CREATED', postId: 'p1'));
+      expect(parseCommunityEnvelope('{"kind":"POST_CREATED"}'), isNull);
+      expect(parseCommunityEnvelope('{"kind":"POST_CREATED","postId":"p1"}')!, (
+        kind: 'POST_CREATED',
+        postId: 'p1',
+      ));
     });
 
     test('community targets cover feed, detail and reports', () {
@@ -78,17 +73,21 @@ void main() {
   });
 
   group('live resync', () {
-    testWidgets('category invalidation refetches the feed surface',
-        (tester) async {
+    testWidgets('category invalidation refetches the feed surface', (
+      tester,
+    ) async {
       final repo = FakeCommunityRepository()
         ..pages = [
-          CommunityFeedPage(items: [
-            communityPost('p1', body: 'before'),
-          ], hasMore: false),
+          CommunityFeedPage(
+            items: [communityPost('p1', body: 'before')],
+            hasMore: false,
+          ),
         ];
-      final container = await pumpCommunity(tester,
-          const _FeedProbe(),
-          repo: repo);
+      final container = await pumpCommunity(
+        tester,
+        const _FeedProbe(),
+        repo: repo,
+      );
       expect(repo.feedCalls, 1);
       // What foregroundSyncProvider does on a community frame (its own
       // element, never a dependent's): invalidate the category → the
@@ -99,20 +98,24 @@ void main() {
       expect(find.text('before'), findsOneWidget);
     });
 
-    testWidgets('duplicate topic frames converge to one resync',
-        (tester) async {      final repo = FakeCommunityRepository()
+    testWidgets('duplicate topic frames converge to one resync', (
+      tester,
+    ) async {
+      final repo = FakeCommunityRepository()
         ..pages = [
-          CommunityFeedPage(items: [
-            communityPost('p1', body: 'stable'),
-          ], hasMore: false),
+          CommunityFeedPage(
+            items: [communityPost('p1', body: 'stable')],
+            hasMore: false,
+          ),
         ];
       final stomp = FakeStomp();
-      final container = await pumpCommunity(tester,
-          const _FeedProbe(),
-          repo: repo, stomp: stomp);
-      await container
-          .read(stompChatServiceProvider)
-          .subscribeCommunity((body) {
+      final container = await pumpCommunity(
+        tester,
+        const _FeedProbe(),
+        repo: repo,
+        stomp: stomp,
+      );
+      await container.read(stompChatServiceProvider).subscribeCommunity((body) {
         container.read(communityFramesProvider).add(body);
       });
       const envelope =

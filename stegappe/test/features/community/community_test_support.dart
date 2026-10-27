@@ -52,8 +52,11 @@ class FakeCommunityRepository implements CommunityRepository {
       : pages[call < pages.length ? call : pages.length - 1];
 
   @override
-  Future<CommunityFeedPage> feed(
-      {DateTime? cursorTs, String? cursorId, int size = 20}) async {
+  Future<CommunityFeedPage> feed({
+    DateTime? cursorTs,
+    String? cursorId,
+    int size = 20,
+  }) async {
     final call = feedCalls;
     feedCalls++;
     if (failFeed) throw Exception('feed failed');
@@ -64,15 +67,16 @@ class FakeCommunityRepository implements CommunityRepository {
   Future<CommunityPost> post(String postId) async {
     final post = postsById[postId];
     if (post == null) {
-      throw const ApiException(
-          kind: ApiErrorKind.notFound, message: 'gone');
+      throw const ApiException(kind: ApiErrorKind.notFound, message: 'gone');
     }
     return post;
   }
 
   @override
-  Future<CommunityPost> createPost(String body,
-      {String? idempotencyKey}) async {
+  Future<CommunityPost> createPost(
+    String body, {
+    String? idempotencyKey,
+  }) async {
     if (failNextCreate) {
       failNextCreate = false;
       throw Exception('create failed');
@@ -114,10 +118,11 @@ class FakeCommunityRepository implements CommunityRepository {
       commentCount: 0,
       createdAt: DateTime(2026, 9, 15, 12, 0),
       attachment: CommunityAttachment(
-          id: 'a1',
-          fileName: fileName,
-          mimeType: contentType,
-          size: bytes.length),
+        id: 'a1',
+        fileName: fileName,
+        mimeType: contentType,
+        size: bytes.length,
+      ),
       mine: true,
     );
   }
@@ -146,18 +151,23 @@ class FakeCommunityRepository implements CommunityRepository {
   }
 
   @override
-  Future<CommunityCandidatePage> candidates(
-      {int page = 0, int size = 50, String? q}) async {
+  Future<CommunityCandidatePage> candidates({
+    int page = 0,
+    int size = 50,
+    String? q,
+  }) async {
     candidateQueries.add(q);
     if (failCandidates) throw Exception('candidates failed');
     final needle = (q ?? '').trim().toLowerCase();
     final filtered = needle.isEmpty
         ? candidateFixture
         : candidateFixture
-            .where((c) =>
-                c.displayName.toLowerCase().contains(needle) ||
-                c.internshipReference.toLowerCase().contains(needle))
-            .toList();
+              .where(
+                (c) =>
+                    c.displayName.toLowerCase().contains(needle) ||
+                    c.internshipReference.toLowerCase().contains(needle),
+              )
+              .toList();
     final from = page * size;
     final to = (from + size).clamp(0, filtered.length);
     return CommunityCandidatePage(
@@ -170,8 +180,7 @@ class FakeCommunityRepository implements CommunityRepository {
   }
 
   @override
-  Future<CommunityPost> deletePost(String postId,
-      {String? reason}) async {
+  Future<CommunityPost> deletePost(String postId, {String? reason}) async {
     if (failNextDelete) {
       failNextDelete = false;
       throw Exception('delete failed');
@@ -180,15 +189,17 @@ class FakeCommunityRepository implements CommunityRepository {
     deleteReasons.add(reason);
     final post = postsById[postId];
     if (post == null) {
-      throw const ApiException(
-          kind: ApiErrorKind.notFound, message: 'gone');
+      throw const ApiException(kind: ApiErrorKind.notFound, message: 'gone');
     }
     return post;
   }
 
   @override
-  Future<Paged<CommunityComment>> comments(String postId,
-      {int page = 0, int size = 20}) async {
+  Future<Paged<CommunityComment>> comments(
+    String postId, {
+    int page = 0,
+    int size = 20,
+  }) async {
     final all = commentsByPost[postId] ?? const [];
     return Paged<CommunityComment>(
       items: all,
@@ -200,8 +211,11 @@ class FakeCommunityRepository implements CommunityRepository {
   }
 
   @override
-  Future<CommunityComment> comment(String postId, String body,
-      {String? idempotencyKey}) async {
+  Future<CommunityComment> comment(
+    String postId,
+    String body, {
+    String? idempotencyKey,
+  }) async {
     createdKeys.add(idempotencyKey);
     return CommunityComment(
       id: 'c-${createdKeys.length}',
@@ -215,8 +229,7 @@ class FakeCommunityRepository implements CommunityRepository {
   }
 
   @override
-  Future<void> deleteComment(String commentId,
-      {String? reason}) async {
+  Future<void> deleteComment(String commentId, {String? reason}) async {
     deletedComments.add(commentId);
     deleteReasons.add(reason);
   }
@@ -233,8 +246,9 @@ class FakeCommunityRepository implements CommunityRepository {
 
   @override
   Future<Uint8List> downloadAttachment(
-          String attachmentId, String fileName) async =>
-      Uint8List.fromList([0x25, 0x50, 0x44, 0x46]);
+    String attachmentId,
+    String fileName,
+  ) async => Uint8List.fromList([0x25, 0x50, 0x44, 0x46]);
 
   @override
   Future<Paged<CommunityReport>> reports({bool openOnly = true}) async {
@@ -254,16 +268,16 @@ class FakeCommunityRepository implements CommunityRepository {
   }
 
   @override
-  Future<void> resolveReport(String reportId,
-      {String? resolution}) async {
+  Future<void> resolveReport(String reportId, {String? resolution}) async {
     resolvedReports.add(reportId);
   }
 
   @override
-  Future<void> muteStudent(
-      {required String userId,
-      required int minutes,
-      required String reason}) async {
+  Future<void> muteStudent({
+    required String userId,
+    required int minutes,
+    required String reason,
+  }) async {
     mutedUsers.add(userId);
   }
 
@@ -282,37 +296,34 @@ CommunityPost communityPost(
   DateTime? at,
   bool mine = false,
   CommunityAttachment? attachment,
-}) =>
-    CommunityPost(
-      id: id,
-      authorId: authorId,
-      authorDisplayName: authorDisplayName,
-      body: body,
-      status: CommunityContentStatus.visible,
-      commentCount: commentCount,
-      createdAt: at ?? DateTime(2026, 9, 15, 10, 0),
-      attachment: attachment,
-      mine: mine,
-    );
+}) => CommunityPost(
+  id: id,
+  authorId: authorId,
+  authorDisplayName: authorDisplayName,
+  body: body,
+  status: CommunityContentStatus.visible,
+  commentCount: commentCount,
+  createdAt: at ?? DateTime(2026, 9, 15, 10, 0),
+  attachment: attachment,
+  mine: mine,
+);
 
 CommunityComment communityComment(
   String id, {
   String postId = 'p1',
   String body = 'reply',
   bool mine = false,
-}) =>
-    CommunityComment(
-      id: id,
-      postId: postId,
-      authorId: mine ? 'me' : 'u2',
-      authorDisplayName: mine ? 'Moi M.' : 'Yasmine H.',
-      body: body,
-      createdAt: DateTime(2026, 9, 15, 11, 0),
-      mine: mine,
-    );
+}) => CommunityComment(
+  id: id,
+  postId: postId,
+  authorId: mine ? 'me' : 'u2',
+  authorDisplayName: mine ? 'Moi M.' : 'Yasmine H.',
+  body: body,
+  createdAt: DateTime(2026, 9, 15, 11, 0),
+  mine: mine,
+);
 
-const _internUser =
-    AppUser(id: 'me', email: 'intern@u.tn', roles: ['INTERN']);
+const _internUser = AppUser(id: 'me', email: 'intern@u.tn', roles: ['INTERN']);
 
 /// Pumps a community page with role control (default intern).
 Future<ProviderContainer> pumpCommunity(
@@ -328,8 +339,7 @@ Future<ProviderContainer> pumpCommunity(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        authRepositoryProvider
-            .overrideWithValue(HarnessAuthRepository(user)),
+        authRepositoryProvider.overrideWithValue(HarnessAuthRepository(user)),
         internshipRepositoryProvider.overrideWithValue(
           FakeInternshipRepository(),
         ),

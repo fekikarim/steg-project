@@ -32,8 +32,7 @@ void main() {
 
     test('login saves tokens to secure storage (never prefs)', () async {
       when(() => remote.login(any())).thenAnswer(
-        (_) async =>
-            const AuthTokens(accessToken: 'a.b.c', refreshToken: 'r'),
+        (_) async => const AuthTokens(accessToken: 'a.b.c', refreshToken: 'r'),
       );
       await repo.login(email: 'i@u.tn', password: 'password123');
       expect(await tokens.readAccessToken(), 'a.b.c');
@@ -49,8 +48,10 @@ void main() {
       when(() => remote.login(any())).thenAnswer(
         (_) async => AuthTokens(accessToken: jwt, refreshToken: 'r'),
       );
-      final AppUser user =
-          await repo.login(email: 'i@u.tn', password: 'password123');
+      final AppUser user = await repo.login(
+        email: 'i@u.tn',
+        password: 'password123',
+      );
       expect(user.mobileRole, UserRole.intern);
       expect(user.id, 'u1');
     });
@@ -58,8 +59,7 @@ void main() {
     test('failed refresh clears tokens', () async {
       await tokens.saveTokens(accessToken: 'a', refreshToken: 'bad');
       when(() => remote.refresh(any())).thenThrow(
-        const ApiException(
-            kind: ApiErrorKind.unauthorized, message: 'expired'),
+        const ApiException(kind: ApiErrorKind.unauthorized, message: 'expired'),
       );
       expect(await repo.refreshSession(), isFalse);
       expect(await tokens.readAccessToken(), isNull);
@@ -68,8 +68,10 @@ void main() {
 
   group('userRoleFromBackend', () {
     test('supervisor wins when both roles present', () {
-      expect(userRoleFromBackend(['INTERN', 'SUPERVISOR']),
-          UserRole.supervisor);
+      expect(
+        userRoleFromBackend(['INTERN', 'SUPERVISOR']),
+        UserRole.supervisor,
+      );
     });
     test('unknown/staff roles are unsupported on mobile', () {
       expect(userRoleFromBackend(['HR']), UserRole.unsupported);

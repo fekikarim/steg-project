@@ -35,12 +35,11 @@ const _intern = AppUser(id: 'u1', email: 'intern@u.tn', roles: ['INTERN']);
 
 /// Renders [child] under a fixed text scale on top of the real theme.
 Widget _scaled(double scale, Widget child) => Builder(
-      builder: (context) => MediaQuery(
-        data: MediaQuery.of(context)
-            .copyWith(textScaler: TextScaler.linear(scale)),
-        child: child,
-      ),
-    );
+  builder: (context) => MediaQuery(
+    data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(scale)),
+    child: child,
+  ),
+);
 
 void main() {
   group('T15 quick actions: no reserved band around the grid', () {
@@ -59,34 +58,54 @@ void main() {
 
           final title = tester.getRect(find.text(l10n.homeQuickActions));
           final grid = tester.getRect(find.byType(GridView).first);
-          final tile = tester.getRect(find
-              .ancestor(
-                of: find.text(l10n.qaTasks),
-                matching: find.byType(InkWell),
-              )
-              .first);
-          final chips = tester.getRect(find
-              .ancestor(
-                of: find.byType(StegStatusChip).first,
-                matching: find.byType(Wrap),
-              )
-              .first);
-          final card = tester.getRect(find
-              .ancestor(
-                of: find.byType(StegStatusChip).first,
-                matching: find.byType(StegCard),
-              )
-              .first);
+          final tile = tester.getRect(
+            find
+                .ancestor(
+                  of: find.text(l10n.qaTasks),
+                  matching: find.byType(InkWell),
+                )
+                .first,
+          );
+          final chips = tester.getRect(
+            find
+                .ancestor(
+                  of: find.byType(StegStatusChip).first,
+                  matching: find.byType(Wrap),
+                )
+                .first,
+          );
+          final card = tester.getRect(
+            find
+                .ancestor(
+                  of: find.byType(StegStatusChip).first,
+                  matching: find.byType(StegCard),
+                )
+                .first,
+          );
 
-          expect(tile.height, closeTo(grid.height, 1),
-              reason: 'the tiles fill their cells: the grid can never be '
-                  'taller than what it paints');
-          expect(tile.top - title.bottom, lessThanOrEqualTo(20),
-              reason: 'no dead band between the section title and the buttons');
-          expect(card.top - grid.bottom, lessThanOrEqualTo(20),
-              reason: 'no dead band between the buttons and the identity card');
-          expect(chips.top - card.top, lessThanOrEqualTo(20),
-              reason: 'the chips sit at the top of the card, not in a reserved band');
+          expect(
+            tile.height,
+            closeTo(grid.height, 1),
+            reason:
+                'the tiles fill their cells: the grid can never be '
+                'taller than what it paints',
+          );
+          expect(
+            tile.top - title.bottom,
+            lessThanOrEqualTo(20),
+            reason: 'no dead band between the section title and the buttons',
+          );
+          expect(
+            card.top - grid.bottom,
+            lessThanOrEqualTo(20),
+            reason: 'no dead band between the buttons and the identity card',
+          );
+          expect(
+            chips.top - card.top,
+            lessThanOrEqualTo(20),
+            reason:
+                'the chips sit at the top of the card, not in a reserved band',
+          );
           expect(tester.takeException(), isNull);
         });
       }
@@ -96,21 +115,28 @@ void main() {
   group('T15 journal calendar: whole weeks, no reserved band', () {
     // Different month lengths *and* different starting weekdays, including
     // the 28-day February that used to leave a whole dead row.
-    const months = [2026 * 12 + 2, 2026 * 12 + 3, 2026 * 12 + 9, 2026 * 12 + 10];
+    const months = [
+      2026 * 12 + 2,
+      2026 * 12 + 3,
+      2026 * 12 + 9,
+      2026 * 12 + 10,
+    ];
     for (final encoded in months) {
       final month = DateTime(encoded ~/ 12, encoded % 12);
-      testWidgets(
-          '${month.year}-${month.month.toString().padLeft(2, '0')}: '
+      testWidgets('${month.year}-${month.month.toString().padLeft(2, '0')}: '
           'the grid ends exactly at its last week', (tester) async {
         await _pumpCalendar(tester, month, 1.0);
 
         final grid = find.byType(GridView);
         final box = tester
-            .getRect(find
-                .ancestor(of: grid, matching: find.byType(SizedBox)).first)
+            .getRect(
+              find.ancestor(of: grid, matching: find.byType(SizedBox)).first,
+            )
             .deflate(1);
-        final cellFinder =
-            find.descendant(of: grid, matching: find.byType(InkWell));
+        final cellFinder = find.descendant(
+          of: grid,
+          matching: find.byType(InkWell),
+        );
         final cells = [
           for (final e in cellFinder.evaluate())
             tester.getRect(find.byWidget(e.widget)),
@@ -118,13 +144,20 @@ void main() {
 
         expect(cells, isNotEmpty);
         final top = cells.map((r) => r.top).reduce((a, b) => a < b ? a : b);
-        final bottom =
-            cells.map((r) => r.bottom).reduce((a, b) => a > b ? a : b);
+        final bottom = cells
+            .map((r) => r.bottom)
+            .reduce((a, b) => a > b ? a : b);
 
-        expect(top - box.top, lessThanOrEqualTo(2),
-            reason: 'the first week starts at the top of the reserved box');
-        expect(box.bottom - bottom, lessThanOrEqualTo(2),
-            reason: 'no reserved band under the last week');
+        expect(
+          top - box.top,
+          lessThanOrEqualTo(2),
+          reason: 'the first week starts at the top of the reserved box',
+        );
+        expect(
+          box.bottom - bottom,
+          lessThanOrEqualTo(2),
+          reason: 'no reserved band under the last week',
+        );
         expect(tester.takeException(), isNull);
       });
     }
@@ -133,27 +166,38 @@ void main() {
       final month = DateTime(2026, 10); // 1 October 2026 is a Thursday
       await _pumpCalendar(tester, month, 1.0);
 
-      final monday =
-          JournalMonthCalendar.shortWeekday(const Locale('fr'), DateTime(2026, 10, 5));
-      expect(find.text(monday), findsOneWidget,
-          reason: 'the weekday header must be on screen to stay honest');
+      final monday = JournalMonthCalendar.shortWeekday(
+        const Locale('fr'),
+        DateTime(2026, 10, 5),
+      );
+      expect(
+        find.text(monday),
+        findsOneWidget,
+        reason: 'the weekday header must be on screen to stay honest',
+      );
 
       final grid = find.byType(GridView);
       final box = tester.getRect(grid);
-      final dayOne = tester.getRect(find
-          .descendant(of: grid, matching: find.text('1'))
-          .first);
+      final dayOne = tester.getRect(
+        find.descendant(of: grid, matching: find.text('1')).first,
+      );
       final column = box.width / 7;
       // Thursday is the 4th Monday-first column → its centre sits inside it.
       final index = ((dayOne.center.dx - box.left) / column).floor();
-      expect(index, 3,
-          reason: '1 October 2026 is a Thursday: the 4th Monday-first column');
+      expect(
+        index,
+        3,
+        reason: '1 October 2026 is a Thursday: the 4th Monday-first column',
+      );
     });
   });
 }
 
 Future<void> _pumpCalendar(
-    WidgetTester tester, DateTime month, double scale) async {
+  WidgetTester tester,
+  DateTime month,
+  double scale,
+) async {
   SharedPreferences.setMockInitialValues({});
   final prefs = await PrefsStore.load();
   await tester.pumpWidget(
@@ -162,10 +206,12 @@ Future<void> _pumpCalendar(
       ProviderScope(
         overrides: [
           prefsStoreProvider.overrideWithValue(prefs),
-          internshipRepositoryProvider
-              .overrideWithValue(FakeInternshipRepository()),
-          journalAccentProvider
-              .overrideWith((ref) => JournalAccentController(null)),
+          internshipRepositoryProvider.overrideWithValue(
+            FakeInternshipRepository(),
+          ),
+          journalAccentProvider.overrideWith(
+            (ref) => JournalAccentController(null),
+          ),
         ],
         child: MaterialApp(
           locale: const Locale('fr'),

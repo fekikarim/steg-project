@@ -24,8 +24,9 @@ void main() {
   for (final scale in <double>[1.3, 2.0]) {
     group('T15 scaling · every ux-ui §4 screen at $scale×', () {
       for (final screen in uxScreens()) {
-        testWidgets('${screen.id} · ${screen.name} survives $scale×',
-            (tester) async {
+        testWidgets('${screen.id} · ${screen.name} survives $scale×', (
+          tester,
+        ) async {
           final pump = await pumpUx(
             tester,
             screen.build(),
@@ -35,8 +36,11 @@ void main() {
             surface: Size(screen.wide ? 900 : 400, 800),
           );
           final offenders = pump.layoutOffenders.join('\n');
-          expect(pump.layoutOffenders, isEmpty,
-              reason: '${screen.name} overflowed at $scale×:\n$offenders');
+          expect(
+            pump.layoutOffenders,
+            isEmpty,
+            reason: '${screen.name} overflowed at $scale×:\n$offenders',
+          );
         });
       }
     });
@@ -45,32 +49,39 @@ void main() {
   group('T15 scaling · bottom sheets and pickers at 2.0×', () {
     final sheets = <String, Widget>{
       'task editor (intern)': const TaskEditorSheet(
-          internshipId: 'internship-1'),
+        internshipId: 'internship-1',
+      ),
       'task editor (staff)': const TaskEditorSheet(
-          internshipId: 'internship-1',
-          staffMode: true),
+        internshipId: 'internship-1',
+        staffMode: true,
+      ),
       'deliverable upload': const DeliverableUploadSheet(
-          internshipId: 'internship-1'),
+        internshipId: 'internship-1',
+      ),
       'deliverable version': const VersionUploadSheet(
-          internshipId: 'internship-1', deliverableId: 'd0'),
+        internshipId: 'internship-1',
+        deliverableId: 'd0',
+      ),
       'bulk task': const BulkTaskSheet(),
       'classification': const ClassificationSheet(),
       'AI classification proposal': const SuggestSheet(),
       'journal generation bar': const JournalGenerationBar(
-          internshipId: 'internship-1'),
+        internshipId: 'internship-1',
+      ),
       'journal generation sheet': JournalGenerationSheet(
-          internshipId: 'internship-1',
-          eligibility: JournalEligibility(
-            eligible: true,
-            reason: 'ELIGIBLE_WINDOW',
-            daysUntilOpen: 0,
-            windowDays: 14,
-            taskCount: 40,
-            approvedTasks: 12,
-            belowThreshold: true,
-            opensAt: DateTime(2026, 9, 1),
-            closesAt: DateTime(2026, 9, 15),
-          )),
+        internshipId: 'internship-1',
+        eligibility: JournalEligibility(
+          eligible: true,
+          reason: 'ELIGIBLE_WINDOW',
+          daysUntilOpen: 0,
+          windowDays: 14,
+          taskCount: 40,
+          approvedTasks: 12,
+          belowThreshold: true,
+          opensAt: DateTime(2026, 9, 1),
+          closesAt: DateTime(2026, 9, 15),
+        ),
+      ),
     };
 
     for (final entry in sheets.entries) {
@@ -83,15 +94,22 @@ void main() {
           surface: const Size(400, 800),
         );
         final offenders = pump.layoutOffenders.join('\n');
-        expect(pump.layoutOffenders, isEmpty,
-            reason: '${entry.key} overflowed at 2.0×:\n$offenders');
+        expect(
+          pump.layoutOffenders,
+          isEmpty,
+          reason: '${entry.key} overflowed at 2.0×:\n$offenders',
+        );
       });
     }
   });
 
   group('T15 scaling · worst-case content at 2.0×', () {
-    Future<UxPump> pumpFor(WidgetTester tester, UxScreen screen,
-        {FakeNotifRepo? notifications, bool online = true}) async {
+    Future<UxPump> pumpFor(
+      WidgetTester tester,
+      UxScreen screen, {
+      FakeNotifRepo? notifications,
+      bool online = true,
+    }) async {
       return pumpUx(
         tester,
         screen.build(),
@@ -104,19 +122,22 @@ void main() {
       );
     }
 
-    UxScreen screen(String id) =>
-        uxScreens().firstWhere((s) => s.id == id);
+    UxScreen screen(String id) => uxScreens().firstWhere((s) => s.id == id);
 
-    testWidgets('chat with a 2 000-character mixed-direction message',
-        (tester) async {
+    testWidgets('chat with a 2 000-character mixed-direction message', (
+      tester,
+    ) async {
       final pump = await pumpUx(
         tester,
         screen('ST-MSG-chat').build(),
         textScale: 2.0,
         messaging: UxMessagingRepository(),
       );
-      expect(pump.layoutOffenders, isEmpty,
-          reason: pump.layoutOffenders.join('\n'));
+      expect(
+        pump.layoutOffenders,
+        isEmpty,
+        reason: pump.layoutOffenders.join('\n'),
+      );
     });
 
     testWidgets('conversation list with a long title', (tester) async {
@@ -126,58 +147,84 @@ void main() {
         textScale: 2.0,
         messaging: UxMessagingRepository(),
       );
-      expect(pump.layoutOffenders, isEmpty,
-          reason: pump.layoutOffenders.join('\n'));
+      expect(
+        pump.layoutOffenders,
+        isEmpty,
+        reason: pump.layoutOffenders.join('\n'),
+      );
     });
 
     testWidgets('assistant with a 2 000-character answer', (tester) async {
       final pump = await pumpFor(tester, screen('ST-BOT'));
-      expect(pump.internship.calls['askAssistant'], isNull,
-          reason: 'the probe must not answer before the user asks');
-      expect(pump.layoutOffenders, isEmpty,
-          reason: pump.layoutOffenders.join('\n'));
+      expect(
+        pump.internship.calls['askAssistant'],
+        isNull,
+        reason: 'the probe must not answer before the user asks',
+      );
+      expect(
+        pump.layoutOffenders,
+        isEmpty,
+        reason: pump.layoutOffenders.join('\n'),
+      );
     });
 
     testWidgets('task board with long titles', (tester) async {
       final pump = await pumpFor(tester, screen('ST-TASK'));
-      expect(pump.layoutOffenders, isEmpty,
-          reason: pump.layoutOffenders.join('\n'));
+      expect(
+        pump.layoutOffenders,
+        isEmpty,
+        reason: pump.layoutOffenders.join('\n'),
+      );
     });
 
     testWidgets('deliverables with long titles', (tester) async {
       final pump = await pumpFor(tester, screen('ST-VAL-doc'));
-      expect(pump.layoutOffenders, isEmpty,
-          reason: pump.layoutOffenders.join('\n'));
+      expect(
+        pump.layoutOffenders,
+        isEmpty,
+        reason: pump.layoutOffenders.join('\n'),
+      );
     });
 
     testWidgets('community feed with long posts', (tester) async {
       final pump = await pumpFor(tester, screen('ST-COM'));
-      expect(pump.layoutOffenders, isEmpty,
-          reason: pump.layoutOffenders.join('\n'));
+      expect(
+        pump.layoutOffenders,
+        isEmpty,
+        reason: pump.layoutOffenders.join('\n'),
+      );
     });
 
-    testWidgets('notification rows with long titles and messages',
-        (tester) async {
-      final long = FakeNotifRepo(extraItems: [
-        NotificationItem(
-          id: 'n-long',
-          title: '$kLongFr $kLongAr',
-          message: '$kLongAr — $kLongFr',
-          priority: 'HIGH',
-          createdAt: DateTime(2026, 9, 15, 9),
-          isRead: false,
-        ),
-      ]);
-      final pump = await pumpFor(tester, screen('ST-NOT'),
-          notifications: long);
-      expect(pump.layoutOffenders, isEmpty,
-          reason: pump.layoutOffenders.join('\n'));
+    testWidgets('notification rows with long titles and messages', (
+      tester,
+    ) async {
+      final long = FakeNotifRepo(
+        extraItems: [
+          NotificationItem(
+            id: 'n-long',
+            title: '$kLongFr $kLongAr',
+            message: '$kLongAr — $kLongFr',
+            priority: 'HIGH',
+            createdAt: DateTime(2026, 9, 15, 9),
+            isRead: false,
+          ),
+        ],
+      );
+      final pump = await pumpFor(tester, screen('ST-NOT'), notifications: long);
+      expect(
+        pump.layoutOffenders,
+        isEmpty,
+        reason: pump.layoutOffenders.join('\n'),
+      );
     });
 
     testWidgets('intern list with long names at 2.0×', (tester) async {
       final pump = await pumpFor(tester, screen('W12'));
-      expect(pump.layoutOffenders, isEmpty,
-          reason: pump.layoutOffenders.join('\n'));
+      expect(
+        pump.layoutOffenders,
+        isEmpty,
+        reason: pump.layoutOffenders.join('\n'),
+      );
     });
   });
 }

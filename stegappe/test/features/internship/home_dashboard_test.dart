@@ -1,8 +1,11 @@
+import 'package:stegappe/core/navigation/app_destination.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
 import '../../support/queue_harness.dart';
+
 import 'package:stegappe/core/connectivity/connectivity_service.dart';
 import 'package:stegappe/core/l10n/app_localizations.dart';
 import 'package:stegappe/core/theme/steg_theme.dart';
@@ -26,7 +29,6 @@ import 'package:stegappe/features/internship/presentation/screens/assistant_scre
 import 'package:stegappe/features/internship/presentation/widgets/dashboard_sections.dart';
 import 'package:stegappe/features/internship/presentation/screens/intern_home_screen.dart';
 import 'package:stegappe/features/internship/presentation/screens/supervisor_home_screen.dart';
-import 'package:stegappe/features/internship/presentation/screens/supervisor_tasks_screen.dart';
 import 'package:stegappe/features/internship/presentation/widgets/home_header.dart';
 
 import '../../test_fixtures.dart';
@@ -69,8 +71,9 @@ Future<FakeInternshipRepository> pumpHome(
       overrides: [
         authRepositoryProvider.overrideWithValue(_FakeAuth(user)),
         internshipRepositoryProvider.overrideWithValue(repo),
-        assistantHistoryStoreProvider
-            .overrideWithValue(MemoryAssistantHistoryStore()),
+        assistantHistoryStoreProvider.overrideWithValue(
+          MemoryAssistantHistoryStore(),
+        ),
         isOnlineProvider.overrideWith((ref) => online),
         await queueOverride(),
         ...extra,
@@ -106,23 +109,22 @@ SupervisedIntern _row({
   int submittedJournal = 0,
   int pendingJournal = 0,
   int pendingDeliverables = 0,
-}) =>
-    SupervisedIntern(
-      internshipId: id,
-      reference: 'REF-$id',
-      internName: name,
-      status: InternshipStatus.inProgress,
-      type: InternshipType.perfectionnement,
-      startDate: DateTime(2026, 1, 1),
-      endDate: DateTime(2026, 3, 31),
-      departmentName: 'DSI',
-      tasksCompleted: 1,
-      tasksTotal: 4,
-      pendingJournal: pendingJournal,
-      submittedJournal: submittedJournal,
-      pendingDeliverables: pendingDeliverables,
-      evaluationsCount: 0,
-    );
+}) => SupervisedIntern(
+  internshipId: id,
+  reference: 'REF-$id',
+  internName: name,
+  status: InternshipStatus.inProgress,
+  type: InternshipType.perfectionnement,
+  startDate: DateTime(2026, 1, 1),
+  endDate: DateTime(2026, 3, 31),
+  departmentName: 'DSI',
+  tasksCompleted: 1,
+  tasksTotal: 4,
+  pendingJournal: pendingJournal,
+  submittedJournal: submittedJournal,
+  pendingDeliverables: pendingDeliverables,
+  evaluationsCount: 0,
+);
 
 void main() {
   group('T13 greeting: deterministic bands, display only', () {
@@ -151,9 +153,9 @@ void main() {
         final now = DateTime(2026, 1, 1, 9);
         expect(greetingFor(l10n, 'Amira Ben Salah', now), contains('Amira'));
         expect(
-            greetingFor(l10n, 'Amira Ben Salah',
-                DateTime(2026, 1, 1, 15)),
-            contains('Amira'));
+          greetingFor(l10n, 'Amira Ben Salah', DateTime(2026, 1, 1, 15)),
+          contains('Amira'),
+        );
       }
     });
   });
@@ -190,7 +192,7 @@ void main() {
               'id': 'j1',
               'title': 'J',
               'status': 'DRAFT',
-              'entryDate': '2026-02-01'
+              'entryDate': '2026-02-01',
             },
           ],
           'page': {'totalElements': 4, 'totalPages': 1, 'number': 0},
@@ -203,14 +205,20 @@ void main() {
               'id': 'd1',
               'title': 'R',
               'status': 'SUBMITTED',
-              'currentVersion': 1
+              'currentVersion': 1,
             },
           ],
           'page': {'totalElements': 2, 'totalPages': 1, 'number': 0},
         },
         'deliverablesTotal': 2,
-        'evaluations': {'content': [], 'page': {'totalElements': 0}},
-        'notifications': {'content': [], 'page': {'totalElements': 0}},
+        'evaluations': {
+          'content': [],
+          'page': {'totalElements': 0},
+        },
+        'notifications': {
+          'content': [],
+          'page': {'totalElements': 0},
+        },
       });
       expect(summary.internship.reference, 'STG-1');
       expect(summary.assignments, hasLength(1));
@@ -235,20 +243,18 @@ void main() {
   });
 
   group('T13 provider: one summary read replaces the fan-out', () {
-    test('dashboard loads through internshipSummary exactly once',
-        () async {
+    test('dashboard loads through internshipSummary exactly once', () async {
       final fake = FakeInternshipRepository();
-      final container = ProviderContainer(overrides: [
-        authRepositoryProvider.overrideWithValue(_FakeAuth(_intern)),
-        internshipRepositoryProvider.overrideWithValue(fake),
-        isOnlineProvider.overrideWith((ref) => true),
-      ]);
+      final container = ProviderContainer(
+        overrides: [
+          authRepositoryProvider.overrideWithValue(_FakeAuth(_intern)),
+          internshipRepositoryProvider.overrideWithValue(fake),
+          isOnlineProvider.overrideWith((ref) => true),
+        ],
+      );
       addTearDown(container.dispose);
-      await container
-          .read(authControllerProvider.notifier)
-          .bootstrap();
-      final data =
-          await container.read(dashboardProvider.future);
+      await container.read(authControllerProvider.notifier).bootstrap();
+      final data = await container.read(dashboardProvider.future);
       expect(data.tasksTotal, 4);
       expect(fake.summaryCalls, 1);
       // The 13-call fan-out is gone: no section endpoint was touched.
@@ -262,8 +268,20 @@ void main() {
   group('T13 queue totals: submitted-only journal tile', () {
     test('sums submitted rows, ignoring drafts and rejected', () {
       final totals = queueTotals([
-        _row(id: 'a', name: 'A', submittedJournal: 2, pendingJournal: 5, pendingDeliverables: 1),
-        _row(id: 'b', name: 'B', submittedJournal: 3, pendingJournal: 0, pendingDeliverables: 2),
+        _row(
+          id: 'a',
+          name: 'A',
+          submittedJournal: 2,
+          pendingJournal: 5,
+          pendingDeliverables: 1,
+        ),
+        _row(
+          id: 'b',
+          name: 'B',
+          submittedJournal: 3,
+          pendingJournal: 0,
+          pendingDeliverables: 2,
+        ),
       ]);
       expect(totals.submittedJournal, 5);
       expect(totals.submittedDeliverables, 3);
@@ -272,9 +290,8 @@ void main() {
 
   group('T13 intern home: greeting, actions, sections', () {
     testWidgets('header, quick actions and sections render', (tester) async {
-      final tabs = <int>[];
-      await pumpHome(
-          tester, InternHomeScreen(user: _intern, onOpenTab: tabs.add));
+      final tabs = <AppDestination>[];
+      await pumpHome(tester, InternHomeScreen(user: _intern, onOpen: tabs.add));
       final l10n = await loadL10n('fr');
       // Greeting carries the intern's first name; avatar + role present.
       expect(find.textContaining('Amira'), findsWidgets);
@@ -283,9 +300,9 @@ void main() {
       // Four quick actions, no more.
       for (final label in [
         l10n.qaTasks,
-        l10n.qaJournal,
-        l10n.qaAssistant,
-        l10n.qaMessages
+        l10n.qaMyJournal,
+        l10n.qaAssistantAi,
+        l10n.qaMentor,
       ]) {
         expect(find.text(label), findsOneWidget);
       }
@@ -294,10 +311,10 @@ void main() {
       expect(find.text('${l10n.pendingJournalTitle} (1)'), findsOneWidget);
     });
 
-    testWidgets('quick actions hug their title and the identity card',
-        (tester) async {
-      await pumpHome(
-          tester, InternHomeScreen(user: _intern, onOpenTab: (_) {}));
+    testWidgets('quick actions hug their title and the identity card', (
+      tester,
+    ) async {
+      await pumpHome(tester, InternHomeScreen(user: _intern, onOpen: (_) {}));
       final l10n = await loadL10n('fr');
 
       // The tile card *fills* its grid cell: a one-line label can never leave
@@ -310,65 +327,82 @@ void main() {
 
       // Section rhythm only: title → tiles → internship identity card.
       final title = tester.getRect(find.text(l10n.homeQuickActions));
-      expect(tester.getRect(tile).top - title.bottom, lessThanOrEqualTo(20),
-          reason: 'no big empty band between the title and the buttons');
-      final card = tester.getRect(find
-          .ancestor(
-            of: find.byType(StegStatusChip).first,
-            matching: find.byType(StegCard),
-          )
-          .first);
-      expect(card.top - grid.bottom, lessThanOrEqualTo(20),
-          reason: 'no big empty band between the buttons and the card below');
+      expect(
+        tester.getRect(tile).top - title.bottom,
+        lessThanOrEqualTo(20),
+        reason: 'no big empty band between the title and the buttons',
+      );
+      final card = tester.getRect(
+        find
+            .ancestor(
+              of: find.byType(StegStatusChip).first,
+              matching: find.byType(StegCard),
+            )
+            .first,
+      );
+      expect(
+        card.top - grid.bottom,
+        lessThanOrEqualTo(20),
+        reason: 'no big empty band between the buttons and the card below',
+      );
     });
 
-    testWidgets('the internal reference is not an identity chip',
-        (tester) async {
+    testWidgets('the internal reference is not an identity chip', (
+      tester,
+    ) async {
       final repo = await pumpHome(tester, InternHomeScreen(user: _intern));
       // It stays reachable for screen readers, but the row stays clean.
       expect(find.text(repo.dashboard.internship.reference), findsNothing);
     });
 
-    testWidgets('quick actions navigate to existing destinations',
-        (tester) async {
-      final tabs = <int>[];
+    testWidgets('quick actions navigate to existing destinations', (
+      tester,
+    ) async {
+      final tabs = <AppDestination>[];
       final l10n = await loadL10n('fr');
-      await pumpHome(
-          tester, InternHomeScreen(user: _intern, onOpenTab: tabs.add));
+      await pumpHome(tester, InternHomeScreen(user: _intern, onOpen: tabs.add));
 
       await tester.tap(find.text(l10n.qaTasks));
       await tester.pumpAndSettle();
-      expect(tabs, [1]);
+      expect(tabs, [AppDestination.tasks]);
 
-      await tester.tap(find.text(l10n.qaJournal));
+      await tester.tap(find.text(l10n.qaMyJournal));
       await tester.pumpAndSettle();
-      expect(tabs, [1, 2]);
+      expect(tabs, [AppDestination.tasks, AppDestination.journal]);
 
-      await tester.tap(find.text(l10n.qaAssistant));
+      await tester.tap(find.text(l10n.qaAssistantAi));
       await tester.pumpAndSettle();
       expect(find.byType(AssistantScreen), findsOneWidget);
       tester.state<NavigatorState>(find.byType(Navigator)).pop();
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text(l10n.qaMessages));
+      await tester.tap(find.text(l10n.qaMentor));
       await tester.pumpAndSettle();
-      expect(tabs, [1, 2, 3]);
+      expect(tabs, [
+        AppDestination.tasks,
+        AppDestination.journal,
+        AppDestination.messages,
+      ]);
     });
 
     testWidgets('no internship shows the honest empty state', (tester) async {
       final fake = FakeInternshipRepository()..noInternship = true;
       final l10n = await loadL10n('fr');
-      await pumpHome(tester, InternHomeScreen(user: _intern),
-          fake: fake);
+      await pumpHome(tester, InternHomeScreen(user: _intern), fake: fake);
       expect(find.text(l10n.noInternshipTitle), findsOneWidget);
       expect(fake.summaryCalls, 0);
     });
 
-    testWidgets('offline renders the stale snapshot with a label',
-        (tester) async {
+    testWidgets('offline renders the stale snapshot with a label', (
+      tester,
+    ) async {
       final fake = FakeInternshipRepository();
-      await pumpHome(tester, InternHomeScreen(user: _intern),
-          fake: fake, online: false);
+      await pumpHome(
+        tester,
+        InternHomeScreen(user: _intern),
+        fake: fake,
+        online: false,
+      );
       final l10n = await loadL10n('fr');
       // The fake serves reads offline (connectivity only gates writes);
       // the screen marks the snapshot stale instead of failing.
@@ -378,8 +412,11 @@ void main() {
     });
 
     testWidgets('arabic renders the home (RTL smoke)', (tester) async {
-      await pumpHome(tester, InternHomeScreen(user: _intern),
-          locale: const Locale('ar'));
+      await pumpHome(
+        tester,
+        InternHomeScreen(user: _intern),
+        locale: const Locale('ar'),
+      );
       expect(find.byType(UserAvatar), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
@@ -387,27 +424,33 @@ void main() {
 
   group('T13 supervisor home: greeting, actions, scoped tiles', () {
     testWidgets('header, actions and T12-sourced tiles render', (tester) async {
-      final tabs = <int>[];
+      final tabs = <AppDestination>[];
       final fake = FakeInternshipRepository()
         ..supervisedOverride = [
           _row(id: 'a', name: 'Amira Ben Salah', submittedJournal: 2),
-          _row(id: 'b', name: 'Karim Gharbi', submittedJournal: 3, pendingDeliverables: 1),
+          _row(
+            id: 'b',
+            name: 'Karim Gharbi',
+            submittedJournal: 3,
+            pendingDeliverables: 1,
+          ),
         ];
       final l10n = await loadL10n('fr');
-      await pumpHome(tester,
-          SupervisorHomeScreen(user: _sup, onOpenTab: tabs.add),
-          user: _sup,
-          fake: fake);
+      await pumpHome(
+        tester,
+        SupervisorHomeScreen(user: _sup, onOpen: tabs.add),
+        user: _sup,
+        fake: fake,
+      );
 
       expect(find.textContaining('Sup'), findsWidgets);
       expect(find.text(l10n.roleSupervisor), findsOneWidget);
-      expect(find.text(l10n.supManageTasks), findsOneWidget);
-      expect(find.text(l10n.qaValidations), findsOneWidget);
+      expect(find.text(l10n.qaAssignTask), findsOneWidget);
+      expect(find.text(l10n.qaSeeInterns), findsOneWidget);
+      expect(find.text(l10n.qaVerifyDocs), findsOneWidget);
       expect(find.text(l10n.qaCalendar), findsOneWidget);
       // SU-HOME-02: the notify-to-prepare quick action is on the home.
       expect(find.text(l10n.notifyPrepareAsk), findsOneWidget);
-      // "My interns" labels both the quick action and the list section.
-      expect(find.text(l10n.myInterns), findsWidgets);
       // Tiles sum the scoped rows: journal 2+3, deliverables 0+1.
       expect(find.text('5'), findsOneWidget);
       await tester.dragUntilVisible(
@@ -418,30 +461,35 @@ void main() {
       expect(find.text('Amira Ben Salah'), findsWidgets);
     });
 
-    testWidgets('calendar action opens the Interns tab in calendar view',
-        (tester) async {
-      final tabs = <int>[];
+    testWidgets('calendar action opens the Interns tab in calendar view', (
+      tester,
+    ) async {
+      final tabs = <AppDestination>[];
       final l10n = await loadL10n('fr');
       ProviderContainer? held;
-      await pumpHome(tester,
-          SupervisorHomeScreen(user: _sup, onOpenTab: tabs.add),
-          user: _sup);
+      await pumpHome(
+        tester,
+        SupervisorHomeScreen(user: _sup, onOpen: tabs.add),
+        user: _sup,
+      );
       final ctx = tester.element(find.byType(Scaffold).first);
       held = ProviderScope.containerOf(ctx);
       await tester.tap(find.text(l10n.qaCalendar));
       await tester.pumpAndSettle();
-      expect(tabs, [1]);
-      expect(
-          held.read(supervisedViewProvider), SupervisedView.calendar);
+      expect(tabs, [AppDestination.interns]);
+      expect(held.read(supervisedViewProvider), SupervisedView.calendar);
     });
 
-    testWidgets('notify-to-prepare opens the scoped list in select mode',
-        (tester) async {
-      final tabs = <int>[];
+    testWidgets('notify-to-prepare opens the scoped list in select mode', (
+      tester,
+    ) async {
+      final tabs = <AppDestination>[];
       final l10n = await loadL10n('fr');
-      await pumpHome(tester,
-          SupervisorHomeScreen(user: _sup, onOpenTab: tabs.add),
-          user: _sup);
+      await pumpHome(
+        tester,
+        SupervisorHomeScreen(user: _sup, onOpen: tabs.add),
+        user: _sup,
+      );
       final ctx = tester.element(find.byType(Scaffold).first);
       final container = ProviderScope.containerOf(ctx);
       expect(container.read(notifySelectModeProvider), isFalse);
@@ -452,36 +500,46 @@ void main() {
       // The Interns tab (1) in list view, with multi-select already on: the
       // supervisor picks the students from the server-scoped rows and the
       // send bar performs the call.
-      expect(tabs, [1]);
+      expect(tabs, [AppDestination.interns]);
       expect(container.read(notifySelectModeProvider), isTrue);
       expect(container.read(supervisedViewProvider), SupervisedView.list);
     });
 
     testWidgets('validations action opens the queue tab', (tester) async {
-      final tabs = <int>[];
+      final tabs = <AppDestination>[];
       final l10n = await loadL10n('fr');
-      await pumpHome(tester,
-          SupervisorHomeScreen(user: _sup, onOpenTab: tabs.add),
-          user: _sup);
-      await tester.tap(find.text(l10n.qaValidations));
+      await pumpHome(
+        tester,
+        SupervisorHomeScreen(user: _sup, onOpen: tabs.add),
+        user: _sup,
+      );
+      await tester.tap(find.text(l10n.qaVerifyDocs));
       await tester.pumpAndSettle();
-      expect(tabs, [2]);
+      expect(tabs, [AppDestination.validations]);
     });
 
-    testWidgets('manage tasks pushes the existing screen', (tester) async {
+    testWidgets('assign a task opens the tasks tab', (tester) async {
       final l10n = await loadL10n('fr');
-      await pumpHome(tester, SupervisorHomeScreen(user: _sup),
-          user: _sup);
-      await tester.tap(find.text(l10n.supManageTasks));
+      final tabs = <AppDestination>[];
+      await pumpHome(
+        tester,
+        SupervisorHomeScreen(user: _sup, onOpen: tabs.add),
+        user: _sup,
+      );
+      await tester.tap(find.text(l10n.qaAssignTask));
       await tester.pumpAndSettle();
-      expect(find.byType(SupervisorTasksScreen), findsOneWidget);
+      expect(tabs, [AppDestination.tasks]);
     });
 
     testWidgets('error offers retry and recovers', (tester) async {
       final fake = FakeInternshipRepository()..failSupervised = true;
       final l10n = await loadL10n('fr');
-      await pumpHome(tester, SupervisorHomeScreen(user: _sup),
-          user: _sup, fake: fake);
+      await pumpHome(
+        tester,
+        SupervisorHomeScreen(user: _sup),
+        user: _sup,
+        fake: fake,
+      );
       expect(find.byType(StegErrorView), findsOneWidget);
       fake.failSupervised = false;
       await tester.tap(find.text(l10n.retry));
@@ -491,7 +549,9 @@ void main() {
       // actions, so scroll once to build them before asserting.
       expect(find.byType(StegErrorView), findsNothing);
       await tester.drag(
-          find.byType(CustomScrollView).first, const Offset(0, -400));
+        find.byType(CustomScrollView).first,
+        const Offset(0, -400),
+      );
       await tester.pumpAndSettle();
       expect(find.text('Amira Ben Salah'), findsWidgets);
     });
@@ -499,8 +559,12 @@ void main() {
     testWidgets('empty scope is an empty state, not an error', (tester) async {
       final fake = FakeInternshipRepository()..supervisedOverride = [];
       final l10n = await loadL10n('fr');
-      await pumpHome(tester, SupervisorHomeScreen(user: _sup),
-          user: _sup, fake: fake);
+      await pumpHome(
+        tester,
+        SupervisorHomeScreen(user: _sup),
+        user: _sup,
+        fake: fake,
+      );
       expect(find.text(l10n.noSupervised), findsOneWidget);
     });
   });
@@ -515,9 +579,12 @@ void main() {
         expect(l10n.homeGreetNight('X').trim(), isNotEmpty);
         expect(l10n.homeQuickActions.trim(), isNotEmpty);
         expect(l10n.qaTasks.trim(), isNotEmpty);
-        expect(l10n.qaJournal.trim(), isNotEmpty);
-        expect(l10n.qaAssistant.trim(), isNotEmpty);
-        expect(l10n.qaMessages.trim(), isNotEmpty);
+        expect(l10n.qaMyJournal.trim(), isNotEmpty);
+        expect(l10n.qaAssistantAi.trim(), isNotEmpty);
+        expect(l10n.qaMentor.trim(), isNotEmpty);
+        expect(l10n.qaAssignTask.trim(), isNotEmpty);
+        expect(l10n.qaSeeInterns.trim(), isNotEmpty);
+        expect(l10n.qaVerifyDocs.trim(), isNotEmpty);
         expect(l10n.qaValidations.trim(), isNotEmpty);
         expect(l10n.qaCalendar.trim(), isNotEmpty);
       }

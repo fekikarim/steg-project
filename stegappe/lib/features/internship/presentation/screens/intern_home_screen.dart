@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/connectivity/connectivity_service.dart';
+import '../../../../core/navigation/app_destination.dart';
 import '../../../../core/l10n/app_localizations.dart';
 import '../../../../core/network/error_messages.dart';
 import '../../../../core/theme/steg_colors.dart';
@@ -31,10 +32,10 @@ import '../../../../core/widgets/steg_skeleton.dart';
 /// "what did I do?" (pending journal, deliverables) /
 /// "how am I progressing?" (task + timeline progress, evaluations).
 class InternHomeScreen extends ConsumerWidget {
-  const InternHomeScreen({super.key, required this.user, this.onOpenTab});
+  const InternHomeScreen({super.key, required this.user, this.onOpen});
 
   final AppUser user;
-  final void Function(int tab)? onOpenTab;
+  final ValueChanged<AppDestination>? onOpen;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -96,7 +97,7 @@ class InternHomeScreen extends ConsumerWidget {
               data: (data) => _DashboardSliver(
                 data: data,
                 isOnline: isOnline,
-                onOpenTab: onOpenTab,
+                onOpen: onOpen,
               ),
             ),
           ),
@@ -129,12 +130,12 @@ class _DashboardSliver extends StatelessWidget {
   const _DashboardSliver({
     required this.data,
     required this.isOnline,
-    this.onOpenTab,
+    this.onOpen,
   });
 
   final DashboardData data;
   final bool isOnline;
-  final void Function(int tab)? onOpenTab;
+  final ValueChanged<AppDestination>? onOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -146,11 +147,7 @@ class _DashboardSliver extends StatelessWidget {
             const StaleNotice(),
             const SizedBox(height: StegSpacing.md),
           ],
-          _DashboardContent(
-            data: data,
-            isOnline: isOnline,
-            onOpenTab: onOpenTab,
-          ),
+          _DashboardContent(data: data, isOnline: isOnline, onOpen: onOpen),
           SizedBox(height: 110 + MediaQuery.paddingOf(context).bottom),
         ],
       ),
@@ -162,12 +159,12 @@ class _DashboardContent extends ConsumerWidget {
   const _DashboardContent({
     required this.data,
     required this.isOnline,
-    this.onOpenTab,
+    this.onOpen,
   });
 
   final DashboardData data;
   final bool isOnline;
-  final void Function(int tab)? onOpenTab;
+  final ValueChanged<AppDestination>? onOpen;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -198,24 +195,30 @@ class _DashboardContent extends ConsumerWidget {
             QuickAction(
               icon: Icons.checklist_outlined,
               label: l10n.qaTasks,
-              onTap: onOpenTab == null ? null : () => onOpenTab!(1),
+              onTap: onOpen == null
+                  ? null
+                  : () => onOpen!(AppDestination.tasks),
             ),
             QuickAction(
               icon: Icons.book_outlined,
-              label: l10n.qaJournal,
-              onTap: onOpenTab == null ? null : () => onOpenTab!(2),
+              label: l10n.qaMyJournal,
+              onTap: onOpen == null
+                  ? null
+                  : () => onOpen!(AppDestination.journal),
             ),
             QuickAction(
               icon: Icons.smart_toy_outlined,
-              label: l10n.qaAssistant,
+              label: l10n.qaAssistantAi,
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const AssistantScreen()),
               ),
             ),
             QuickAction(
               icon: Icons.chat_bubble_outline,
-              label: l10n.qaMessages,
-              onTap: onOpenTab == null ? null : () => onOpenTab!(3),
+              label: l10n.qaMentor,
+              onTap: onOpen == null
+                  ? null
+                  : () => onOpen!(AppDestination.messages),
             ),
           ],
         ),
@@ -236,7 +239,7 @@ class _DashboardContent extends ConsumerWidget {
         DashboardSection(
           title: l10n.todayTitle,
           actionLabel: l10n.viewAll,
-          onAction: () => onOpenTab?.call(1),
+          onAction: () => onOpen?.call(AppDestination.tasks),
           child: _TaskPreviewList(
             tasks: [...data.overdueTasks, ...data.todayTasks].take(5).toList(),
             emptyHint: l10n.tasksEmpty,
@@ -249,7 +252,7 @@ class _DashboardContent extends ConsumerWidget {
           DashboardSection(
             title: l10n.thisWeek,
             actionLabel: l10n.viewAll,
-            onAction: () => onOpenTab?.call(1),
+            onAction: () => onOpen?.call(AppDestination.tasks),
             child: _TaskPreviewList(
               tasks: data.weekTasks.take(4).toList(),
               emptyHint: l10n.tasksEmpty,
@@ -286,12 +289,16 @@ class _DashboardContent extends ConsumerWidget {
         ),
         const SizedBox(height: StegSpacing.md),
 
+        // --- Progress hero + counts from the same dashboard snapshot ---
+        _ProgressHero(data: data),
+        const SizedBox(height: StegSpacing.md),
+
         // --- Pending journal ---
         DashboardSection(
           title: '${l10n.pendingJournalTitle} (${data.pendingJournalTotal})',
           icon: Icons.edit_note_outlined,
           actionLabel: l10n.viewAll,
-          onAction: () => onOpenTab?.call(2),
+          onAction: () => onOpen?.call(AppDestination.journal),
           child: data.pendingJournal.isEmpty
               ? _Hint(text: l10n.journalEmpty)
               : Column(
@@ -327,15 +334,26 @@ class _DashboardContent extends ConsumerWidget {
               ? _Hint(text: l10n.journalEmpty)
               : Column(
                   children: [
-                    for (int di = 0; di < data.openDeliverables.length; di++) ...[
+                    for (
+                      int di = 0;
+                      di < data.openDeliverables.length;
+                      di++
+                    ) ...[
                       _ModernItemRow(
                         icon: Icons.upload_file_outlined,
                         gradient: StegColors.aiGradient,
                         title: data.openDeliverables[di].title,
-                        subtitle: l10n.versionLabel(data.openDeliverables[di].currentVersion),
+                        subtitle: l10n.versionLabel(
+                          data.openDeliverables[di].currentVersion,
+                        ),
                         trailing: StegStatusChip(
-                          label: deliverableStatusLabel(data.openDeliverables[di].status, l10n),
-                          kind: deliverableStatusKind(data.openDeliverables[di].status),
+                          label: deliverableStatusLabel(
+                            data.openDeliverables[di].status,
+                            l10n,
+                          ),
+                          kind: deliverableStatusKind(
+                            data.openDeliverables[di].status,
+                          ),
                         ),
                       ),
                       if (di < data.openDeliverables.length - 1)
@@ -377,7 +395,8 @@ class _DashboardContent extends ConsumerWidget {
             child: _ModernItemRow(
               icon: Icons.star_outline,
               gradient: [StegColors.journalAmber, StegColors.journalAmberDark],
-              title: '${data.latestEvaluation!.type} • ${formatDay(data.latestEvaluation!.evaluationDate, locale)}',
+              title:
+                  '${data.latestEvaluation!.type} • ${formatDay(data.latestEvaluation!.evaluationDate, locale)}',
               subtitle: data.latestEvaluation!.totalScore == null
                   ? null
                   : l10n.scoreLabel(
@@ -485,9 +504,7 @@ class _MetaRow extends StatelessWidget {
         Expanded(
           child: Text(
             text,
-            style: Theme.of(context)
-                .textTheme
-                .bodySmall
+            style: Theme.of(context).textTheme.bodySmall
                 ?.copyWith(fontWeight: FontWeight.w600),
           ),
         ),
@@ -529,9 +546,8 @@ class _Hint extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: StegSpacing.xs),
         child: Text(
           text,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
+          style: Theme.of(context).textTheme.bodyMedium
+              ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
         ),
       ),
     );
@@ -596,9 +612,8 @@ class _ModernItemRow extends StatelessWidget {
                       title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: Theme.of(context).textTheme.bodyMedium
+                          ?.copyWith(fontWeight: FontWeight.w600),
                     ),
                     if (subtitle != null) ...[
                       const SizedBox(height: 2),
@@ -656,13 +671,20 @@ class _NotificationsCard extends ConsumerWidget {
           ? _Hint(text: l10n.notificationsEmpty)
           : Column(
               children: [
-                for (int ni = 0; ni < data.recentNotifications.length; ni++) ...[
+                for (
+                  int ni = 0;
+                  ni < data.recentNotifications.length;
+                  ni++
+                ) ...[
                   _ModernItemRow(
                     icon: data.recentNotifications[ni].isRead
                         ? Icons.notifications_outlined
                         : Icons.notifications_active_outlined,
                     gradient: data.recentNotifications[ni].isRead
-                        ? [StegColors.lightTextSecondary, StegColors.darkTextSecondary]
+                        ? [
+                            StegColors.lightTextSecondary,
+                            StegColors.darkTextSecondary,
+                          ]
                         : StegColors.brandGradientBright,
                     title: data.recentNotifications[ni].title.isEmpty
                         ? '—'
@@ -676,6 +698,93 @@ class _NotificationsCard extends ConsumerWidget {
                 ],
               ],
             ),
+    );
+  }
+}
+
+/// Progress card with the completion percentage and three counts computed from
+/// the dashboard snapshot (total, done, remaining). It is a [StegCard] so the
+/// home keeps one consistent rhythm between sections.
+class _ProgressHero extends StatelessWidget {
+  const _ProgressHero({required this.data});
+
+  final DashboardData data;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final total = data.tasksTotal;
+    final done = data.tasksCompleted;
+    final remaining = (total - done).clamp(0, total);
+    final fraction = data.tasksFraction;
+    final percent = fraction == null ? null : (fraction * 100).round();
+    return StegCard(
+      accent: true,
+      title: l10n.homeProgressTitle,
+      action: percent == null
+          ? null
+          : Text(
+              '$percent%',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(StegSpacing.radiusFull),
+            child: LinearProgressIndicator(value: fraction ?? 0, minHeight: 6),
+          ),
+          const SizedBox(height: StegSpacing.md),
+          Row(
+            children: [
+              Expanded(
+                child: _HeroCount(value: '$total', label: l10n.homeKpiTotal),
+              ),
+              Expanded(
+                child: _HeroCount(value: '$done', label: l10n.homeKpiDone),
+              ),
+              Expanded(
+                child: _HeroCount(
+                  value: '$remaining',
+                  label: l10n.homeKpiRemaining,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HeroCount extends StatelessWidget {
+  const _HeroCount({required this.value, required this.label});
+
+  final String value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          value,
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: theme.textTheme.labelSmall,
+        ),
+      ],
     );
   }
 }

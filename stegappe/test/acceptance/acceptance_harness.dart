@@ -57,7 +57,10 @@ class AcceptanceAuthRepository implements AuthRepository {
   AppUser? get currentUser => _currentUser;
 
   @override
-  Future<AppUser> login({required String email, required String password}) async {
+  Future<AppUser> login({
+    required String email,
+    required String password,
+  }) async {
     loginCalls++;
     if (email.contains('fresh')) {
       _currentUser = kAcceptanceInternNeedsPasswordChange;
@@ -102,7 +105,7 @@ class AcceptanceAuthRepository implements AuthRepository {
 /// Acceptance Notification Repository with controllable items list
 class AcceptanceNotifRepo implements NotificationRepository {
   AcceptanceNotifRepo({List<NotificationItem>? initialItems})
-      : items = initialItems ?? [];
+    : items = initialItems ?? [];
 
   final List<NotificationItem> items;
   final List<String> readIds = [];
@@ -114,7 +117,9 @@ class AcceptanceNotifRepo implements NotificationRepository {
     int size = 20,
     bool unreadOnly = false,
   }) async {
-    final filtered = unreadOnly ? items.where((i) => !i.isRead).toList() : items;
+    final filtered = unreadOnly
+        ? items.where((i) => !i.isRead).toList()
+        : items;
     return Paged<NotificationItem>(
       items: filtered,
       page: page,
@@ -176,12 +181,12 @@ class AcceptanceHarness {
     AcceptanceNotifRepo? notifRepo,
     FakeStomp? stomp,
     this.online = true,
-  })  : authRepo = AcceptanceAuthRepository(initialUser: user),
-        internshipRepo = internshipRepo ?? FakeInternshipRepository(),
-        stomp = stomp ?? FakeStomp(),
-        messagingRepo =
-            messagingRepo ?? FakeMessagingRepo(stomp: stomp ?? FakeStomp()),
-        notifRepo = notifRepo ?? AcceptanceNotifRepo();
+  }) : authRepo = AcceptanceAuthRepository(initialUser: user),
+       internshipRepo = internshipRepo ?? FakeInternshipRepository(),
+       stomp = stomp ?? FakeStomp(),
+       messagingRepo =
+           messagingRepo ?? FakeMessagingRepo(stomp: stomp ?? FakeStomp()),
+       notifRepo = notifRepo ?? AcceptanceNotifRepo();
 
   final AppUser? user;
   final AcceptanceAuthRepository authRepo;

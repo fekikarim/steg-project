@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
 import '../../support/queue_harness.dart';
+
 import 'package:stegappe/core/connectivity/connectivity_service.dart';
 import 'package:stegappe/core/l10n/app_localizations.dart';
 import 'package:stegappe/core/theme/steg_theme.dart';
@@ -87,27 +89,33 @@ void main() {
   group('CategoryChip', () {
     testWidgets('renders icon + name (never color alone)', (tester) async {
       await _pump(
-          tester,
-          const CategoryChip(
-              category: TaskCategory(id: 'c1', name: 'Frontend')));
+        tester,
+        const CategoryChip(
+          category: TaskCategory(id: 'c1', name: 'Frontend'),
+        ),
+      );
       expect(find.text('Frontend'), findsOneWidget);
       expect(find.byIcon(Icons.folder_outlined), findsOneWidget);
     });
 
-    testWidgets('unknown color token falls back without crashing', (tester) async {
+    testWidgets('unknown color token falls back without crashing', (
+      tester,
+    ) async {
       await _pump(
-          tester,
-          const CategoryChip(
-              category:
-                  TaskCategory(id: 'c9', name: 'Future', colorToken: 'holo')),
-          theme: StegTheme.dark());
+        tester,
+        const CategoryChip(
+          category: TaskCategory(id: 'c9', name: 'Future', colorToken: 'holo'),
+        ),
+        theme: StegTheme.dark(),
+      );
       expect(find.text('Future'), findsOneWidget);
     });
   });
 
   group('ClassificationSheet', () {
-    testWidgets('lists categories with empty explanation and create action',
-        (tester) async {
+    testWidgets('lists categories with empty explanation and create action', (
+      tester,
+    ) async {
       final fake = FakeInternshipRepository()..fakeBoard = _board;
       await _pump(tester, const ClassificationSheet(), fake: fake);
       expect(find.text('Frontend'), findsOneWidget);
@@ -122,19 +130,21 @@ void main() {
   });
 
   group('SuggestSheet', () {
-    testWidgets('no categories disables AI with an explanation', (tester) async {
+    testWidgets('no categories disables AI with an explanation', (
+      tester,
+    ) async {
       await _pump(tester, const SuggestSheet());
       expect(find.textContaining('au moins une catégorie'), findsWidgets);
     });
 
-    testWidgets('proposals show existing chips and NEW badges distinctly',
-        (tester) async {
+    testWidgets('proposals show existing chips and NEW badges distinctly', (
+      tester,
+    ) async {
       final fake = FakeInternshipRepository()
         ..fakeBoard = _board
         ..fakeProposals = const [
           CategoryProposal(taskId: 't-week', categoryId: 'c2'),
-          CategoryProposal(
-              taskId: 't-overdue', newCategoryName: 'Urgent'),
+          CategoryProposal(taskId: 't-overdue', newCategoryName: 'Urgent'),
         ]
         ..fakeUnclassifiedCount = 2;
       await _pump(tester, const SuggestSheet(), fake: fake);
@@ -165,8 +175,9 @@ void main() {
       expect(fake.undoneBatches, ['batch-1']);
     });
 
-    testWidgets('AI failure shows a localized sentence, board preserved',
-        (tester) async {
+    testWidgets('AI failure shows a localized sentence, board preserved', (
+      tester,
+    ) async {
       final fake = FakeInternshipRepository()
         ..fakeBoard = _board
         ..failSuggest = true;
@@ -180,27 +191,33 @@ void main() {
 
     testWidgets('offline disables AI with an honest sentence', (tester) async {
       final fake = FakeInternshipRepository()..fakeBoard = _board;
-      await _pump(tester, const SuggestSheet(),
-          fake: fake, online: false);
+      await _pump(tester, const SuggestSheet(), fake: fake, online: false);
       expect(
-          find.text('La suggestion IA nécessite une connexion.'),
-          findsWidgets);
+        find.text('La suggestion IA nécessite une connexion.'),
+        findsWidgets,
+      );
     });
 
     testWidgets('arabic renders RTL with translated copy', (tester) async {
       final fake = FakeInternshipRepository()..fakeBoard = _board;
-      await _pump(tester, const SuggestSheet(),
-          fake: fake, locale: const Locale('ar'));
+      await _pump(
+        tester,
+        const SuggestSheet(),
+        fake: fake,
+        locale: const Locale('ar'),
+      );
       expect(find.text('اقتراح بالذكاء الاصطناعي'), findsOneWidget);
-      final direction =
-          tester.element(find.byType(Scaffold)).findAncestorWidgetOfExactType<Directionality>();
+      final direction = tester
+          .element(find.byType(Scaffold))
+          .findAncestorWidgetOfExactType<Directionality>();
       expect(direction?.textDirection, TextDirection.rtl);
     });
   });
 
   group('TaskListScreen classification dimension', () {
-    testWidgets('filter chips appear separately from status chips',
-        (tester) async {
+    testWidgets('filter chips appear separately from status chips', (
+      tester,
+    ) async {
       final fake = FakeInternshipRepository()..fakeBoard = _board;
       await _pump(tester, TaskListScreen(), fake: fake);
       // Status chips (T02) and classification chips (T03) coexist.
@@ -220,8 +237,9 @@ void main() {
       expect(find.text('Week task'), findsNothing);
     });
 
-    testWidgets('unclassified filter shows tasks without a category',
-        (tester) async {
+    testWidgets('unclassified filter shows tasks without a category', (
+      tester,
+    ) async {
       final fake = FakeInternshipRepository()..fakeBoard = _board;
       await _pump(tester, TaskListScreen(), fake: fake);
       await tester.tap(find.text('Sans catégorie').first);

@@ -12,26 +12,35 @@ void main() {
     });
 
     test('every colour is distinct', () {
-      expect(StegColors.calendarPalette.toSet().length,
-          StegColors.calendarPalette.length);
+      expect(
+        StegColors.calendarPalette.toSet().length,
+        StegColors.calendarPalette.length,
+      );
     });
 
     test('the periods are distinguishable in greyscale', () {
-      final lums =
-          StegColors.calendarPalette.map(StegColors.greyscaleLuminance).toList();
+      final lums = StegColors.calendarPalette
+          .map(StegColors.greyscaleLuminance)
+          .toList();
       for (var i = 0; i < lums.length; i++) {
         for (var j = i + 1; j < lums.length; j++) {
-          expect((lums[i] - lums[j]).abs(), greaterThanOrEqualTo(15.0),
-              reason: 'palette[$i] and palette[$j] are too close in '
-                  'greyscale (${lums[i]} vs ${lums[j]})');
+          expect(
+            (lums[i] - lums[j]).abs(),
+            greaterThanOrEqualTo(15.0),
+            reason:
+                'palette[$i] and palette[$j] are too close in '
+                'greyscale (${lums[i]} vs ${lums[j]})',
+          );
         }
       }
     });
 
     test('calendarColorFor maps, wraps, and never throws', () {
       expect(StegColors.calendarColorFor(0), StegColors.calendarPalette[0]);
-      expect(StegColors.calendarColorFor(StegColors.calendarPalette.length),
-          StegColors.calendarPalette[0]);
+      expect(
+        StegColors.calendarColorFor(StegColors.calendarPalette.length),
+        StegColors.calendarPalette[0],
+      );
       expect(() => StegColors.calendarColorFor(1 << 20), returnsNormally);
     });
 
@@ -44,55 +53,63 @@ void main() {
     });
   });
 
-  group('new semantic tokens (scheduled / awaiting approval / AI / community)',
-      () {
-    test('all exist and are pairwise distinct (light and dark variants)', () {
-      final tokens = <Color>[
-        StegColors.scheduledTask,
-        StegColors.scheduledTaskDark,
-        StegColors.awaitingApproval,
-        StegColors.awaitingApprovalDark,
-        StegColors.aiAccent,
-        StegColors.aiAccentDark,
-        StegColors.communityAccent,
-        StegColors.communityAccentDark,
-      ];
-      expect(tokens.toSet().length, tokens.length,
-          reason: 'each new token must be a distinct value');
-    });
+  group(
+    'new semantic tokens (scheduled / awaiting approval / AI / community)',
+    () {
+      test('all exist and are pairwise distinct (light and dark variants)', () {
+        final tokens = <Color>[
+          StegColors.scheduledTask,
+          StegColors.scheduledTaskDark,
+          StegColors.awaitingApproval,
+          StegColors.awaitingApprovalDark,
+          StegColors.aiAccent,
+          StegColors.aiAccentDark,
+          StegColors.communityAccent,
+          StegColors.communityAccentDark,
+        ];
+        expect(
+          tokens.toSet().length,
+          tokens.length,
+          reason: 'each new token must be a distinct value',
+        );
+      });
 
-    test('are distinct from the pre-existing semantic tokens', () {
-      final existing = <Color>[
-        StegColors.info,
-        StegColors.success,
-        StegColors.warning,
-        StegColors.error,
-        StegColors.brandPrimary,
-        StegColors.brandRed,
-        StegColors.brandNavy,
-      ];
-      for (final token in <Color>[
-        StegColors.scheduledTask,
-        StegColors.awaitingApproval,
-        StegColors.aiAccent,
-        StegColors.communityAccent,
-      ]) {
-        expect(existing.contains(token), isFalse,
-            reason: 'a new token must not reuse an existing semantic colour');
-      }
-    });
+      test('are distinct from the pre-existing semantic tokens', () {
+        final existing = <Color>[
+          StegColors.info,
+          StegColors.success,
+          StegColors.warning,
+          StegColors.error,
+          StegColors.brandPrimary,
+          StegColors.brandRed,
+          StegColors.brandNavy,
+        ];
+        for (final token in <Color>[
+          StegColors.scheduledTask,
+          StegColors.awaitingApproval,
+          StegColors.aiAccent,
+          StegColors.communityAccent,
+        ]) {
+          expect(
+            existing.contains(token),
+            isFalse,
+            reason: 'a new token must not reuse an existing semantic colour',
+          );
+        }
+      });
 
-    test('the greyscale helper is deterministic and ordered', () {
-      expect(
-        StegColors.greyscaleLuminance(StegColors.brandNavy),
-        lessThan(StegColors.greyscaleLuminance(StegColors.lightSurface)),
-      );
-      expect(
-        StegColors.greyscaleLuminance(StegColors.brandNavy),
-        StegColors.greyscaleLuminance(StegColors.brandNavy),
-      );
-    });
-  });
+      test('the greyscale helper is deterministic and ordered', () {
+        expect(
+          StegColors.greyscaleLuminance(StegColors.brandNavy),
+          lessThan(StegColors.greyscaleLuminance(StegColors.lightSurface)),
+        );
+        expect(
+          StegColors.greyscaleLuminance(StegColors.brandNavy),
+          StegColors.greyscaleLuminance(StegColors.brandNavy),
+        );
+      });
+    },
+  );
 
   group('both themes build with the new tokens', () {
     test('light and dark ThemeData construct', () {

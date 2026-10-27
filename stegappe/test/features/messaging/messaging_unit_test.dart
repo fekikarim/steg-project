@@ -3,17 +3,20 @@ import 'package:stegappe/features/messaging/domain/entities/conversation.dart';
 import 'package:stegappe/features/messaging/presentation/screens/attachment_sheet.dart'
     show ChatAttachmentRules;
 
-ChatMessage msg(String id, int seq,
-    {String status = 'SENT', String sender = 'u2'}) =>
-    ChatMessage(
-      id: id,
-      conversationId: 'c1',
-      senderId: sender,
-      content: 'm$seq',
-      status: messageStatusFrom(status),
-      sequenceNumber: seq,
-      sentAt: DateTime(2026, 9, 15, 10, seq),
-    );
+ChatMessage msg(
+  String id,
+  int seq, {
+  String status = 'SENT',
+  String sender = 'u2',
+}) => ChatMessage(
+  id: id,
+  conversationId: 'c1',
+  senderId: sender,
+  content: 'm$seq',
+  status: messageStatusFrom(status),
+  sequenceNumber: seq,
+  sentAt: DateTime(2026, 9, 15, 10, seq),
+);
 
 void main() {
   group('mergeMessages', () {
@@ -40,13 +43,9 @@ void main() {
     });
 
     test('caps the in-memory window keeping the newest', () {
-      final current = [
-        for (var i = 1; i <= 10; i++) msg('m$i', i),
-      ];
-      final merged =
-          mergeMessages(current, [msg('m11', 11)], cap: 5);
-      expect(merged.map((m) => m.sequenceNumber),
-          [7, 8, 9, 10, 11]);
+      final current = [for (var i = 1; i <= 10; i++) msg('m$i', i)];
+      final merged = mergeMessages(current, [msg('m11', 11)], cap: 5);
+      expect(merged.map((m) => m.sequenceNumber), [7, 8, 9, 10, 11]);
     });
 
     test('deleted messages keep their slot', () {
@@ -67,10 +66,8 @@ void main() {
     });
 
     test('unknown conversation types fall back to group', () {
-      expect(conversationTypeFrom('PRIVATE'),
-          ConversationType.private);
-      expect(
-          conversationTypeFrom('GROUP'), ConversationType.group);
+      expect(conversationTypeFrom('PRIVATE'), ConversationType.private);
+      expect(conversationTypeFrom('GROUP'), ConversationType.group);
       expect(conversationTypeFrom(null), ConversationType.group);
     });
   });
@@ -80,15 +77,13 @@ void main() {
       expect(ChatAttachmentRules.check('a.pdf', 100), isNull);
       expect(ChatAttachmentRules.check('a.JPG', 100), isNull);
       expect(ChatAttachmentRules.check('a.jpeg', 100), isNull);
-      expect(ChatAttachmentRules.check('a.png', 10 * 1024 * 1024),
-          isNull);
+      expect(ChatAttachmentRules.check('a.png', 10 * 1024 * 1024), isNull);
     });
 
     test('rejects other types and oversize', () {
       expect(ChatAttachmentRules.check('a.mp4', 100), 'type');
       expect(ChatAttachmentRules.check('a.docx', 100), 'type');
-      expect(ChatAttachmentRules.check('a.pdf', 10 * 1024 * 1024 + 1),
-          'size');
+      expect(ChatAttachmentRules.check('a.pdf', 10 * 1024 * 1024 + 1), 'size');
       expect(ChatAttachmentRules.check('a.pdf', 0), 'empty');
     });
   });

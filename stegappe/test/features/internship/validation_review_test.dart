@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
 import '../../support/queue_harness.dart';
+
 import 'package:stegappe/core/connectivity/connectivity_service.dart';
 import 'package:stegappe/core/l10n/app_localizations.dart';
 import 'package:stegappe/core/realtime/document_sync.dart';
@@ -86,16 +88,18 @@ Future<AppLocalizations> loadL10n(String code) =>
     AppLocalizations.delegate.load(Locale(code));
 
 NotificationItem itemOf(String wireType) {
-  final parsed = notificationItemFromFrame(jsonEncode({
-    'notificationId': 'n1',
-    'type': wireType,
-    'title': 't',
-    'message': 'm',
-    'priority': 'HIGH',
-    'relatedEntityType': 'Deliverable',
-    'relatedEntityId': 'd1',
-    'createdAt': DateTime.now().toUtc().toIso8601String(),
-  }));
+  final parsed = notificationItemFromFrame(
+    jsonEncode({
+      'notificationId': 'n1',
+      'type': wireType,
+      'title': 't',
+      'message': 'm',
+      'priority': 'HIGH',
+      'relatedEntityType': 'Deliverable',
+      'relatedEntityId': 'd1',
+      'createdAt': DateTime.now().toUtc().toIso8601String(),
+    }),
+  );
   return parsed!;
 }
 
@@ -131,15 +135,19 @@ void main() {
       }
     });
 
-    testWidgets('deliverable approve states the administration decides last',
-        (tester) async {
+    testWidgets('deliverable approve states the administration decides last', (
+      tester,
+    ) async {
       final l10n = await loadL10n('fr');
       await pumpValidation(
         tester,
         Builder(
           builder: (ctx) => ElevatedButton(
-            onPressed: () => showDeliverableReviewDialog(ctx,
-                deliverableId: 'd-sub', approve: true),
+            onPressed: () => showDeliverableReviewDialog(
+              ctx,
+              deliverableId: 'd-sub',
+              approve: true,
+            ),
             child: const Text('open'),
           ),
         ),
@@ -149,18 +157,21 @@ void main() {
       expect(find.text(l10n.reviewFirstLevelNote), findsOneWidget);
     });
 
-    testWidgets('logbook approve states the administration decides last',
-        (tester) async {
+    testWidgets('logbook approve states the administration decides last', (
+      tester,
+    ) async {
       final l10n = await loadL10n('fr');
       await pumpValidation(
         tester,
         Builder(
           builder: (ctx) => ElevatedButton(
-            onPressed: () => showLogbookReviewDialog(ctx,
-                internshipId: 'internship-1',
-                internshipReference: 'STG-2026-0001',
-                logbookId: 'l1',
-                approve: true),
+            onPressed: () => showLogbookReviewDialog(
+              ctx,
+              internshipId: 'internship-1',
+              internshipReference: 'STG-2026-0001',
+              logbookId: 'l1',
+              approve: true,
+            ),
             child: const Text('open'),
           ),
         ),
@@ -172,16 +183,20 @@ void main() {
   });
 
   group('T10 deliverable review: server-confirmed, reason-gated', () {
-    testWidgets('approve records a VALIDATED decision with the note',
-        (tester) async {
+    testWidgets('approve records a VALIDATED decision with the note', (
+      tester,
+    ) async {
       final fake = FakeInternshipRepository();
       final l10n = await loadL10n('fr');
       await pumpValidation(
         tester,
         Builder(
           builder: (ctx) => ElevatedButton(
-            onPressed: () => showDeliverableReviewDialog(ctx,
-                deliverableId: 'd-sub', approve: true),
+            onPressed: () => showDeliverableReviewDialog(
+              ctx,
+              deliverableId: 'd-sub',
+              approve: true,
+            ),
             child: const Text('open'),
           ),
         ),
@@ -191,20 +206,23 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text(l10n.validateAction).last);
       await tester.pumpAndSettle();
-      expect(
-          fake.deliverableDecisions, contains(('d-sub', 'VALIDATED', null)));
+      expect(fake.deliverableDecisions, contains(('d-sub', 'VALIDATED', null)));
     });
 
-    testWidgets('reject without a comment is refused client-side',
-        (tester) async {
+    testWidgets('reject without a comment is refused client-side', (
+      tester,
+    ) async {
       final fake = FakeInternshipRepository();
       final l10n = await loadL10n('fr');
       await pumpValidation(
         tester,
         Builder(
           builder: (ctx) => ElevatedButton(
-            onPressed: () => showDeliverableReviewDialog(ctx,
-                deliverableId: 'd-sub', approve: false),
+            onPressed: () => showDeliverableReviewDialog(
+              ctx,
+              deliverableId: 'd-sub',
+              approve: false,
+            ),
             child: const Text('open'),
           ),
         ),
@@ -218,16 +236,20 @@ void main() {
       expect(fake.deliverableDecisions, isEmpty);
     });
 
-    testWidgets('reject with a comment records REJECTED with the reason',
-        (tester) async {
+    testWidgets('reject with a comment records REJECTED with the reason', (
+      tester,
+    ) async {
       final fake = FakeInternshipRepository();
       final l10n = await loadL10n('fr');
       await pumpValidation(
         tester,
         Builder(
           builder: (ctx) => ElevatedButton(
-            onPressed: () => showDeliverableReviewDialog(ctx,
-                deliverableId: 'd-sub', approve: false),
+            onPressed: () => showDeliverableReviewDialog(
+              ctx,
+              deliverableId: 'd-sub',
+              approve: false,
+            ),
             child: const Text('open'),
           ),
         ),
@@ -238,20 +260,26 @@ void main() {
       await tester.enterText(find.byType(TextField), 'Add the STEG header');
       await tester.tap(find.text(l10n.rejectAction).last);
       await tester.pumpAndSettle();
-      expect(fake.deliverableDecisions,
-          contains(('d-sub', 'REJECTED', 'Add the STEG header')));
+      expect(
+        fake.deliverableDecisions,
+        contains(('d-sub', 'REJECTED', 'Add the STEG header')),
+      );
     });
 
-    testWidgets('failed review stays open with the error (never fake-done)',
-        (tester) async {
+    testWidgets('failed review stays open with the error (never fake-done)', (
+      tester,
+    ) async {
       final fake = FakeInternshipRepository()..failWrites = true;
       final l10n = await loadL10n('fr');
       await pumpValidation(
         tester,
         Builder(
           builder: (ctx) => ElevatedButton(
-            onPressed: () => showDeliverableReviewDialog(ctx,
-                deliverableId: 'd-sub', approve: true),
+            onPressed: () => showDeliverableReviewDialog(
+              ctx,
+              deliverableId: 'd-sub',
+              approve: true,
+            ),
             child: const Text('open'),
           ),
         ),
@@ -281,7 +309,9 @@ void main() {
       await tester.tap(find.text(l10n.deliverableSubmitAction));
       await tester.pumpAndSettle();
       expect(
-          fake.submittedDeliverables.where((e) => e == 'd-sub'), hasLength(1));
+        fake.submittedDeliverables.where((e) => e == 'd-sub'),
+        hasLength(1),
+      );
     });
   });
 }

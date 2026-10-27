@@ -10,11 +10,18 @@ void main() {
   const en = AppLocalizations(Locale('en'));
   const ar = AppLocalizations(Locale('ar'));
 
-  ApiException of(ApiErrorKind kind,
-          {int? status, String? code, List<FieldError> fields = const []}) =>
-      ApiException(
-          kind: kind, message: 'raw backend text', statusCode: status, code: code,
-          fieldErrors: fields);
+  ApiException of(
+    ApiErrorKind kind, {
+    int? status,
+    String? code,
+    List<FieldError> fields = const [],
+  }) => ApiException(
+    kind: kind,
+    message: 'raw backend text',
+    statusCode: status,
+    code: code,
+    fieldErrors: fields,
+  );
 
   group('one case per ApiErrorKind', () {
     test('network → connection-required message, retryable, offline flag', () {
@@ -57,9 +64,13 @@ void main() {
 
     test('validation with field details → form sentence + field messages', () {
       final e = userErrorOf(
-        of(ApiErrorKind.validation, status: 400, fields: const [
-          FieldError(field: 'email', message: 'must be a valid email'),
-        ]),
+        of(
+          ApiErrorKind.validation,
+          status: 400,
+          fields: const [
+            FieldError(field: 'email', message: 'must be a valid email'),
+          ],
+        ),
         fr,
       );
       expect(e.message, fr.errValidation);
@@ -85,32 +96,35 @@ void main() {
   group('named backend codes', () {
     test('INVALID_STATUS_TRANSITION → not-allowed sentence, no retry', () {
       final e = userErrorOf(
-          of(ApiErrorKind.conflict,
-              status: 409, code: kCodeInvalidTransition),
-          fr);
+        of(ApiErrorKind.conflict, status: 409, code: kCodeInvalidTransition),
+        fr,
+      );
       expect(e.message, fr.errInvalidTransition);
       expect(e.retryable, isFalse);
     });
 
     test('MALWARE_SCAN_FAILED → upload rejected sentence', () {
       final e = userErrorOf(
-          of(ApiErrorKind.badRequest,
-              status: 400, code: kCodeMalwareScanFailed),
-          fr);
+        of(ApiErrorKind.badRequest, status: 400, code: kCodeMalwareScanFailed),
+        fr,
+      );
       expect(e.message, fr.errUploadRejected);
       expect(e.retryable, isFalse);
     });
 
-    test('AI_GENERATION_FAILED → its own format sentence, not "AI unavailable"',
-        () {
-      // A malformed AI answer and an AI outage are different problems; the
-      // user must not be told "unavailable" for a schema failure.
-      final e = userErrorOf(
+    test(
+      'AI_GENERATION_FAILED → its own format sentence, not "AI unavailable"',
+      () {
+        // A malformed AI answer and an AI outage are different problems; the
+        // user must not be told "unavailable" for a schema failure.
+        final e = userErrorOf(
           of(ApiErrorKind.server, status: 502, code: kCodeAiGenerationFailed),
-          fr);
-      expect(e.message, fr.errAiFormatFailed);
-      expect(e.message, isNot(fr.errAiUnavailable));
-    });
+          fr,
+        );
+        expect(e.message, fr.errAiFormatFailed);
+        expect(e.message, isNot(fr.errAiUnavailable));
+      },
+    );
 
     test('S8 journal PDF codes map to their own honest sentences', () {
       final fr = AppLocalizations(Locale('fr'));
@@ -119,21 +133,31 @@ void main() {
 
       // An empty journal is the student's problem to fix, not a server fault.
       final empty = userErrorOf(
-          of(ApiErrorKind.validation, status: 422, code: 'JOURNAL_NO_ENTRIES'), fr);
+        of(ApiErrorKind.validation, status: 422, code: 'JOURNAL_NO_ENTRIES'),
+        fr,
+      );
       expect(empty.message, fr.errJournalNoEntries);
       expect(empty.retryable, isFalse);
       expect(empty.message, isNot(contains('JOURNAL_NO_ENTRIES')));
 
       // The PDF service is supervised and comes back: worth retrying.
       final down = userErrorOf(
-          of(ApiErrorKind.server, status: 422, code: 'JOURNAL_RENDER_UNAVAILABLE'), fr);
+        of(
+          ApiErrorKind.server,
+          status: 422,
+          code: 'JOURNAL_RENDER_UNAVAILABLE',
+        ),
+        fr,
+      );
       expect(down.message, fr.errJournalRenderUnavailable);
       expect(down.retryable, isTrue);
       expect(down.message, isNot(contains('JOURNAL_RENDER_UNAVAILABLE')));
 
       // A stale ai-services image is a deployment fault, not user error.
       final stale = userErrorOf(
-          of(ApiErrorKind.validation, status: 422, code: 'AI_SERVICE_OUTDATED'), fr);
+        of(ApiErrorKind.validation, status: 422, code: 'AI_SERVICE_OUTDATED'),
+        fr,
+      );
       expect(stale.message, fr.errAiServiceOutdated);
       expect(stale.retryable, isFalse);
 
@@ -145,7 +169,9 @@ void main() {
           'AI_SERVICE_OUTDATED',
         ]) {
           final mapped = userErrorOf(
-              of(ApiErrorKind.server, status: 422, code: code), locale);
+            of(ApiErrorKind.server, status: 422, code: code),
+            locale,
+          );
           expect(mapped.message, isNot(contains(code)));
           expect(mapped.message.trim(), isNotEmpty);
         }
@@ -154,21 +180,26 @@ void main() {
 
     test('PASSWORD_CHANGE_REQUIRED → forced-change sentence', () {
       final e = userErrorOf(
-          of(ApiErrorKind.forbidden,
-              status: 403, code: kCodePasswordChangeRequired),
-          fr);
+        of(
+          ApiErrorKind.forbidden,
+          status: 403,
+          code: kCodePasswordChangeRequired,
+        ),
+        fr,
+      );
       expect(e.message, fr.errPasswordChangeRequired);
       expect(e.retryable, isFalse);
     });
 
     test('rate-limit code and HTTP 429 both → rate-limited sentence', () {
       final byCode = userErrorOf(
-          of(ApiErrorKind.unknown, code: kCodeRateLimitExceeded), fr);
+        of(ApiErrorKind.unknown, code: kCodeRateLimitExceeded),
+        fr,
+      );
       expect(byCode.message, fr.errRateLimited);
       expect(byCode.rateLimited, isTrue);
 
-      final byStatus = userErrorOf(
-          of(ApiErrorKind.unknown, status: 429), fr);
+      final byStatus = userErrorOf(of(ApiErrorKind.unknown, status: 429), fr);
       expect(byStatus.message, fr.errRateLimited);
       expect(byStatus.rateLimited, isTrue);
     });
@@ -201,14 +232,19 @@ void main() {
       }
     });
 
-    test('the trace id is preserved for support (not mixed into the sentence)',
-        () {
-      const e = ApiException(
-          kind: ApiErrorKind.server, message: 'boom', traceId: 'trace-42');
-      final user = userErrorOf(e, fr);
-      expect(user.traceId, 'trace-42');
-      expect(user.message.contains('trace-42'), isFalse);
-    });
+    test(
+      'the trace id is preserved for support (not mixed into the sentence)',
+      () {
+        const e = ApiException(
+          kind: ApiErrorKind.server,
+          message: 'boom',
+          traceId: 'trace-42',
+        );
+        final user = userErrorOf(e, fr);
+        expect(user.traceId, 'trace-42');
+        expect(user.message.contains('trace-42'), isFalse);
+      },
+    );
   });
 
   group('localized in all three languages', () {

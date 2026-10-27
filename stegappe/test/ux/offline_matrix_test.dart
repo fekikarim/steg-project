@@ -22,8 +22,13 @@ import 'ux_harness.dart';
 /// (a) enqueue a D12 write, or (b) disable with a reason, or (c) require
 /// connectivity and block with a reason — never fail silently after the tap.
 void main() {
-  Paged<T> pageOf<T>(List<T> items, {int total = 1}) =>
-      Paged<T>(items: items, page: 0, totalElements: total, totalPages: 1, isLast: true);
+  Paged<T> pageOf<T>(List<T> items, {int total = 1}) => Paged<T>(
+    items: items,
+    page: 0,
+    totalElements: total,
+    totalPages: 1,
+    isLast: true,
+  );
 
   UxScreen screen(String id) => uxScreens().firstWhere((s) => s.id == id);
 
@@ -39,120 +44,164 @@ void main() {
   List<Override> overridesFor(String id) {
     if (id == 'ST-HOME') {
       return [
-        lastDashboardProvider.overrideWith((ref) => DashboardData(
-              internship: Internship(
-                  id: 'i0',
-                  reference: 'STG-2026-0001',
-                  status: InternshipStatus.inProgress,
-                  type: InternshipType.pfe,
-                  requirement: 'Mandatory',
-                  paymentEligible: false,
-                  candidateFullName: 'Alice Test',
-                  startDate: DateTime(2026, 1, 1),
-                  endDate: DateTime(2026, 6, 30)),
-              assignments: const [],
-              activeAssignment: null,
-              todayTasks: const [],
-              overdueTasks: const [],
-              weekTasks: const [],
-              tasksCompleted: 0,
-              tasksTotal: 6,
-              extraTasks: 0,
-              pendingJournal: const [],
-              pendingJournalTotal: 1,
-              journalValidatedTotal: 0,
-              openDeliverables: const [],
-              deliverablesTotal: 3,
-              deliverablesValidated: 0,
-              deliverablesComplete: false,
-              evaluationsCount: 0,
-              latestEvaluation: null,
-              recentNotifications: const [],
-              unreadNotifications: 0,
-              unreadMessages: 0,
-              now: DateTime(2026, 9, 15),
-            )),
+        lastDashboardProvider.overrideWith(
+          (ref) => DashboardData(
+            internship: Internship(
+              id: 'i0',
+              reference: 'STG-2026-0001',
+              status: InternshipStatus.inProgress,
+              type: InternshipType.pfe,
+              requirement: 'Mandatory',
+              paymentEligible: false,
+              candidateFullName: 'Alice Test',
+              startDate: DateTime(2026, 1, 1),
+              endDate: DateTime(2026, 6, 30),
+            ),
+            assignments: const [],
+            activeAssignment: null,
+            todayTasks: const [],
+            overdueTasks: const [],
+            weekTasks: const [],
+            tasksCompleted: 0,
+            tasksTotal: 6,
+            extraTasks: 0,
+            pendingJournal: const [],
+            pendingJournalTotal: 1,
+            journalValidatedTotal: 0,
+            openDeliverables: const [],
+            deliverablesTotal: 3,
+            deliverablesValidated: 0,
+            deliverablesComplete: false,
+            evaluationsCount: 0,
+            latestEvaluation: null,
+            recentNotifications: const [],
+            unreadNotifications: 0,
+            unreadMessages: 0,
+            now: DateTime(2026, 9, 15),
+          ),
+        ),
       ];
     }
     if (id == 'ST-TASK') {
       return [
-        lastTasksProvider.overrideWith((ref) => pageOf(
-            [const InternTask(
-                id: 't0', title: 'Task 1', description: '',
-                status: TaskStatus.todo, dueDate: null)],
-            total: 1)),
+        lastTasksProvider.overrideWith(
+          (ref) => pageOf([
+            const InternTask(
+              id: 't0',
+              title: 'Task 1',
+              description: '',
+              status: TaskStatus.todo,
+              dueDate: null,
+            ),
+          ], total: 1),
+        ),
       ];
     }
     if (id == 'ST-JRN-list') {
       return [
-        lastJournalProvider.overrideWith((ref) => pageOf(
-            [JournalEntry(
-                id: 'j0', title: 'Entry 1', description: '',
-                status: JournalStatus.submitted,
-                entryDate: DateTime(2026, 9, 14))],
-            total: 1)),
+        lastJournalProvider.overrideWith(
+          (ref) => pageOf([
+            JournalEntry(
+              id: 'j0',
+              title: 'Entry 1',
+              description: '',
+              status: JournalStatus.submitted,
+              entryDate: DateTime(2026, 9, 14),
+            ),
+          ], total: 1),
+        ),
       ];
     }
     if (id == 'ST-VAL-doc') {
       return [
-        deliverablesListProvider.overrideWith((ref) async => pageOf(
-            [const DeliverableSummary(
-                id: 'd0', title: 'Deliverable 1',
-                status: DeliverableStatus.draft, currentVersion: 1)],
-            total: 1)),
+        deliverablesListProvider.overrideWith(
+          (ref) async => pageOf([
+            const DeliverableSummary(
+              id: 'd0',
+              title: 'Deliverable 1',
+              status: DeliverableStatus.draft,
+              currentVersion: 1,
+            ),
+          ], total: 1),
+        ),
       ];
     }
     if (id == 'SU-HOME') {
       return [
-        lastSupervisedProvider.overrideWith((ref) => [
-          SupervisedIntern(
-              internshipId: 'i0', reference: 'STG-2026-0001',
-              internName: 'Alice Test', status: InternshipStatus.inProgress,
-              type: InternshipType.pfe, startDate: DateTime(2026, 1, 1),
-              endDate: DateTime(2026, 6, 30), departmentName: 'DSI',
-              tasksCompleted: 0, tasksTotal: 6, pendingJournal: 1,
-              pendingDeliverables: 0, evaluationsCount: 0),
-        ]),
+        lastSupervisedProvider.overrideWith(
+          (ref) => [
+            SupervisedIntern(
+              internshipId: 'i0',
+              reference: 'STG-2026-0001',
+              internName: 'Alice Test',
+              status: InternshipStatus.inProgress,
+              type: InternshipType.pfe,
+              startDate: DateTime(2026, 1, 1),
+              endDate: DateTime(2026, 6, 30),
+              departmentName: 'DSI',
+              tasksCompleted: 0,
+              tasksTotal: 6,
+              pendingJournal: 1,
+              pendingDeliverables: 0,
+              evaluationsCount: 0,
+            ),
+          ],
+        ),
       ];
     }
     if (id == 'W12') {
       return [
         notifySelectModeProvider.overrideWith((ref) => true),
-        supervisedInternsProvider.overrideWith((ref) async => [
-          SupervisedIntern(
-              internshipId: 'i0', reference: 'STG-2026-0001',
-              internName: 'Alice Test', status: InternshipStatus.inProgress,
-              type: InternshipType.pfe, startDate: DateTime(2026, 1, 1),
-              endDate: DateTime(2026, 6, 30), departmentName: 'DSI',
-              tasksCompleted: 0, tasksTotal: 6, pendingJournal: 1,
-              pendingDeliverables: 0, evaluationsCount: 0),
-        ]),
+        supervisedInternsProvider.overrideWith(
+          (ref) async => [
+            SupervisedIntern(
+              internshipId: 'i0',
+              reference: 'STG-2026-0001',
+              internName: 'Alice Test',
+              status: InternshipStatus.inProgress,
+              type: InternshipType.pfe,
+              startDate: DateTime(2026, 1, 1),
+              endDate: DateTime(2026, 6, 30),
+              departmentName: 'DSI',
+              tasksCompleted: 0,
+              tasksTotal: 6,
+              pendingJournal: 1,
+              pendingDeliverables: 0,
+              evaluationsCount: 0,
+            ),
+          ],
+        ),
       ];
     }
     if (id == 'SU-TASK') {
       return [
-        supervisedInternDetailProvider.overrideWith((ref, arg) async =>
-            SupervisedInternDetail(
-                internship: Internship(
-                    id: 'i0', reference: 'STG-2026-0001',
-                    status: InternshipStatus.inProgress,
-                    type: InternshipType.pfe,
-                    requirement: 'Mandatory',
-                    paymentEligible: false,
-                    candidateFullName: 'Alice Test',
-                    startDate: DateTime(2026, 1, 1),
-                    endDate: DateTime(2026, 6, 30)),
-                assignments: const [], activeAssignment: null,
-                tasks: const [], tasksTotal: 6, tasksCompletedTotal: 0,
-                pendingJournal: const [],
-                deliverables: const [],
-                evaluations: const [])),
+        supervisedInternDetailProvider.overrideWith(
+          (ref, arg) async => SupervisedInternDetail(
+            internship: Internship(
+              id: 'i0',
+              reference: 'STG-2026-0001',
+              status: InternshipStatus.inProgress,
+              type: InternshipType.pfe,
+              requirement: 'Mandatory',
+              paymentEligible: false,
+              candidateFullName: 'Alice Test',
+              startDate: DateTime(2026, 1, 1),
+              endDate: DateTime(2026, 6, 30),
+            ),
+            assignments: const [],
+            activeAssignment: null,
+            tasks: const [],
+            tasksTotal: 6,
+            tasksCompletedTotal: 0,
+            pendingJournal: const [],
+            deliverables: const [],
+            evaluations: const [],
+          ),
+        ),
       ];
     }
     if (id == 'W11') {
-      return [
-        pendingValidationsProvider.overrideWith((ref) async => []),
-      ];
+      return [pendingValidationsProvider.overrideWith((ref) async => [])];
     }
     return const [];
   }
@@ -217,8 +266,11 @@ void main() {
           isNotEmpty,
           reason: '$id must label cached reads stale when offline',
         );
-        expect(offline.layoutOffenders, isEmpty,
-            reason: '$id overflowed offline');
+        expect(
+          offline.layoutOffenders,
+          isEmpty,
+          reason: '$id overflowed offline',
+        );
       });
 
       testWidgets('$id · stale marker absent when online', (t) async {
@@ -243,8 +295,9 @@ void main() {
       );
     });
 
-    testWidgets('SU-TASK · add-task and review FABs disabled offline + stale',
-        (t) async {
+    testWidgets('SU-TASK · add-task and review FABs disabled offline + stale', (
+      t,
+    ) async {
       final offline = await pumpOffline(t, 'SU-TASK');
       expect(
         find.byType(StaleNotice).evaluate(),
@@ -254,18 +307,22 @@ void main() {
       expect(offline.layoutOffenders, isEmpty);
     });
 
-    testWidgets('W12 · notify bar OFFLINE + reason, disabled when canSend=false',
-        (t) async {
-      await pumpOffline(t, 'W12');
-      final l10n = l10nOf(t);
-      expect(
-        find.text(l10n.notifyNeedsConnection),
-        findsAtLeastNWidgets(1),
-        reason: 'W12 notify bar must explain the offline block',
-      );
-    });
+    testWidgets(
+      'W12 · notify bar OFFLINE + reason, disabled when canSend=false',
+      (t) async {
+        await pumpOffline(t, 'W12');
+        final l10n = l10nOf(t);
+        expect(
+          find.text(l10n.notifyNeedsConnection),
+          findsAtLeastNWidgets(1),
+          reason: 'W12 notify bar must explain the offline block',
+        );
+      },
+    );
 
-    testWidgets('SU-CAL-03 · notify button disabled offline + reason', (t) async {
+    testWidgets('SU-CAL-03 · notify button disabled offline + reason', (
+      t,
+    ) async {
       await pumpOffline(t, 'SU-CAL-03');
       expect(
         find.byType(StegButton).evaluate().isNotEmpty,
@@ -275,18 +332,28 @@ void main() {
     });
   });
 
-  group('T15 offline · queued writes (D12 set) enqueue, never fail silently', () {
-    testWidgets('SU-TASK · task status tap offline enqueues via PendingWrites',
+  group(
+    'T15 offline · queued writes (D12 set) enqueue, never fail silently',
+    () {
+      testWidgets(
+        'SU-TASK · task status tap offline enqueues via PendingWrites',
         (t) async {
-      addTearDown(() => () {});
-      final p = await pumpOffline(t, 'SU-TASK');
-      expect(p.container, isNotNull,
-          reason: 'SU-TASK must render inside a provider container that owns the queue');
-    });
-  });
+          addTearDown(() => () {});
+          final p = await pumpOffline(t, 'SU-TASK');
+          expect(
+            p.container,
+            isNotNull,
+            reason: 'SU-TASK must render inside a provider container that owns the queue',
+          );
+        },
+      );
+    },
+  );
 
   group('T15 offline · connectivity-required paths blocked + reason', () {
-    testWidgets('ST-BOT · assistant strips offline + reason, send blocked', (t) async {
+    testWidgets('ST-BOT · assistant strips offline + reason, send blocked', (
+      t,
+    ) async {
       await pumpOffline(t, 'ST-BOT');
       final l10n = l10nOf(t);
       expect(
@@ -311,7 +378,9 @@ void main() {
       );
     });
 
-    testWidgets('SU-EVAL · evaluation submit blocked offline + reason', (t) async {
+    testWidgets('SU-EVAL · evaluation submit blocked offline + reason', (
+      t,
+    ) async {
       await pumpOffline(t, 'SU-EVAL');
       final l10n = l10nOf(t);
       await t.scrollUntilVisible(
@@ -326,16 +395,18 @@ void main() {
       );
     });
 
-    testWidgets('ST-JRN-compose · submit+draft buttons disabled offline + reason',
-        (t) async {
-      await pumpOffline(t, 'ST-JRN-compose');
-      final l10n = l10nOf(t);
-      expect(
-        find.text(l10n.submitNeedsConnection),
-        findsWidgets,
-        reason: 'ST-JRN-compose submit must explain the offline block',
-      );
-    });
+    testWidgets(
+      'ST-JRN-compose · submit+draft buttons disabled offline + reason',
+      (t) async {
+        await pumpOffline(t, 'ST-JRN-compose');
+        final l10n = l10nOf(t);
+        expect(
+          find.text(l10n.submitNeedsConnection),
+          findsWidgets,
+          reason: 'ST-JRN-compose submit must explain the offline block',
+        );
+      },
+    );
   });
 
   group('T15 offline · no raw exception reaches the user', () {

@@ -13,9 +13,12 @@ InternTask _t(
   TaskStatus status, {
   String? title,
   String? description,
-}) =>
-    InternTask(
-        id: id, title: title ?? 'T$id', status: status, description: description);
+}) => InternTask(
+  id: id,
+  title: title ?? 'T$id',
+  status: status,
+  description: description,
+);
 
 void main() {
   group('taskGroupOf (ST-TASK-01/06, BR-11/12)', () {
@@ -39,8 +42,7 @@ void main() {
   group('buildTaskBoard (AC1)', () {
     test('always renders the four primary groups, even empty', () {
       final sections = buildTaskBoard([]);
-      expect(sections.map((s) => s.group),
-          kBoardPrimaryGroups);
+      expect(sections.map((s) => s.group), kBoardPrimaryGroups);
       for (final s in sections) {
         expect(s.isEmpty, isTrue);
         expect(s.count, 0);
@@ -80,8 +82,7 @@ void main() {
       final sections = buildTaskBoard([_t('1', TaskStatus.unknown)]);
       final unknown = sections.singleWhere((s) => s.group == TaskGroup.unknown);
       expect(unknown.count, 1);
-      final todo =
-          sections.singleWhere((s) => s.group == TaskGroup.todo);
+      final todo = sections.singleWhere((s) => s.group == TaskGroup.todo);
       expect(todo.isEmpty, isTrue);
     });
 
@@ -94,18 +95,19 @@ void main() {
     });
 
     test('cancelled appears when asked for', () {
-      final sections = buildTaskBoard(
-        [_t('1', TaskStatus.cancelled)],
-        includeCancelled: true,
-      );
+      final sections = buildTaskBoard([
+        _t('1', TaskStatus.cancelled),
+      ], includeCancelled: true);
       expect(sections.any((s) => s.group == TaskGroup.cancelled), isTrue);
     });
 
-    test('cancelled alone is never silently swallowed (looks like data loss)',
-        () {
-      final sections = buildTaskBoard([_t('1', TaskStatus.cancelled)]);
-      expect(sections.any((s) => s.group == TaskGroup.cancelled), isTrue);
-    });
+    test(
+      'cancelled alone is never silently swallowed (looks like data loss)',
+      () {
+        final sections = buildTaskBoard([_t('1', TaskStatus.cancelled)]);
+        expect(sections.any((s) => s.group == TaskGroup.cancelled), isTrue);
+      },
+    );
   });
 
   group('taskMatchesQuery (AC4 — search)', () {
@@ -115,8 +117,12 @@ void main() {
     });
 
     test('matches title and description, case-insensitively', () {
-      final task = _t('1', TaskStatus.todo,
-          title: 'Préparer la démo', description: 'Salle B12');
+      final task = _t(
+        '1',
+        TaskStatus.todo,
+        title: 'Préparer la démo',
+        description: 'Salle B12',
+      );
       expect(taskMatchesQuery(task, 'démo'), isTrue);
       expect(taskMatchesQuery(task, 'la démo'), isTrue);
       expect(taskMatchesQuery(task, 'b12'), isTrue);

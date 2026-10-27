@@ -3,8 +3,10 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:stegappe/features/internship/presentation/providers/workspace_providers.dart';
+
 import 'support/queue_harness.dart';
 import 'test_fixtures.dart';
+
 import 'package:stegappe/core/l10n/app_localizations.dart';
 import 'package:stegappe/core/theme/steg_theme.dart';
 import 'package:stegappe/features/internship/domain/entities/evaluation.dart';
@@ -15,8 +17,7 @@ import 'package:stegappe/features/internship/presentation/widgets/task_row.dart'
 import 'package:stegappe/features/messaging/domain/entities/conversation.dart';
 import 'package:stegappe/features/messaging/presentation/widgets/message_bubble.dart';
 
-Future<void> pumpL10n(
-    WidgetTester tester, Widget child, Locale locale) async {
+Future<void> pumpL10n(WidgetTester tester, Widget child, Locale locale) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -35,9 +36,7 @@ Future<void> pumpL10n(
           GlobalCupertinoLocalizations.delegate,
         ],
         theme: StegTheme.light(),
-        home: Scaffold(
-          body: SizedBox(width: 360, child: child),
-        ),
+        home: Scaffold(body: SizedBox(width: 360, child: child)),
       ),
     ),
   );

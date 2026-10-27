@@ -77,15 +77,15 @@ const _plainAttachment = MessageAttachment(
 );
 
 ChatMessage _messageWith(MessageAttachment attachment) => ChatMessage(
-      id: 'm1',
-      conversationId: 'c1',
-      senderId: 'other',
-      content: 'Voici mon document.',
-      status: MessageStatus.sent,
-      sequenceNumber: 1,
-      sentAt: DateTime(2026, 10, 7, 9),
-      attachments: [attachment],
-    );
+  id: 'm1',
+  conversationId: 'c1',
+  senderId: 'other',
+  content: 'Voici mon document.',
+  status: MessageStatus.sent,
+  sequenceNumber: 1,
+  sentAt: DateTime(2026, 10, 7, 9),
+  attachments: [attachment],
+);
 
 Future<FakeInternshipRepository> pumpWith(
   WidgetTester tester,
@@ -123,138 +123,148 @@ Future<AppLocalizations> loadL10n(String code) =>
     AppLocalizations.delegate.load(Locale(code));
 
 void main() {
-  group('T10/SU-VAL-01 — supervisor registers the attachment from the chat',
-      () {
-    testWidgets('long-press opens the actions and registers as journal',
+  group(
+    'T10/SU-VAL-01 — supervisor registers the attachment from the chat',
+    () {
+      testWidgets('long-press opens the actions and registers as journal', (
+        tester,
+      ) async {
+        final fake = FakeInternshipRepository();
+        final l10n = await loadL10n('fr');
+        await pumpWith(
+          tester,
+          MessageBubble(
+            message: _messageWith(_linkedAttachment),
+            canRegisterDocuments: true,
+          ),
+          fake: fake,
+        );
+
+        await tester.longPress(find.text('journal-envoye.pdf'));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.msgSetAsJournal), findsOneWidget);
+        expect(find.text(l10n.msgSetAsReport), findsOneWidget);
+
+        await tester.tap(find.text(l10n.msgSetAsJournal));
+        await tester.pumpAndSettle();
+
+        expect(fake.registeredKinds, contains(('d-sub', 'JOURNAL')));
+        // First-level framing in the feedback (D2/BR-28): the administration
+        // takes the final decision.
+        expect(
+          find.text(l10n.msgDocRegistered(l10n.deliverableKindJournal)),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('the explicit "…" menu reaches the same actions', (
+        tester,
+      ) async {
+        final fake = FakeInternshipRepository();
+        final l10n = await loadL10n('fr');
+        await pumpWith(
+          tester,
+          MessageBubble(
+            message: _messageWith(_linkedAttachment),
+            canRegisterDocuments: true,
+          ),
+          fake: fake,
+        );
+
+        await tester.tap(find.byTooltip(l10n.msgDocMenu));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.msgSetAsReport), findsOneWidget);
+
+        await tester.tap(find.text(l10n.msgSetAsReport));
+        await tester.pumpAndSettle();
+        expect(fake.registeredKinds, contains(('d-sub', 'REPORT')));
+      });
+
+      testWidgets('a viewer without the staff role gets no registration rows', (
+        tester,
+      ) async {
+        final fake = FakeInternshipRepository();
+        final l10n = await loadL10n('fr');
+        await pumpWith(
+          tester,
+          MessageBubble(
+            message: _messageWith(_linkedAttachment),
+            canRegisterDocuments: false,
+          ),
+          fake: fake,
+        );
+
+        await tester.longPress(find.text('journal-envoye.pdf'));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.msgSetAsJournal), findsNothing);
+        expect(find.text(l10n.msgSetAsReport), findsNothing);
+        expect(fake.registeredKinds, isEmpty);
+      });
+
+      testWidgets('a plain chat file says honestly why it cannot register', (
+        tester,
+      ) async {
+        final fake = FakeInternshipRepository();
+        final l10n = await loadL10n('fr');
+        await pumpWith(
+          tester,
+          MessageBubble(
+            message: _messageWith(_plainAttachment),
+            canRegisterDocuments: true,
+          ),
+          fake: fake,
+        );
+
+        await tester.longPress(find.text('photo-libre.pdf'));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.msgDocNotLinked), findsOneWidget);
+        expect(find.text(l10n.msgSetAsJournal), findsNothing);
+      });
+
+      testWidgets(
+        'an already-registered kind marks itself and refuses re-taps',
         (tester) async {
-      final fake = FakeInternshipRepository();
-      final l10n = await loadL10n('fr');
-      await pumpWith(
-        tester,
-        MessageBubble(
-          message: _messageWith(_linkedAttachment),
-          canRegisterDocuments: true,
-        ),
-        fake: fake,
+          final fake = FakeInternshipRepository();
+          final l10n = await loadL10n('fr');
+          const alreadyJournal = MessageAttachment(
+            id: 'a3',
+            fileName: 'journal.pdf',
+            mimeType: 'application/pdf',
+            size: 1024,
+            sourceDeliverableId: 'd1',
+            sourceDocumentKind: 'JOURNAL',
+          );
+          await pumpWith(
+            tester,
+            MessageBubble(
+              message: _messageWith(alreadyJournal),
+              canRegisterDocuments: true,
+            ),
+            fake: fake,
+          );
+
+          // The chip shows the registered kind inline.
+          expect(find.text(l10n.deliverableKindJournal), findsOneWidget);
+
+          await tester.longPress(find.text('journal.pdf'));
+          await tester.pumpAndSettle();
+          // The current kind row is present but not re-registerable.
+          final journalRow = find.widgetWithText(
+            ListTile,
+            l10n.msgSetAsJournal,
+          );
+          expect(journalRow, findsOneWidget);
+          expect(tester.widget<ListTile>(journalRow).enabled, isFalse);
+          expect(fake.registeredKinds, isEmpty);
+        },
       );
-
-      await tester.longPress(find.text('journal-envoye.pdf'));
-      await tester.pumpAndSettle();
-      expect(find.text(l10n.msgSetAsJournal), findsOneWidget);
-      expect(find.text(l10n.msgSetAsReport), findsOneWidget);
-
-      await tester.tap(find.text(l10n.msgSetAsJournal));
-      await tester.pumpAndSettle();
-
-      expect(fake.registeredKinds, contains(('d-sub', 'JOURNAL')));
-      // First-level framing in the feedback (D2/BR-28): the administration
-      // takes the final decision.
-      expect(
-        find.text(l10n.msgDocRegistered(l10n.deliverableKindJournal)),
-        findsOneWidget,
-      );
-    });
-
-    testWidgets('the explicit "…" menu reaches the same actions', (
-      tester,
-    ) async {
-      final fake = FakeInternshipRepository();
-      final l10n = await loadL10n('fr');
-      await pumpWith(
-        tester,
-        MessageBubble(
-          message: _messageWith(_linkedAttachment),
-          canRegisterDocuments: true,
-        ),
-        fake: fake,
-      );
-
-      await tester.tap(find.byTooltip(l10n.msgDocMenu));
-      await tester.pumpAndSettle();
-      expect(find.text(l10n.msgSetAsReport), findsOneWidget);
-
-      await tester.tap(find.text(l10n.msgSetAsReport));
-      await tester.pumpAndSettle();
-      expect(fake.registeredKinds, contains(('d-sub', 'REPORT')));
-    });
-
-    testWidgets('a viewer without the staff role gets no registration rows',
-        (tester) async {
-      final fake = FakeInternshipRepository();
-      final l10n = await loadL10n('fr');
-      await pumpWith(
-        tester,
-        MessageBubble(
-          message: _messageWith(_linkedAttachment),
-          canRegisterDocuments: false,
-        ),
-        fake: fake,
-      );
-
-      await tester.longPress(find.text('journal-envoye.pdf'));
-      await tester.pumpAndSettle();
-      expect(find.text(l10n.msgSetAsJournal), findsNothing);
-      expect(find.text(l10n.msgSetAsReport), findsNothing);
-      expect(fake.registeredKinds, isEmpty);
-    });
-
-    testWidgets('a plain chat file says honestly why it cannot register', (
-      tester,
-    ) async {
-      final fake = FakeInternshipRepository();
-      final l10n = await loadL10n('fr');
-      await pumpWith(
-        tester,
-        MessageBubble(
-          message: _messageWith(_plainAttachment),
-          canRegisterDocuments: true,
-        ),
-        fake: fake,
-      );
-
-      await tester.longPress(find.text('photo-libre.pdf'));
-      await tester.pumpAndSettle();
-      expect(find.text(l10n.msgDocNotLinked), findsOneWidget);
-      expect(find.text(l10n.msgSetAsJournal), findsNothing);
-    });
-
-    testWidgets('an already-registered kind marks itself and refuses re-taps',
-        (tester) async {
-      final fake = FakeInternshipRepository();
-      final l10n = await loadL10n('fr');
-      const alreadyJournal = MessageAttachment(
-        id: 'a3',
-        fileName: 'journal.pdf',
-        mimeType: 'application/pdf',
-        size: 1024,
-        sourceDeliverableId: 'd1',
-        sourceDocumentKind: 'JOURNAL',
-      );
-      await pumpWith(
-        tester,
-        MessageBubble(
-          message: _messageWith(alreadyJournal),
-          canRegisterDocuments: true,
-        ),
-        fake: fake,
-      );
-
-      // The chip shows the registered kind inline.
-      expect(find.text(l10n.deliverableKindJournal), findsOneWidget);
-
-      await tester.longPress(find.text('journal.pdf'));
-      await tester.pumpAndSettle();
-      // The current kind row is present but not re-registerable.
-      final journalRow = find.widgetWithText(ListTile, l10n.msgSetAsJournal);
-      expect(journalRow, findsOneWidget);
-      expect(tester.widget<ListTile>(journalRow).enabled, isFalse);
-      expect(fake.registeredKinds, isEmpty);
-    });
-  });
+    },
+  );
 
   group('T10/SU-VAL-01 — sending a document carries the source link', () {
-    testWidgets('the deliverable picker stages with its id and sends it',
-        (tester) async {
+    testWidgets('the deliverable picker stages with its id and sends it', (
+      tester,
+    ) async {
       final fake = FakeInternshipRepository();
       final messaging = _FakeMessagingRepo();
       final l10n = await loadL10n('fr');
@@ -274,7 +284,10 @@ void main() {
       await tester.pumpAndSettle();
 
       // Caption prefilled by the staging step (contract requires one).
-      expect(find.widgetWithText(TextField, 'Brouillon rapport'), findsOneWidget);
+      expect(
+        find.widgetWithText(TextField, 'Brouillon rapport'),
+        findsOneWidget,
+      );
 
       await tester.tap(find.widgetWithText(ElevatedButton, l10n.msgSend));
       await tester.pumpAndSettle();

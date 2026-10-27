@@ -100,71 +100,94 @@ void main() {
       if (settle) await tester.pumpAndSettle();
     }
 
-    Widget openPage() => const JournalAiGenerateScreen(internshipId: 'internship-1');
+    Widget openPage() =>
+        const JournalAiGenerateScreen(internshipId: 'internship-1');
 
     // -----------------------------------------------------------------------
     // The dedicated page
     // -----------------------------------------------------------------------
 
-    testWidgets('autoStart: opens the page and generates from the entries endpoint',
-        (tester) async {
-      await pumpScreen(tester,
+    testWidgets(
+      'autoStart: opens the page and generates from the entries endpoint',
+      (tester) async {
+        await pumpScreen(
+          tester,
           home: const JournalAiGenerateScreen(
-              internshipId: 'internship-1', autoStart: true));
+            internshipId: 'internship-1',
+            autoStart: true,
+          ),
+        );
 
-      expect(find.byType(JournalAiGenerateScreen), findsOneWidget);
-      expect(repo.journalEntriesGenerations, ['ENTRIES']);
-      // The summary tells the student what the document actually holds.
-      expect(find.text('Entrées incluses'), findsOneWidget);
-      expect(find.text('12'), findsWidgets);
-      expect(find.text('Document prêt'), findsOneWidget);
-      expect(find.text('05/01/2026 → 30/04/2026'), findsOneWidget);
-    });
+        expect(find.byType(JournalAiGenerateScreen), findsOneWidget);
+        expect(repo.journalEntriesGenerations, ['ENTRIES']);
+        // The summary tells the student what the document actually holds.
+        expect(find.text('Entrées incluses'), findsOneWidget);
+        expect(find.text('12'), findsWidgets);
+        expect(find.text('Document prêt'), findsOneWidget);
+        expect(find.text('05/01/2026 → 30/04/2026'), findsOneWidget);
+      },
+    );
 
-    testWidgets('without autoStart nothing is generated until the student asks',
-        (tester) async {
-      await pumpScreen(tester, home: openPage());
+    testWidgets(
+      'without autoStart nothing is generated until the student asks',
+      (tester) async {
+        await pumpScreen(tester, home: openPage());
 
-      expect(repo.journalEntriesGenerations, isEmpty);
-      await tester.tap(find.text('Générer le document'));
-      await tester.pumpAndSettle();
+        expect(repo.journalEntriesGenerations, isEmpty);
+        await tester.tap(find.text('Générer le document'));
+        await tester.pumpAndSettle();
 
-      expect(repo.journalEntriesGenerations, ['ENTRIES']);
-    });
+        expect(repo.journalEntriesGenerations, ['ENTRIES']);
+      },
+    );
 
-    testWidgets('a second tap while generating is refused: no duplicate request',
-        (tester) async {
-      final gate = Completer<void>();
-      repo.journalEntriesGate = gate;
-      // pump(), not pumpAndSettle(): the progress spinner animates forever
-      // while the request is in flight.
-      await pumpScreen(tester,
+    testWidgets(
+      'a second tap while generating is refused: no duplicate request',
+      (tester) async {
+        final gate = Completer<void>();
+        repo.journalEntriesGate = gate;
+        // pump(), not pumpAndSettle(): the progress spinner animates forever
+        // while the request is in flight.
+        await pumpScreen(
+          tester,
           home: const JournalAiGenerateScreen(
-              internshipId: 'internship-1', autoStart: true),
-          settle: false);
-      await tester.pump();
+            internshipId: 'internship-1',
+            autoStart: true,
+          ),
+          settle: false,
+        );
+        await tester.pump();
 
-      expect(find.text('Génération du document…'), findsOneWidget);
-      expect(repo.journalEntriesGenerations, ['ENTRIES']);
+        expect(find.text('Génération du document…'), findsOneWidget);
+        expect(repo.journalEntriesGenerations, ['ENTRIES']);
 
-      // Asking again while one is in flight must not reach the backend again.
-      final container = ProviderScope.containerOf(
-          tester.element(find.byType(JournalAiGenerateScreen)));
-      await container.read(journalEntriesProvider.notifier).generate('internship-1');
-      await tester.pump();
-      expect(repo.journalEntriesGenerations, ['ENTRIES']);
+        // Asking again while one is in flight must not reach the backend again.
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(JournalAiGenerateScreen)),
+        );
+        await container
+            .read(journalEntriesProvider.notifier)
+            .generate('internship-1');
+        await tester.pump();
+        expect(repo.journalEntriesGenerations, ['ENTRIES']);
 
-      gate.complete();
-      await tester.pumpAndSettle();
-      expect(repo.journalEntriesGenerations, ['ENTRIES']);
-      expect(find.text('Document prêt'), findsOneWidget);
-    });
+        gate.complete();
+        await tester.pumpAndSettle();
+        expect(repo.journalEntriesGenerations, ['ENTRIES']);
+        expect(find.text('Document prêt'), findsOneWidget);
+      },
+    );
 
-    testWidgets('the generated PDF can be downloaded from the page',
-        (tester) async {
-      await pumpScreen(tester,
-          home: const JournalAiGenerateScreen(
-              internshipId: 'internship-1', autoStart: true));
+    testWidgets('the generated PDF can be downloaded from the page', (
+      tester,
+    ) async {
+      await pumpScreen(
+        tester,
+        home: const JournalAiGenerateScreen(
+          internshipId: 'internship-1',
+          autoStart: true,
+        ),
+      );
 
       await tester.tap(find.text('Télécharger le document'));
       await tester.pumpAndSettle();
@@ -173,8 +196,9 @@ void main() {
       expect(shared.single.$2, 'journal-de-stage-INT-2026-00001.pdf');
     });
 
-    testWidgets('a server failure is explained and can be retried',
-        (tester) async {
+    testWidgets('a server failure is explained and can be retried', (
+      tester,
+    ) async {
       repo.journalEntriesError = const ApiException(
         kind: ApiErrorKind.server,
         statusCode: 503,
@@ -198,8 +222,9 @@ void main() {
       expect(find.text('Document prêt'), findsOneWidget);
     });
 
-    testWidgets('a shared-token mismatch is named as a configuration fault',
-        (tester) async {
+    testWidgets('a shared-token mismatch is named as a configuration fault', (
+      tester,
+    ) async {
       // The backend and the AI service agreeing on the secret is a
       // configuration property, not an outage. When they drift apart every
       // call is refused with 401, and that used to be surfaced as "the AI
@@ -223,91 +248,112 @@ void main() {
       expect(find.textContaining('do not share the token'), findsNothing);
     });
 
-    testWidgets('offline is stated before any request is attempted',
-        (tester) async {
+    testWidgets('offline is stated before any request is attempted', (
+      tester,
+    ) async {
       await pumpScreen(tester, home: openPage(), online: false);
       await tester.tap(find.text('Générer le document'));
       await tester.pumpAndSettle();
 
       expect(repo.journalEntriesGenerations, isEmpty);
-      expect(find.text('Connexion requise pour générer le journal.'),
-          findsOneWidget);
-    });
-
-    testWidgets('an empty journal is reported honestly, not as a blank success',
-        (tester) async {
-      repo.journalEntriesResult = const JournalEntriesResult(
-        deliverableId: 'd',
-        title: 'Journal de stage (journal saisi) — INT-2026-00001',
-        status: DeliverableStatus.draft,
-        currentVersion: 1,
-        fileName: 'j.pdf',
-        source: 'JOURNAL_ENTRIES',
-        entryCount: 0,
-        dayCount: 0,
-        firstDate: '',
-        lastDate: '',
-        pageCount: 1,
-        replacedDraft: false,
-        previousSubmitted: false,
+      expect(
+        find.text('Connexion requise pour générer le journal.'),
+        findsOneWidget,
       );
-      await pumpScreen(tester,
-          home: const JournalAiGenerateScreen(
-              internshipId: 'internship-1', autoStart: true));
-
-      expect(find.text('Document prêt'), findsOneWidget);
-      expect(find.text('—'), findsOneWidget);
     });
+
+    testWidgets(
+      'an empty journal is reported honestly, not as a blank success',
+      (tester) async {
+        repo.journalEntriesResult = const JournalEntriesResult(
+          deliverableId: 'd',
+          title: 'Journal de stage (journal saisi) — INT-2026-00001',
+          status: DeliverableStatus.draft,
+          currentVersion: 1,
+          fileName: 'j.pdf',
+          source: 'JOURNAL_ENTRIES',
+          entryCount: 0,
+          dayCount: 0,
+          firstDate: '',
+          lastDate: '',
+          pageCount: 1,
+          replacedDraft: false,
+          previousSubmitted: false,
+        );
+        await pumpScreen(
+          tester,
+          home: const JournalAiGenerateScreen(
+            internshipId: 'internship-1',
+            autoStart: true,
+          ),
+        );
+
+        expect(find.text('Document prêt'), findsOneWidget);
+        expect(find.text('—'), findsOneWidget);
+      },
+    );
 
     // -----------------------------------------------------------------------
     // Entry point 1: the journal screen button
     // -----------------------------------------------------------------------
 
-    testWidgets('the journal screen exposes "Generate Journal with AI" and opens the page',
-        (tester) async {
-      await pumpScreen(tester,
-          home: const Scaffold(body: JournalListScreen()));
+    testWidgets(
+      'the journal screen exposes "Generate Journal with AI" and opens the page',
+      (tester) async {
+        await pumpScreen(
+          tester,
+          home: const Scaffold(body: JournalListScreen()),
+        );
 
-      final button = find.text('Générer le journal avec l’IA');
-      expect(button, findsOneWidget);
+        final button = find.text('Générer le journal avec l’IA');
+        expect(button, findsOneWidget);
 
-      await tester.tap(button);
-      await tester.pumpAndSettle();
+        await tester.tap(button);
+        await tester.pumpAndSettle();
 
-      expect(find.byType(JournalAiGenerateScreen), findsOneWidget);
-      expect(repo.journalEntriesGenerations, ['ENTRIES']);
-    });
+        expect(find.byType(JournalAiGenerateScreen), findsOneWidget);
+        expect(repo.journalEntriesGenerations, ['ENTRIES']);
+      },
+    );
 
     // -----------------------------------------------------------------------
     // Entry point 2: tasks → generate → "From my tasks"
     // -----------------------------------------------------------------------
 
-    testWidgets('Tasks → "From my tasks" opens the SAME page and hits the SAME endpoint',
-        (tester) async {
-      await pumpScreen(tester,
-          home: const JournalGenerationBar(internshipId: 'internship-1'));
+    testWidgets(
+      'Tasks → "From my tasks" opens the SAME page and hits the SAME endpoint',
+      (tester) async {
+        await pumpScreen(
+          tester,
+          home: const JournalGenerationBar(internshipId: 'internship-1'),
+        );
 
-      await tester.tap(find.text('Générer le journal de stage'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('À partir de mes tâches'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Générer le journal de stage'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('À partir de mes tâches'));
+        await tester.pumpAndSettle();
 
-      expect(find.byType(JournalAiGenerateScreen), findsOneWidget);
-      // Same call as the journal screen button — not the task-list workflow.
-      expect(repo.journalEntriesGenerations, ['ENTRIES']);
-      expect(repo.journalGenerations, isEmpty);
-    });
+        expect(find.byType(JournalAiGenerateScreen), findsOneWidget);
+        // Same call as the journal screen button — not the task-list workflow.
+        expect(repo.journalEntriesGenerations, ['ENTRIES']);
+        expect(repo.journalGenerations, isEmpty);
+      },
+    );
 
-    testWidgets('"From my tasks" no longer claims the task list is the source',
-        (tester) async {
-      await pumpScreen(tester,
-          home: const JournalGenerationBar(internshipId: 'internship-1'));
+    testWidgets(
+      '"From my tasks" no longer claims the task list is the source',
+      (tester) async {
+        await pumpScreen(
+          tester,
+          home: const JournalGenerationBar(internshipId: 'internship-1'),
+        );
 
-      await tester.tap(find.text('Générer le journal de stage'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Générer le journal de stage'));
+        await tester.pumpAndSettle();
 
-      expect(find.textContaining('entrées de journal'), findsOneWidget);
-      expect(find.textContaining('statuts sont assemblés'), findsNothing);
-    });
+        expect(find.textContaining('entrées de journal'), findsOneWidget);
+        expect(find.textContaining('statuts sont assemblés'), findsNothing);
+      },
+    );
   });
 }

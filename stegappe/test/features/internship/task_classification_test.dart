@@ -7,7 +7,11 @@ void main() {
   group('TaskCategory model', () {
     test('known category keeps id, name, color and order', () {
       const cat = TaskCategory(
-          id: 'c1', name: 'Frontend', colorToken: 'blue', position: 2);
+        id: 'c1',
+        name: 'Frontend',
+        colorToken: 'blue',
+        position: 2,
+      );
       expect(cat.id, 'c1');
       expect(cat.name, 'Frontend');
       expect(cat.colorToken, 'blue');
@@ -79,8 +83,9 @@ void main() {
       expect(p.isNewCategory, isFalse);
       expect(p.confidence, 0.9);
       expect(
-          p.displayName(const [TaskCategory(id: 'c1', name: 'Frontend')]),
-          'Frontend');
+        p.displayName(const [TaskCategory(id: 'c1', name: 'Frontend')]),
+        'Frontend',
+      );
     });
 
     test('new-name proposal is flagged and shown as new', () {
@@ -96,15 +101,21 @@ void main() {
 
     test('confidence outside 0..1 is clamped', () {
       expect(
-          categoryProposalFromJson(
-              {'taskId': 't', 'categoryId': 'c', 'confidence': 7})!
-              .confidence,
-          1.0);
+        categoryProposalFromJson({
+          'taskId': 't',
+          'categoryId': 'c',
+          'confidence': 7,
+        })!.confidence,
+        1.0,
+      );
       expect(
-          categoryProposalFromJson(
-              {'taskId': 't', 'categoryId': 'c', 'confidence': -2})!
-              .confidence,
-          0.0);
+        categoryProposalFromJson({
+          'taskId': 't',
+          'categoryId': 'c',
+          'confidence': -2,
+        })!.confidence,
+        0.0,
+      );
     });
 
     test('proposal without a task id is dropped', () {
@@ -171,7 +182,10 @@ void main() {
   group('payload builders', () {
     test('assign payload carries the compare-and-set expectation', () {
       final json = assignCategoryJson(
-          categoryId: 'c1', expectedCategoryId: null, force: false);
+        categoryId: 'c1',
+        expectedCategoryId: null,
+        force: false,
+      );
       expect(json['categoryId'], 'c1');
       expect(json, containsPair('expectedCategoryId', null));
       expect(json['force'], isFalse);

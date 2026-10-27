@@ -83,8 +83,9 @@ Future<AppLocalizations> loadL10n(String code) =>
 
 void main() {
   group('T14 profile: read-only identity, no sensitive data', () {
-    testWidgets('intern sees avatar, email, role and internship facts',
-        (tester) async {
+    testWidgets('intern sees avatar, email, role and internship facts', (
+      tester,
+    ) async {
       final l10n = await loadL10n('fr');
       await pumpProfile(tester);
       expect(find.byType(UserAvatar), findsOneWidget);
@@ -94,6 +95,11 @@ void main() {
       expect(find.text(l10n.profileInternship), findsOneWidget);
       // No editable affordance anywhere on the screen.
       expect(find.byType(TextField), findsNothing);
+      await tester.scrollUntilVisible(
+        find.text(l10n.profileChangePassword),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.text(l10n.profileChangePassword), findsOneWidget);
     });
 
@@ -111,22 +117,29 @@ void main() {
       expect(texts.contains('CIN'), isFalse);
       // No password input anywhere (the change-password screen owns it).
       expect(
-          find.byWidgetPredicate(
-              (w) => w is TextField && w.obscureText == true),
-          findsNothing);
+        find.byWidgetPredicate((w) => w is TextField && w.obscureText == true),
+        findsNothing,
+      );
     });
 
-    testWidgets('change-password entry opens the existing flow',
-        (tester) async {
+    testWidgets('change-password entry opens the existing flow', (
+      tester,
+    ) async {
       final l10n = await loadL10n('fr');
       await pumpProfile(tester);
+      await tester.scrollUntilVisible(
+        find.text(l10n.profileChangePassword),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tester.tap(find.text(l10n.profileChangePassword));
       await tester.pumpAndSettle();
       expect(find.byType(ChangePasswordScreen), findsOneWidget);
     });
 
-    testWidgets('supervisor sees scope count instead of an internship',
-        (tester) async {
+    testWidgets('supervisor sees scope count instead of an internship', (
+      tester,
+    ) async {
       final l10n = await loadL10n('fr');
       await pumpProfile(tester, user: _sup);
       expect(find.text('sup@steg.tn'), findsWidgets);

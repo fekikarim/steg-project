@@ -51,11 +51,14 @@ Future<ProviderContainer> makeContainer({
     overrides: [
       authRepositoryProvider.overrideWithValue(_FakeAuth(user)),
       internshipRepositoryProvider.overrideWithValue(
-          fake ?? FakeInternshipRepository()),
+        fake ?? FakeInternshipRepository(),
+      ),
       assistantHistoryStoreProvider.overrideWithValue(
-          store ?? MemoryAssistantHistoryStore()),
-      assistantControllerProvider
-          .overrideWith((ref) => AssistantController(ref)),
+        store ?? MemoryAssistantHistoryStore(),
+      ),
+      assistantControllerProvider.overrideWith(
+        (ref) => AssistantController(ref),
+      ),
       isOnlineProvider.overrideWith((ref) => online),
     ],
   );
@@ -65,7 +68,7 @@ Future<ProviderContainer> makeContainer({
 }
 
 Future<({FakeInternshipRepository repo, MemoryAssistantHistoryStore store})>
-    pumpAssistant(
+pumpAssistant(
   WidgetTester tester,
   Widget page, {
   FakeInternshipRepository? fake,
@@ -81,8 +84,9 @@ Future<({FakeInternshipRepository repo, MemoryAssistantHistoryStore store})>
         authRepositoryProvider.overrideWithValue(_FakeAuth(_intern)),
         internshipRepositoryProvider.overrideWithValue(repo),
         assistantHistoryStoreProvider.overrideWithValue(history),
-        assistantControllerProvider
-            .overrideWith((ref) => AssistantController(ref)),
+        assistantControllerProvider.overrideWith(
+          (ref) => AssistantController(ref),
+        ),
         isOnlineProvider.overrideWith((ref) => online),
       ],
       child: MaterialApp(
@@ -111,11 +115,11 @@ Future<AppLocalizations> loadL10n(String code) =>
     AppLocalizations.delegate.load(Locale(code));
 
 String _l10nGet(AppLocalizations l10n, String key) => switch (key) {
-      'errAiTemporarilyUnavailable' => l10n.errAiTemporarilyUnavailable,
-      'errAiFormatFailed' => l10n.errAiFormatFailed,
-      'errAiQuotaExceeded' => l10n.errAiQuotaExceeded,
-      _ => throw ArgumentError('unknown key $key'),
-    };
+  'errAiTemporarilyUnavailable' => l10n.errAiTemporarilyUnavailable,
+  'errAiFormatFailed' => l10n.errAiFormatFailed,
+  'errAiQuotaExceeded' => l10n.errAiQuotaExceeded,
+  _ => throw ArgumentError('unknown key $key'),
+};
 
 void main() {
   group('T11 contract: responseText is authoritative', () {
@@ -141,78 +145,90 @@ void main() {
     });
 
     test('blank or absent answers throw instead of rendering empty', () {
-      expect(() => assistantAnswerFromJson({'responseText': '  '}),
-          throwsFormatException);
-      expect(() => assistantAnswerFromJson({'responseText': ''}),
-          throwsFormatException);
+      expect(
+        () => assistantAnswerFromJson({'responseText': '  '}),
+        throwsFormatException,
+      );
+      expect(
+        () => assistantAnswerFromJson({'responseText': ''}),
+        throwsFormatException,
+      );
       expect(() => assistantAnswerFromJson({}), throwsFormatException);
-      expect(() => assistantAnswerFromJson({'responseText': 42}),
-          throwsFormatException);
+      expect(
+        () => assistantAnswerFromJson({'responseText': 42}),
+        throwsFormatException,
+      );
     });
 
     test('responseText wins when both keys are present', () {
       expect(
-        assistantAnswerFromJson(
-            {'responseText': 'real', 'displayText': 'stale'}),
+        assistantAnswerFromJson({
+          'responseText': 'real',
+          'displayText': 'stale',
+        }),
         'real',
       );
     });
 
-    test('a degraded envelope never renders the provider text as an answer',
-        () {
+    test('a degraded envelope never renders the provider text as an answer', () {
       // The backend answers 200 with `responseText` = a French-only
       // "service unavailable: <provider error>" sentence and marks the run
       // in `analysis.outputSummary` (AiService#queryInternAssistant).
       // Rendering that as an answer leaks the provider error into an
       // en/ar UI and makes a failure look like a reply.
       const degraded = {
-        'analysis': {'id': 'a', 'outputSummary': 'AI_UNAVAILABLE: quota exhausted'},
+        'analysis': {
+          'id': 'a',
+          'outputSummary': 'AI_UNAVAILABLE: quota exhausted',
+        },
         'recommendations': <Object>[],
         'responseText':
             "Service d'assistance temporairement indisponible: quota exhausted",
       };
       expect(
         () => assistantAnswerFromJson(degraded),
-        throwsA(isA<ApiException>()
-            .having((e) => e.code, 'code', kCodeAiUnavailable)),
+        throwsA(
+          isA<ApiException>().having((e) => e.code, 'code', kCodeAiUnavailable),
+        ),
       );
     });
 
-    test('the degraded failure maps to its own specific, localized sentence',
-        () async {
-      // Not a single catch-all "AI unavailable": the user is told WHY it
-      // failed, because the causes need different actions.
-      const cases = {
-        kCodeAiUnavailable: null, // -> errAiNotConfigured
-        'AI_TEMPORARILY_UNAVAILABLE': 'errAiTemporarilyUnavailable',
-        'AI_GENERATION_FAILED': 'errAiFormatFailed',
-        'AI_GENERATION_INVALID': 'errAiFormatFailed',
-      };
-      for (final entry in cases.entries) {
-        for (final code in ['fr', 'en', 'ar']) {
-          final l10n = await loadL10n(code);
-          final mapped = userMessageOf(
-            ApiException(
-              kind: ApiErrorKind.unknown,
-              statusCode: 503,
-              code: entry.key,
-              message: 'The AI service is unavailable. quota exhausted',
-            ),
-            l10n,
-          );
-          final expected = entry.value == null
-              ? l10n.errAiNotConfigured
-              : _l10nGet(l10n, entry.value!);
-          expect(mapped, expected, reason: 'code ${entry.key} / $code');
-          // The raw provider sentence never leaks into any locale.
-          expect(mapped, isNot(contains('quota exhausted')));
-          expect(mapped, isNot(contains('AI_')));
+    test(
+      'the degraded failure maps to its own specific, localized sentence',
+      () async {
+        // Not a single catch-all "AI unavailable": the user is told WHY it
+        // failed, because the causes need different actions.
+        const cases = {
+          kCodeAiUnavailable: null, // -> errAiNotConfigured
+          'AI_TEMPORARILY_UNAVAILABLE': 'errAiTemporarilyUnavailable',
+          'AI_GENERATION_FAILED': 'errAiFormatFailed',
+          'AI_GENERATION_INVALID': 'errAiFormatFailed',
+        };
+        for (final entry in cases.entries) {
+          for (final code in ['fr', 'en', 'ar']) {
+            final l10n = await loadL10n(code);
+            final mapped = userMessageOf(
+              ApiException(
+                kind: ApiErrorKind.unknown,
+                statusCode: 503,
+                code: entry.key,
+                message: 'The AI service is unavailable. quota exhausted',
+              ),
+              l10n,
+            );
+            final expected = entry.value == null
+                ? l10n.errAiNotConfigured
+                : _l10nGet(l10n, entry.value!);
+            expect(mapped, expected, reason: 'code ${entry.key} / $code');
+            // The raw provider sentence never leaks into any locale.
+            expect(mapped, isNot(contains('quota exhausted')));
+            expect(mapped, isNot(contains('AI_')));
+          }
         }
-      }
-    });
+      },
+    );
 
-    test('a normal answer whose outputSummary holds content still decodes',
-        () {
+    test('a normal answer whose outputSummary holds content still decodes', () {
       expect(
         assistantAnswerFromJson({
           'analysis': {'outputSummary': 'Plan de stage en 3 phases.'},
@@ -239,8 +255,7 @@ void main() {
     test('keeps only the newest 100 rows', () async {
       final store = MemoryAssistantHistoryStore();
       await store.save('u1', [
-        for (var i = 0; i < 105; i++)
-          AssistantMessage(mine: true, text: 'q$i'),
+        for (var i = 0; i < 105; i++) AssistantMessage(mine: true, text: 'q$i'),
       ]);
       final rows = await store.load('u1');
       expect(rows, hasLength(100));
@@ -258,8 +273,7 @@ void main() {
     test('send appends the pair, persists and clears the error', () async {
       final fake = FakeInternshipRepository();
       final store = MemoryAssistantHistoryStore();
-      final container =
-          await makeContainer(fake: fake, store: store);
+      final container = await makeContainer(fake: fake, store: store);
       final notifier = container.read(assistantControllerProvider.notifier);
 
       expect(await notifier.send('  Bonjour  '), isTrue);
@@ -303,8 +317,7 @@ void main() {
     test('retry replaces the failed row with the answer', () async {
       final fake = FakeInternshipRepository()..failAi = true;
       final store = MemoryAssistantHistoryStore();
-      final container =
-          await makeContainer(fake: fake, store: store);
+      final container = await makeContainer(fake: fake, store: store);
       final notifier = container.read(assistantControllerProvider.notifier);
 
       await notifier.send('recommence');
@@ -332,8 +345,7 @@ void main() {
       final notifier = container.read(assistantControllerProvider.notifier);
       await notifier.send('salut');
       await notifier.clear();
-      expect(
-          container.read(assistantControllerProvider).messages, isEmpty);
+      expect(container.read(assistantControllerProvider).messages, isEmpty);
       expect(await store.load('u1'), isEmpty);
     });
 
@@ -346,7 +358,9 @@ void main() {
       final container = await makeContainer(store: store);
       await container.read(assistantControllerProvider.notifier).restore();
       expect(
-          container.read(assistantControllerProvider).messages, hasLength(2));
+        container.read(assistantControllerProvider).messages,
+        hasLength(2),
+      );
     });
 
     test('offline send fails honestly without dispatching', () async {
@@ -358,15 +372,16 @@ void main() {
       final state = container.read(assistantControllerProvider);
       expect(state.messages, isEmpty);
       expect(state.error, isA<ApiException>());
-      expect(
-          (state.error! as ApiException).kind, ApiErrorKind.network);
+      expect((state.error! as ApiException).kind, ApiErrorKind.network);
       expect(fake.askedQuestions, isEmpty);
     });
 
     test('a 404 stays raw for the no-internship empty state', () async {
       final fake = FakeInternshipRepository()
         ..assistantError = const ApiException(
-            kind: ApiErrorKind.notFound, message: 'No internship');
+          kind: ApiErrorKind.notFound,
+          message: 'No internship',
+        );
       final container = await makeContainer(fake: fake);
       final notifier = container.read(assistantControllerProvider.notifier);
       await notifier.send('où en suis-je ?');
@@ -392,8 +407,9 @@ void main() {
       expect(find.byType(TextField), findsOneWidget);
     });
 
-    testWidgets('failure shows a failed row with retry, then recovers',
-        (tester) async {
+    testWidgets('failure shows a failed row with retry, then recovers', (
+      tester,
+    ) async {
       final fake = FakeInternshipRepository()..failAi = true;
       final l10n = await loadL10n('fr');
       await pumpAssistant(tester, const AssistantScreen(), fake: fake);
@@ -411,23 +427,31 @@ void main() {
       expect(find.text(l10n.assistantUnavailable), findsNothing);
     });
 
-    testWidgets('offline disables the composer with an explicit reason',
-        (tester) async {
-      final h = await pumpAssistant(tester, const AssistantScreen(),
-          online: false);
+    testWidgets('offline disables the composer with an explicit reason', (
+      tester,
+    ) async {
+      final h = await pumpAssistant(
+        tester,
+        const AssistantScreen(),
+        online: false,
+      );
       final l10n = await loadL10n('fr');
       expect(find.text(l10n.assistantOffline), findsOneWidget);
       final send = tester.widget<IconButton>(
-          find.ancestor(
-            of: find.byTooltip(l10n.assistantSend),
-            matching: find.byType(IconButton),
-          ).first);
+        find
+            .ancestor(
+              of: find.byTooltip(l10n.assistantSend),
+              matching: find.byType(IconButton),
+            )
+            .first,
+      );
       expect(send.onPressed, isNull);
       expect(h.repo.askedQuestions, isEmpty);
     });
 
-    testWidgets('clear asks for confirmation and wipes the thread',
-        (tester) async {
+    testWidgets('clear asks for confirmation and wipes the thread', (
+      tester,
+    ) async {
       final h = await pumpAssistant(tester, const AssistantScreen());
       final l10n = await loadL10n('fr');
       await tester.enterText(find.byType(TextField), 'salut');
@@ -446,11 +470,14 @@ void main() {
       expect(await h.store.load('u1'), isEmpty);
     });
 
-    testWidgets('no internship renders the dedicated empty state',
-        (tester) async {
+    testWidgets('no internship renders the dedicated empty state', (
+      tester,
+    ) async {
       final fake = FakeInternshipRepository()
         ..assistantError = const ApiException(
-            kind: ApiErrorKind.notFound, message: 'No internship');
+          kind: ApiErrorKind.notFound,
+          message: 'No internship',
+        );
       final l10n = await loadL10n('fr');
       await pumpAssistant(tester, const AssistantScreen(), fake: fake);
       await tester.enterText(find.byType(TextField), 'où en suis-je ?');
@@ -459,11 +486,15 @@ void main() {
       expect(find.text(l10n.assistantNoInternship), findsOneWidget);
     });
 
-    testWidgets('rate limit surfaces the wait hint, text is kept',
-        (tester) async {
+    testWidgets('rate limit surfaces the wait hint, text is kept', (
+      tester,
+    ) async {
       final fake = FakeInternshipRepository()
-        ..assistantError =
-            const ApiException(kind: ApiErrorKind.unknown, message: 'slow down', statusCode: 429);
+        ..assistantError = const ApiException(
+          kind: ApiErrorKind.unknown,
+          message: 'slow down',
+          statusCode: 429,
+        );
       final l10n = await loadL10n('fr');
       await pumpAssistant(tester, const AssistantScreen(), fake: fake);
       await tester.enterText(find.byType(TextField), 'vite');
@@ -474,30 +505,40 @@ void main() {
       expect(find.text(l10n.retry), findsWidgets);
     });
 
-    testWidgets('a degraded provider renders the unavailable state, not an answer',
-        (tester) async {
-      final fake = FakeInternshipRepository()
-        ..assistantError = const ApiException(
+    testWidgets(
+      'a degraded provider renders the unavailable state, not an answer',
+      (tester) async {
+        final fake = FakeInternshipRepository()
+          ..assistantError = const ApiException(
             kind: ApiErrorKind.unknown,
             message: 'The AI service is unavailable.',
-            code: kCodeAiUnavailable);
-      final l10n = await loadL10n('en');
-      await pumpAssistant(tester, const AssistantScreen(),
-          fake: fake, locale: const Locale('en'));
-      await tester.enterText(find.byType(TextField), 'where am I?');
-      await tester.tap(find.byTooltip(l10n.assistantSend));
-      await tester.pumpAndSettle();
-      // Localized banner + a failed row with retry; the French provider
-      // sentence never appears.
-      expect(find.text(l10n.errAiNotConfigured), findsOneWidget);
-      expect(find.text(l10n.assistantUnavailable), findsOneWidget);
-      expect(find.text(l10n.retry), findsWidgets);
-      expect(find.textContaining('indisponible'), findsNothing);
-    });
+            code: kCodeAiUnavailable,
+          );
+        final l10n = await loadL10n('en');
+        await pumpAssistant(
+          tester,
+          const AssistantScreen(),
+          fake: fake,
+          locale: const Locale('en'),
+        );
+        await tester.enterText(find.byType(TextField), 'where am I?');
+        await tester.tap(find.byTooltip(l10n.assistantSend));
+        await tester.pumpAndSettle();
+        // Localized banner + a failed row with retry; the French provider
+        // sentence never appears.
+        expect(find.text(l10n.errAiNotConfigured), findsOneWidget);
+        expect(find.text(l10n.assistantUnavailable), findsOneWidget);
+        expect(find.text(l10n.retry), findsWidgets);
+        expect(find.textContaining('indisponible'), findsNothing);
+      },
+    );
 
     testWidgets('arabic renders the thread (RTL smoke)', (tester) async {
-      await pumpAssistant(tester, const AssistantScreen(),
-          locale: const Locale('ar'));
+      await pumpAssistant(
+        tester,
+        const AssistantScreen(),
+        locale: const Locale('ar'),
+      );
       final l10n = await loadL10n('ar');
       await tester.enterText(find.byType(TextField), 'مرحبا');
       await tester.tap(find.byTooltip(l10n.assistantSend));
@@ -532,56 +573,64 @@ void main() {
       expect(state.messages, hasLength(2));
     });
 
-    test('"new chat" starts an empty thread without losing the old one',
-        () async {
-      final container = await makeContainer();
-      final notifier = container.read(assistantControllerProvider.notifier);
+    test(
+      '"new chat" starts an empty thread without losing the old one',
+      () async {
+        final container = await makeContainer();
+        final notifier = container.read(assistantControllerProvider.notifier);
 
-      await notifier.send('première question');
-      final firstId = container.read(assistantControllerProvider).activeId;
-      expect(firstId, isNotNull);
+        await notifier.send('première question');
+        final firstId = container.read(assistantControllerProvider).activeId;
+        expect(firstId, isNotNull);
 
-      await notifier.newConversation();
-      var state = container.read(assistantControllerProvider);
-      expect(state.conversations, hasLength(2));
-      expect(state.messages, isEmpty);
+        await notifier.newConversation();
+        var state = container.read(assistantControllerProvider);
+        expect(state.conversations, hasLength(2));
+        expect(state.messages, isEmpty);
 
-      await notifier.send('deuxième question');
-      state = container.read(assistantControllerProvider);
-      // Two independent threads, each with only its own exchange.
-      expect(state.conversations, hasLength(2));
-      expect(
-        state.conversations.firstWhere((c) => c.id == firstId).messages,
-        hasLength(2),
-      );
-      expect(
-        state.conversations.firstWhere((c) => c.id != firstId).messages,
-        hasLength(2),
-      );
+        await notifier.send('deuxième question');
+        state = container.read(assistantControllerProvider);
+        // Two independent threads, each with only its own exchange.
+        expect(state.conversations, hasLength(2));
+        expect(
+          state.conversations.firstWhere((c) => c.id == firstId).messages,
+          hasLength(2),
+        );
+        expect(
+          state.conversations.firstWhere((c) => c.id != firstId).messages,
+          hasLength(2),
+        );
 
-      // Switching back restores the first thread.
-      await notifier.selectConversation(firstId!);
-      expect(container.read(assistantControllerProvider).messages,
-          hasLength(2));
-      expect(container.read(assistantControllerProvider).messages.first.text,
-          'première question');
-    });
+        // Switching back restores the first thread.
+        await notifier.selectConversation(firstId!);
+        expect(
+          container.read(assistantControllerProvider).messages,
+          hasLength(2),
+        );
+        expect(
+          container.read(assistantControllerProvider).messages.first.text,
+          'première question',
+        );
+      },
+    );
 
-    test('deleting the open thread opens the next one, never a dead view',
-        () async {
-      final container = await makeContainer();
-      final notifier = container.read(assistantControllerProvider.notifier);
-      await notifier.send('une');
-      final firstId = container.read(assistantControllerProvider).activeId;
-      await notifier.newConversation();
-      await notifier.send('deux');
+    test(
+      'deleting the open thread opens the next one, never a dead view',
+      () async {
+        final container = await makeContainer();
+        final notifier = container.read(assistantControllerProvider.notifier);
+        await notifier.send('une');
+        final firstId = container.read(assistantControllerProvider).activeId;
+        await notifier.newConversation();
+        await notifier.send('deux');
 
-      await notifier.deleteConversation(firstId!);
-      final state = container.read(assistantControllerProvider);
-      expect(state.conversations, hasLength(1));
-      expect(state.active, isNotNull);
-      expect(state.active!.messages.first.text, 'deux');
-    });
+        await notifier.deleteConversation(firstId!);
+        final state = container.read(assistantControllerProvider);
+        expect(state.conversations, hasLength(1));
+        expect(state.active, isNotNull);
+        expect(state.active!.messages.first.text, 'deux');
+      },
+    );
 
     test('rename changes the thread title only', () async {
       final container = await makeContainer();
@@ -602,11 +651,15 @@ void main() {
       final store = MemoryAssistantHistoryStore();
       final alice = await makeContainer(store: store);
       await alice.read(assistantControllerProvider.notifier).send('alice');
-      expect(alice.read(assistantControllerProvider).conversations, hasLength(1));
+      expect(
+        alice.read(assistantControllerProvider).conversations,
+        hasLength(1),
+      );
 
       final bob = await makeContainer(
-          store: store, user: const AppUser(
-              id: 'u2', email: 'bob@u.tn', roles: ['INTERN']));
+        store: store,
+        user: const AppUser(id: 'u2', email: 'bob@u.tn', roles: ['INTERN']),
+      );
       await bob.read(assistantControllerProvider.notifier).restore();
       // Bob starts empty: no cross-user leak.
       expect(bob.read(assistantControllerProvider).conversations, isEmpty);
@@ -665,8 +718,9 @@ void main() {
       expect(find.text(l10n.assistantWelcome), findsNothing);
     });
 
-    testWidgets('history screen lists threads and can delete one',
-        (tester) async {
+    testWidgets('history screen lists threads and can delete one', (
+      tester,
+    ) async {
       final l10n = await loadL10n('fr');
       await pumpAssistant(tester, const AssistantScreen());
       await tester.enterText(find.byType(TextField), 'sujet un');

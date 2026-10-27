@@ -51,7 +51,7 @@ import 'package:stegappe/features/messaging/presentation/screens/chat_screen.dar
 import 'package:stegappe/features/messaging/presentation/screens/conversations_screen.dart';
 import 'package:stegappe/features/messaging/presentation/screens/notifications_screen.dart';
 import 'package:stegappe/features/shell/presentation/about_screen.dart';
-import 'package:stegappe/features/shell/presentation/more_tab.dart';
+import 'package:stegappe/features/shell/presentation/account_settings_section.dart';
 import 'package:stegappe/features/shell/presentation/profile_screen.dart';
 
 import '../support/queue_harness.dart';
@@ -70,10 +70,16 @@ import '../features/messaging/messaging_widget_test.dart'
 ///
 /// Nothing in here changes product behaviour; it is measurement only.
 
-const kInternUser =
-    AppUser(id: 'me', email: 'intern@steg.tn', roles: ['INTERN']);
-const kSupervisorUser =
-    AppUser(id: 'sup', email: 'supervisor@steg.tn', roles: ['SUPERVISOR']);
+const kInternUser = AppUser(
+  id: 'me',
+  email: 'intern@steg.tn',
+  roles: ['INTERN'],
+);
+const kSupervisorUser = AppUser(
+  id: 'sup',
+  email: 'supervisor@steg.tn',
+  roles: ['SUPERVISOR'],
+);
 
 /// Role a screen is rendered for (drives which user the session holds).
 enum UxRole { intern, supervisor }
@@ -123,23 +129,23 @@ class UxScreen {
 }
 
 List<SupervisedIntern> uxInterns(int count) => [
-      for (var i = 0; i < count; i++)
-        SupervisedIntern(
-          internshipId: 'i$i',
-          reference: 'STG-2026-${(i + 1).toString().padLeft(4, '0')}',
-          internName: 'Métbribs ${i + 1}',
-          status: InternshipStatus.inProgress,
-          type: InternshipType.pfe,
-          startDate: DateTime(2026, 1, 1),
-          endDate: DateTime(2026, 12, 31),
-          departmentName: 'DSI',
-          tasksCompleted: i % 5,
-          tasksTotal: 6,
-          pendingJournal: i % 3,
-          pendingDeliverables: 0,
-          evaluationsCount: 0,
-        ),
-    ];
+  for (var i = 0; i < count; i++)
+    SupervisedIntern(
+      internshipId: 'i$i',
+      reference: 'STG-2026-${(i + 1).toString().padLeft(4, '0')}',
+      internName: 'Métbribs ${i + 1}',
+      status: InternshipStatus.inProgress,
+      type: InternshipType.pfe,
+      startDate: DateTime(2026, 1, 1),
+      endDate: DateTime(2026, 12, 31),
+      departmentName: 'DSI',
+      tasksCompleted: i % 5,
+      tasksTotal: 6,
+      pendingJournal: i % 3,
+      pendingDeliverables: 0,
+      evaluationsCount: 0,
+    ),
+];
 
 /// Extra internship repository that can serve arbitrary list sizes (the
 /// 200-item performance probes) without touching the shared fixture.
@@ -191,15 +197,17 @@ class UxInternshipRepository extends FakeInternshipRepository {
       for (var i = 0; i < taskCount; i++)
         InternTask(
           id: 't$i',
-          title: 'Tâche numéro $i — un intitulé suffisamment long pour tester '
+          title:
+              'Tâche numéro $i — un intitulé suffisamment long pour tester '
               'la mise en page',
           description: 'Description $i',
           status: TaskStatus.values[i % 6],
           dueDate: day(now, i % 21 - 7),
         ),
     ];
-    final items =
-        status == null ? all : all.where((t) => t.status == status).toList();
+    final items = status == null
+        ? all
+        : all.where((t) => t.status == status).toList();
     return pageOf(items, total: items.length);
   }
 
@@ -229,8 +237,10 @@ class UxInternshipRepository extends FakeInternshipRepository {
   }
 
   @override
-  Future<Paged<AppNotification>> listNotifications(
-      {int page = 0, int size = 20}) async {
+  Future<Paged<AppNotification>> listNotifications({
+    int page = 0,
+    int size = 20,
+  }) async {
     _count('listNotifications');
     return super.listNotifications(page: page, size: size);
   }
@@ -259,8 +269,11 @@ class UxCommunityRepository extends FakeCommunityRepository {
   final int postCount;
 
   @override
-  Future<CommunityFeedPage> feed(
-      {DateTime? cursorTs, String? cursorId, int size = 20}) async {
+  Future<CommunityFeedPage> feed({
+    DateTime? cursorTs,
+    String? cursorId,
+    int size = 20,
+  }) async {
     // The inherited counter is the one tests read.
     feedCalls++;
     final items = [
@@ -269,7 +282,8 @@ class UxCommunityRepository extends FakeCommunityRepository {
           'p$i',
           authorId: 'u$i',
           authorDisplayName: 'Étudiant ${i + 1}',
-          body: 'Message communautaire numéro $i — un texte assez long pour '
+          body:
+              'Message communautaire numéro $i — un texte assez long pour '
               'éprouver le retour à la ligne dans les deux directions.',
           at: DateTime(2026, 9, 15, 10 - (i % 6)),
         ),
@@ -300,15 +314,15 @@ class UxMessagingRepository extends FakeMessagingRepo {
   }) async {
     if (failHistory) throw Exception('history failed');
     ChatMessage msg(int seq, {bool mine = false}) => ChatMessage(
-          id: 'm$seq',
-          conversationId: conversationId,
-          senderId: mine ? 'me' : 'u2',
-          content: '$kLongAr\n\n$kLongFr\n\n$kAiAnswer',
-          status: MessageStatus.delivered,
-          sequenceNumber: seq,
-          sentAt: DateTime(2026, 9, 15, 10, seq),
-          mine: mine,
-        );
+      id: 'm$seq',
+      conversationId: conversationId,
+      senderId: mine ? 'me' : 'u2',
+      content: '$kLongAr\n\n$kLongFr\n\n$kAiAnswer',
+      status: MessageStatus.delivered,
+      sequenceNumber: seq,
+      sentAt: DateTime(2026, 9, 15, 10, seq),
+      mine: mine,
+    );
     return Paged(
       items: [msg(3, mine: true), msg(2), msg(1)],
       page: 0,
@@ -359,11 +373,11 @@ class UxPump {
     for (final d in errors) {
       final message = d.exceptionAsString();
       if (!message.contains('overflowed by')) continue;
-      final pixels = RegExp(r'overflowed by (\S+) pixels')
-              .firstMatch(message)
-              ?.group(1) ??
+      final pixels =
+          RegExp(r'overflowed by (\S+) pixels').firstMatch(message)?.group(1) ??
           '?';
-      final direction = RegExp(r'on the (right|left|bottom|top)')
+      final direction =
+          RegExp(r'on the (right|left|bottom|top)')
               .firstMatch(message)
               ?.group(1) ??
           '?';
@@ -373,8 +387,7 @@ class UxPump {
   }
 
   static String? _appLocation(FlutterErrorDetails d) {
-    final pattern =
-        RegExp(r'file:///\S*?/stegappe/lib/[^\s]*?\.dart:\d+:\d+');
+    final pattern = RegExp(r'file:///\S*?/stegappe/lib/[^\s]*?\.dart:\d+:\d+');
     for (final text in describeError(d)) {
       final m = pattern.firstMatch(text);
       if (m != null) {
@@ -451,8 +464,9 @@ Future<UxPump> pumpUx(
         internshipRepositoryProvider.overrideWithValue(repo),
         communityRepositoryProvider.overrideWithValue(comm),
         messagingRepositoryProvider.overrideWithValue(msgs),
-        notificationRepositoryProvider
-            .overrideWithValue(notifications ?? FakeNotifRepo()),
+        notificationRepositoryProvider.overrideWithValue(
+          notifications ?? FakeNotifRepo(),
+        ),
         stompChatServiceProvider.overrideWithValue(stomp),
         isOnlineProvider.overrideWith((ref) => online),
         await queueOverride(),
@@ -476,9 +490,7 @@ Future<UxPump> pumpUx(
             disableAnimations: textScale >= 2,
           ),
           child: Scaffold(
-            body: scrollable
-                ? SingleChildScrollView(child: page)
-                : page,
+            body: scrollable ? SingleChildScrollView(child: page) : page,
           ),
         ),
       ),
@@ -511,166 +523,158 @@ Future<UxPump> pumpUx(
 /// `test/long_strings_test.dart` and the feature suites instead of being
 /// re-pumped as standalone screens.
 List<UxScreen> uxScreens() => [
-      // ── Student ────────────────────────────────────────────────────────
-      UxScreen(
-        id: 'ST-HOME',
-        name: 'Intern home',
-        build: () => const InternHomeScreen(user: kInternUser),
-      ),
-      UxScreen(
-        id: 'ST-TASK',
-        name: 'Task board',
-        wide: true,
-        build: () => const TaskListScreen(),
-      ),
-      UxScreen(
-        id: 'ST-JRN-list',
-        name: 'Journal list',
-        build: () => const JournalListScreen(),
-      ),
-      UxScreen(
-        id: 'ST-JRN-compose',
-        name: 'Journal composer',
-        build: () => JournalComposerScreen(
-          internshipId: 'internship-1',
-          day: DateTime(2026, 9, 15),
-        ),
-      ),
-      UxScreen(
-        id: 'ST-VAL-doc',
-        name: 'Deliverables',
-        build: () => const DeliverablesScreen(),
-      ),
-      UxScreen(
-        id: 'ST-VAL-detail',
-        name: 'Deliverable detail',
-        build: () => const DeliverableDetailScreen(deliverableId: 'd0'),
-      ),
-      UxScreen(
-        id: 'ST-PROG',
-        name: 'Progress',
-        build: () => const ProgressScreen(),
-      ),
-      UxScreen(
-        id: 'ST-PROG-timeline',
-        name: 'Timeline',
-        build: () => const TimelineScreen(),
-      ),
-      UxScreen(
-        id: 'ST-PROG-logbook',
-        name: 'Logbook',
-        build: () => const LogbookScreen(),
-      ),
-      UxScreen(
-        id: 'ST-PROG-logbook-detail',
-        name: 'Logbook detail',
-        build: () => const LogbookDetailScreen(internshipId: 'internship-1'),
-      ),
-      UxScreen(
-        id: 'ST-EVAL',
-        name: 'My evaluations',
-        build: () => const MyEvaluationsScreen(),
-      ),
-      UxScreen(
-        id: 'ST-BOT',
-        name: 'Assistant',
-        build: () => const AssistantScreen(),
-      ),
-      UxScreen(
-        id: 'ST-MSG-list',
-        name: 'Conversations',
-        build: () => const ConversationsScreen(),
-      ),
-      UxScreen(
-        id: 'ST-MSG-chat',
-        name: 'Chat',
-        build: () => const ChatScreen(conversationId: 'c1', title: 'Karim Feki'),
-      ),
-      UxScreen(
-        id: 'ST-NOT',
-        name: 'Notifications',
-        build: () => const NotificationsScreen(),
-      ),
-      UxScreen(
-        id: 'ST-COM',
-        name: 'Community feed',
-        build: () => const CommunityFeedScreen(),
-      ),
-      UxScreen(
-        id: 'SH-SET',
-        name: 'Settings (More)',
-        build: () => const MoreTab(),
-      ),
-      UxScreen(
-        id: 'SH-PRO',
-        name: 'Profile',
-        build: () => const ProfileScreen(),
-      ),
-      UxScreen(
-        id: 'SH-SET-about',
-        name: 'About',
-        build: () => const AboutScreen(),
-      ),
-      // ── Supervisor ─────────────────────────────────────────────────────
-      UxScreen(
-        id: 'SU-HOME',
-        name: 'Supervisor home',
-        role: UxRole.supervisor,
-        build: () => const SupervisorHomeScreen(user: kSupervisorUser),
-      ),
-      UxScreen(
-        id: 'W12',
-        name: 'Interns list',
-        role: UxRole.supervisor,
-        build: () => const SupervisedInternsScreen(),
-      ),
-      UxScreen(
-        id: 'SU-CAL',
-        name: 'Calendar',
-        role: UxRole.supervisor,
-        // Hosted in a SliverToBoxAdapter by `SupervisedInternsScreen`.
-        scrollable: true,
-        build: () => SupervisorCalendar(interns: uxInterns(4)),
-      ),
-      UxScreen(
-        id: 'SU-CAL-03',
-        name: 'Intern detail',
-        role: UxRole.supervisor,
-        build: () => const InternDetailScreen(internshipId: 'i0'),
-      ),
-      UxScreen(
-        id: 'W11',
-        name: 'Validations',
-        role: UxRole.supervisor,
-        build: () => const SupervisorValidationsScreen(),
-      ),
-      UxScreen(
-        id: 'SU-TASK',
-        name: 'Task management',
-        role: UxRole.supervisor,
-        wide: true,
-        build: () => const SupervisorTasksScreen(),
-      ),
-      UxScreen(
-        id: 'SU-TASK-02',
-        name: 'AI task generation',
-        role: UxRole.supervisor,
-        wide: true,
-        build: () => const TaskDraftsScreen(referenceInternshipId: 'i0'),
-      ),
-      UxScreen(
-        id: 'SU-EVAL',
-        name: 'Evaluation form',
-        role: UxRole.supervisor,
-        build: () => const EvaluationFormScreen(internshipId: 'i0'),
-      ),
-      UxScreen(
-        id: 'SU-EVAL-detail',
-        name: 'Evaluation detail',
-        role: UxRole.supervisor,
-        build: () => const EvaluationDetailScreen(evaluationId: 'e1'),
-      ),
-    ];
+  // ── Student ────────────────────────────────────────────────────────
+  UxScreen(
+    id: 'ST-HOME',
+    name: 'Intern home',
+    build: () => const InternHomeScreen(user: kInternUser),
+  ),
+  UxScreen(
+    id: 'ST-TASK',
+    name: 'Task board',
+    wide: true,
+    build: () => const TaskListScreen(),
+  ),
+  UxScreen(
+    id: 'ST-JRN-list',
+    name: 'Journal list',
+    build: () => const JournalListScreen(),
+  ),
+  UxScreen(
+    id: 'ST-JRN-compose',
+    name: 'Journal composer',
+    build: () => JournalComposerScreen(
+      internshipId: 'internship-1',
+      day: DateTime(2026, 9, 15),
+    ),
+  ),
+  UxScreen(
+    id: 'ST-VAL-doc',
+    name: 'Deliverables',
+    build: () => const DeliverablesScreen(),
+  ),
+  UxScreen(
+    id: 'ST-VAL-detail',
+    name: 'Deliverable detail',
+    build: () => const DeliverableDetailScreen(deliverableId: 'd0'),
+  ),
+  UxScreen(
+    id: 'ST-PROG',
+    name: 'Progress',
+    build: () => const ProgressScreen(),
+  ),
+  UxScreen(
+    id: 'ST-PROG-timeline',
+    name: 'Timeline',
+    build: () => const TimelineScreen(),
+  ),
+  UxScreen(
+    id: 'ST-PROG-logbook',
+    name: 'Logbook',
+    build: () => const LogbookScreen(),
+  ),
+  UxScreen(
+    id: 'ST-PROG-logbook-detail',
+    name: 'Logbook detail',
+    build: () => const LogbookDetailScreen(internshipId: 'internship-1'),
+  ),
+  UxScreen(
+    id: 'ST-EVAL',
+    name: 'My evaluations',
+    build: () => const MyEvaluationsScreen(),
+  ),
+  UxScreen(
+    id: 'ST-BOT',
+    name: 'Assistant',
+    build: () => const AssistantScreen(),
+  ),
+  UxScreen(
+    id: 'ST-MSG-list',
+    name: 'Conversations',
+    build: () => const ConversationsScreen(),
+  ),
+  UxScreen(
+    id: 'ST-MSG-chat',
+    name: 'Chat',
+    build: () => const ChatScreen(conversationId: 'c1', title: 'Karim Feki'),
+  ),
+  UxScreen(
+    id: 'ST-NOT',
+    name: 'Notifications',
+    build: () => const NotificationsScreen(),
+  ),
+  UxScreen(
+    id: 'ST-COM',
+    name: 'Community feed',
+    build: () => const CommunityFeedScreen(),
+  ),
+  UxScreen(
+    id: 'SH-SET',
+    name: 'Settings',
+    build: () => ListView(children: const [AccountSettingsSection()]),
+  ),
+  UxScreen(id: 'SH-PRO', name: 'Profile', build: () => const ProfileScreen()),
+  UxScreen(id: 'SH-SET-about', name: 'About', build: () => const AboutScreen()),
+  // ── Supervisor ─────────────────────────────────────────────────────
+  UxScreen(
+    id: 'SU-HOME',
+    name: 'Supervisor home',
+    role: UxRole.supervisor,
+    build: () => const SupervisorHomeScreen(user: kSupervisorUser),
+  ),
+  UxScreen(
+    id: 'W12',
+    name: 'Interns list',
+    role: UxRole.supervisor,
+    build: () => const SupervisedInternsScreen(),
+  ),
+  UxScreen(
+    id: 'SU-CAL',
+    name: 'Calendar',
+    role: UxRole.supervisor,
+    // Hosted in a SliverToBoxAdapter by `SupervisedInternsScreen`.
+    scrollable: true,
+    build: () => SupervisorCalendar(interns: uxInterns(4)),
+  ),
+  UxScreen(
+    id: 'SU-CAL-03',
+    name: 'Intern detail',
+    role: UxRole.supervisor,
+    build: () => const InternDetailScreen(internshipId: 'i0'),
+  ),
+  UxScreen(
+    id: 'W11',
+    name: 'Validations',
+    role: UxRole.supervisor,
+    build: () => const SupervisorValidationsScreen(),
+  ),
+  UxScreen(
+    id: 'SU-TASK',
+    name: 'Task management',
+    role: UxRole.supervisor,
+    wide: true,
+    build: () => const SupervisorTasksScreen(),
+  ),
+  UxScreen(
+    id: 'SU-TASK-02',
+    name: 'AI task generation',
+    role: UxRole.supervisor,
+    wide: true,
+    build: () => const TaskDraftsScreen(referenceInternshipId: 'i0'),
+  ),
+  UxScreen(
+    id: 'SU-EVAL',
+    name: 'Evaluation form',
+    role: UxRole.supervisor,
+    build: () => const EvaluationFormScreen(internshipId: 'i0'),
+  ),
+  UxScreen(
+    id: 'SU-EVAL-detail',
+    name: 'Evaluation detail',
+    role: UxRole.supervisor,
+    build: () => const EvaluationDetailScreen(evaluationId: 'e1'),
+  ),
+];
 
 /// ── Measurement helpers ─────────────────────────────────────────────────
 

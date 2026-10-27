@@ -13,12 +13,13 @@ import 'package:stegappe/features/messaging/presentation/providers/messaging_pro
 Future<Override> queueOverride() async {
   SharedPreferences.setMockInitialValues({});
   final prefs = await SharedPreferences.getInstance();
-  return pendingWritesProvider.overrideWith((ref) =>
-      PendingWritesController(
-        ref,
-        PendingWriteStore(PrefsStore(prefs)),
-        ref.watch(internshipRepositoryProvider),
-        ref.watch(messagingRepositoryProvider),
-        ref.watch(realtimeSyncProvider),
-      ));
+  return pendingWritesProvider.overrideWith(
+    (ref) => PendingWritesController(
+      ref,
+      PendingWriteStore(PrefsStore(prefs)),
+      ref.watch(internshipRepositoryProvider),
+      ref.watch(messagingRepositoryProvider),
+      ref.watch(realtimeSyncProvider),
+    ),
+  );
 }

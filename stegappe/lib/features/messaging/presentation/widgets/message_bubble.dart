@@ -110,14 +110,10 @@ class MessageBubble extends ConsumerWidget {
         vertical: StegSpacing.sm,
       ),
       decoration: BoxDecoration(
-        gradient: mine
-            ? const LinearGradient(
-                colors: StegColors.brandGradientRamp,
-                begin: AlignmentDirectional.topStart,
-                end: AlignmentDirectional.bottomEnd,
-              )
-            : null,
-        color: mine ? null : (dark ? StegColors.darkElevated : Colors.white),
+        // Own messages: solid navy (STEG design); others: white surface.
+        color: mine
+            ? (dark ? StegColors.brandPrimary : StegColors.brandNavy)
+            : (dark ? StegColors.darkElevated : Colors.white),
         borderRadius: BorderRadius.only(
           topLeft: const Radius.circular(18),
           topRight: const Radius.circular(18),
