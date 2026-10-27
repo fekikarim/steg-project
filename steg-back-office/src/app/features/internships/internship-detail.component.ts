@@ -1,0 +1,2143 @@
+import { Component, inject, signal, OnInit, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { I18nService } from '../../core/i18n.service';
+import { BreadcrumbService } from '../../core/breadcrumb.service';
+import { AuthService } from '../../core/auth.service';
+import { RealtimeService } from '../../core/realtime.service';
+import { ToastService } from '../../shared/ui/toast.service';
+import {
+  InternshipService,
+  InternshipBundle,
+  activeAssignment,
+  isForbidden,
+} from './internship.service';
+import { PageHeaderComponent } from '../../shared/ui/page-header.component';
+import { LiveStatusComponent } from '../../shared/ui/live-status.component';
+import { BadgeComponent, type BadgeTone } from '../../shared/ui/badge.component';
+import { SkeletonComponent } from '../../shared/ui/skeleton.component';
+import { EmptyStateComponent, ErrorStateComponent } from '../../shared/ui/states.component';
+import { AlertComponent } from '../../shared/ui/alert.component';
+import { TabsComponent } from '../../shared/ui/tabs.component';
+import { DialogComponent, ConfirmDialogComponent } from '../../shared/ui/dialog.component';
+import { StIconComponent } from '../../shared/ui/icon.component';
+import type {
+  Department,
+  Employee,
+  InternshipAssignment,
+  InternshipDocumentItem,
+  DocumentType,
+  CertificateInfo,
+  EvaluationType,
+  TaskStatus,
+  WorkflowActionResponse,
+} from '../../core/api-models';
+import { INTERNSHIP_UPLOAD_TYPES, REQUIRED_DOSSIER_TYPES } from '../../core/api-models';
+
+/**
+ * Internship detail: backend-computed classification shown read-only,
+ * dates editor (backend reclassifies), assignment workspace with the
+ * one-active-assignment rule, lifecycle timeline and certificate entry.
+ * The client never computes type/requirement/eligibility.
+ */
+@Component({
+  selector: 'st-internship-detail',
+  standalone: true,
+  imports: [
+    RouterLink,
+    FormsModule,
+    PageHeaderComponent,
+    LiveStatusComponent,
+    BadgeComponent,
+    SkeletonComponent,
+    EmptyStateComponent,
+    ErrorStateComponent,
+    AlertComponent,
+    TabsComponent,
+    DialogComponent,
+    ConfirmDialogComponent,
+    StIconComponent,
+  ],
+  template: `
+    @if (loading()) {
+      <st-skeleton [rows]="10" />
+    } @else if (error()) {
+      <st-error-state
+        [title]="i18n.t('common.error.title')"
+        [body]="errorMessage() || i18n.t('common.error.body')"
+        [retryLabel]="i18n.t('common.retry')"
+        (retry)="load()"
+      />
+      <p>
+        <a routerLink="/internships" class="st-btn st-btn--secondary">{{
+          i18n.t('common.back')
+        }}</a>
+      </p>
+    } @else if (bundle(); as dossier) {
+      <st-page-header
+        [title]="dossier.internship.reference"
+        [subtitle]="dossier.internship.candidateFullName"
+      >
+        <st-live-status />
+        <a routerLink="/internships" class="st-btn st-btn--secondary">{{
+          i18n.t('common.back')
+        }}</a>
+        @if (canManage() && dossier.internship.status === 'APPROVED') {
+          <button
+            type="button"
+            class="st-btn st-btn--primary"
+            (click)="confirmAction.set('activate')"
+            [disabled]="busy()"
+          >
+            {{ i18n.t('internshipDetail.activate') }}
+          </button>
+        }
+        @if (canManage() && dossier.internship.status === 'IN_PROGRESS') {
+          <button
+            type="button"
+            class="st-btn st-btn--primary"
+            (click)="confirmAction.set('complete')"
+            [disabled]="busy()"
+          >
+            {{ i18n.t('internshipDetail.complete') }}
+          </button>
+        }
+        @if (
+          canManage() &&
+          (dossier.internship.status === 'APPROVED' || dossier.internship.status === 'IN_PROGRESS')
+        ) {
+          <button
+            type="button"
+            class="st-btn st-btn--danger"
+            (click)="confirmAction.set('cancel')"
+            [disabled]="busy()"
+          >
+            {{ i18n.t('internshipDetail.cancel') }}
+          </button>
+        }
+      </st-page-header>
+
+      <p class="st-flags">
+        <st-badge
+          [label]="dossier.internship.status"
+          [tone]="statusTone(dossier.internship.status)"
+        />
+        <st-badge [label]="dossier.internship.type" tone="info" />
+        <st-badge [label]="dossier.internship.requirement" tone="neutral" />
+        <st-badge
+          [label]="
+            dossier.internship.paymentEligible
+              ? i18n.t('internshipDetail.eligible')
+              : i18n.t('internshipDetail.notEligible')
+          "
+          [tone]="dossier.internship.paymentEligible ? 'success' : 'neutral'"
+        />
+      </p>
+
+      <st-tabs
+        [tabs]="tabs()"
+        [activeId]="tab()"
+        label="Internship"
+        (select)="tab.set($event)"
+        class="st-no-print"
+      />
+
+      @if (tab() === 'overview') {
+        <div class="st-grid">
+          <section class="st-card" [attr.aria-label]="i18n.t('internshipDetail.internship')">
+            <h2 class="st-card__title">{{ i18n.t('internshipDetail.internship') }}</h2>
+            <dl class="st-defs">
+              <div>
+                <dt>{{ i18n.t('internshipDetail.period') }}</dt>
+                <dd dir="ltr">
+                  {{ dossier.internship.startDate }} → {{ dossier.internship.endDate }}
+                </dd>
+              </div>
+              <div>
+                <dt>{{ i18n.t('internshipDetail.subject') }}</dt>
+                <dd dir="auto">{{ dossier.internship.subject }}</dd>
+              </div>
+              <div>
+                <dt>{{ i18n.t('internshipDetail.academicLevel') }}</dt>
+                <dd dir="auto">{{ dossier.internship.academicLevel || '—' }}</dd>
+              </div>
+              <div>
+                <dt>{{ i18n.t('internshipDetail.candidate') }}</dt>
+                <dd dir="auto">{{ dossier.internship.candidateFullName }}</dd>
+              </div>
+            </dl>
+            @if (canManage()) {
+              <p>
+                <button type="button" class="st-btn st-btn--secondary" (click)="openDates()">
+                  {{ i18n.t('internshipDetail.editDates') }}
+                </button>
+              </p>
+            }
+          </section>
+
+          <section class="st-card" [attr.aria-label]="i18n.t('internshipDetail.classification')">
+            <h2 class="st-card__title">{{ i18n.t('internshipDetail.classification') }}</h2>
+            @if (dossier.classification; as c) {
+              <dl class="st-defs">
+                <div>
+                  <dt>{{ i18n.t('internshipDetail.computedType') }}</dt>
+                  <dd>{{ c.type }}</dd>
+                </div>
+                <div>
+                  <dt>{{ i18n.t('internshipDetail.requirement') }}</dt>
+                  <dd>{{ c.requirement }}</dd>
+                </div>
+                <div>
+                  <dt>{{ i18n.t('internshipDetail.eligibility') }}</dt>
+                  <dd>
+                    {{
+                      c.paymentEligible
+                        ? i18n.t('internshipDetail.eligible')
+                        : i18n.t('internshipDetail.notEligible')
+                    }}
+                  </dd>
+                </div>
+                <div>
+                  <dt>{{ i18n.t('internshipDetail.duration') }}</dt>
+                  <dd>{{ c.durationInDays }}</dd>
+                </div>
+              </dl>
+              <p class="st-rule" dir="auto">{{ c.appliedRuleDescription }}</p>
+            } @else {
+              <st-alert tone="warning">{{
+                i18n.t('internshipDetail.classificationUnavailable')
+              }}</st-alert>
+            }
+            <p class="st-hint">{{ i18n.t('internshipDetail.backendDerivedHint') }}</p>
+          </section>
+        </div>
+
+        <section class="st-card" [attr.aria-label]="i18n.t('internshipDetail.certificate')">
+          <h2 class="st-card__title">{{ i18n.t('internshipDetail.certificate') }}</h2>
+          @if (certificate(); as cert) {
+            <p class="st-hint" dir="ltr">
+              {{ cert.reference }} · {{ cert.status }} · {{ cert.generatedAt }}
+            </p>
+            <div class="st-actions">
+              <button
+                type="button"
+                class="st-btn st-btn--secondary"
+                (click)="previewCert(cert)"
+                [disabled]="busy()"
+              >
+                <st-icon name="eye" [size]="14" /> {{ i18n.t('common.preview') }}
+              </button>
+              <button
+                type="button"
+                class="st-btn st-btn--secondary"
+                (click)="downloadCert(cert)"
+                [disabled]="busy()"
+              >
+                <st-icon name="download" [size]="14" /> {{ i18n.t('common.download') }}
+              </button>
+            </div>
+            <p class="st-hint">{{ i18n.t('internshipDetail.certificateKept') }}</p>
+          } @else if (canGenerateCertificate()) {
+            @if (!isValidated()) {
+              <st-alert tone="warning">{{
+                i18n.t('internshipDetail.certificateNeedsValidation')
+              }}</st-alert>
+              @if (canSeeValidation()) {
+                <button
+                  type="button"
+                  class="st-btn st-btn--secondary"
+                  (click)="tab.set('validation')"
+                >
+                  {{ i18n.t('internshipDetail.tabValidation') }}
+                </button>
+              }
+            } @else {
+              <p class="st-hint">{{ i18n.t('internshipDetail.certificateHint') }}</p>
+              <button
+                type="button"
+                class="st-btn st-btn--primary"
+                (click)="confirmAction.set('certificate')"
+                [disabled]="busy()"
+              >
+                {{ i18n.t('internshipDetail.generateCertificate') }}
+              </button>
+            }
+          } @else {
+            <p class="st-hint">{{ i18n.t('internshipDetail.certificateAdminOnly') }}</p>
+          }
+        </section>
+      }
+
+      @if (tab() === 'assignment') {
+        <section class="st-card" [attr.aria-label]="i18n.t('internshipDetail.assignment')">
+          <div class="st-card__head">
+            <h2 class="st-card__title">{{ i18n.t('internshipDetail.assignment') }}</h2>
+            @if (canManage()) {
+              <button type="button" class="st-btn st-btn--primary" (click)="openAssign()">
+                {{
+                  currentAssignment()
+                    ? i18n.t('internshipDetail.reassign')
+                    : i18n.t('internshipDetail.assign')
+                }}
+              </button>
+            }
+          </div>
+          <st-alert tone="info">{{ i18n.t('internshipDetail.oneActiveRule') }}</st-alert>
+          @if (currentAssignment(); as current) {
+            <dl class="st-defs">
+              <div>
+                <dt>{{ i18n.t('internshipDetail.supervisor') }}</dt>
+                <dd dir="auto">{{ current.supervisorName }}</dd>
+              </div>
+              <div>
+                <dt>{{ i18n.t('internshipDetail.department') }}</dt>
+                <dd dir="auto">{{ current.departmentName }}</dd>
+              </div>
+              <div>
+                <dt>{{ i18n.t('internshipDetail.assignedBy') }}</dt>
+                <dd dir="auto">{{ current.assignedByName }}</dd>
+              </div>
+              @if (current.assignmentReason) {
+                <div>
+                  <dt>{{ i18n.t('internshipDetail.reason') }}</dt>
+                  <dd dir="auto">{{ current.assignmentReason }}</dd>
+                </div>
+              }
+            </dl>
+          } @else {
+            <st-empty-state
+              [title]="i18n.t('common.empty.title')"
+              [body]="i18n.t('internshipDetail.noAssignment')"
+            />
+          }
+          @if (dossier.assignments.length > 0) {
+            <h3 class="st-sub">{{ i18n.t('internshipDetail.history') }}</h3>
+            <div class="st-table-wrap">
+              <table class="st-table">
+                <thead>
+                  <tr>
+                    <th scope="col">{{ i18n.t('internshipDetail.supervisor') }}</th>
+                    <th scope="col">{{ i18n.t('internshipDetail.department') }}</th>
+                    <th scope="col">{{ i18n.t('table.status') }}</th>
+                    <th scope="col">{{ i18n.t('internshipDetail.assignedAt') }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (a of dossier.assignments; track a.id) {
+                    <tr>
+                      <td dir="auto">{{ a.supervisorName }}</td>
+                      <td dir="auto">{{ a.departmentName }}</td>
+                      <td><st-badge [label]="a.status" [tone]="assignmentTone(a.status)" /></td>
+                      <td dir="ltr">{{ a.assignedAt.slice(0, 10) }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </section>
+      }
+
+      @if (tab() === 'supervision') {
+        <section class="st-card" [attr.aria-label]="i18n.t('supervision.tasksTitle')">
+          <div class="st-card__head">
+            <h2 class="st-card__title">{{ i18n.t('supervision.tasksTitle') }}</h2>
+            <span class="st-hint">{{ i18n.t('supervision.tasksHint') }}</span>
+          </div>
+          @if (dossier.tasks.length === 0) {
+            <st-empty-state
+              [title]="i18n.t('common.empty.title')"
+              [body]="i18n.t('supervision.noTasks')"
+            />
+          } @else {
+            <ul class="st-rows">
+              @for (t of dossier.tasks; track t.id) {
+                <li class="st-row">
+                  <div class="st-row__meta">
+                    <strong dir="auto">{{ t.title }}</strong>
+                    <span class="st-row__sub" dir="auto">
+                      {{ t.status }}
+                      @if (t.dueDate) {
+                        <span dir="ltr"> · {{ t.dueDate }}</span>
+                      }
+                    </span>
+                    @if (t.description) {
+                      <span class="st-row__sub" dir="auto">{{ t.description }}</span>
+                    }
+                  </div>
+                  <div class="st-row__actions st-no-print">
+                    @if (nextTaskStatus(t.status); as next) {
+                      @if (canManage()) {
+                        <button
+                          type="button"
+                          class="st-btn st-btn--secondary"
+                          (click)="advanceTask(t.id, next)"
+                          [disabled]="busy()"
+                        >
+                          {{ i18n.t('supervision.advanceTo.' + next) }}
+                        </button>
+                      } @else {
+                        <st-badge [label]="t.status" [tone]="taskTone(t.status)" />
+                      }
+                    } @else {
+                      <st-badge [label]="t.status" [tone]="taskTone(t.status)" />
+                    }
+                  </div>
+                </li>
+              }
+            </ul>
+          }
+          @if (canManage()) {
+            <div class="st-inline-form st-no-print">
+              <label class="st-field st-field--grow">
+                <span class="st-field__label">{{ i18n.t('supervision.newTask') }} *</span>
+                <input
+                  type="text"
+                  class="st-input"
+                  [(ngModel)]="taskForm.title"
+                  dir="auto"
+                  maxlength="200"
+                />
+              </label>
+              <label class="st-field">
+                <span class="st-field__label">{{ i18n.t('internshipDetail.endDate') }}</span>
+                <input type="date" class="st-input" [(ngModel)]="taskForm.dueDate" />
+              </label>
+              <button
+                type="button"
+                class="st-btn st-btn--primary"
+                [disabled]="busy() || !taskForm.title.trim()"
+                (click)="createTask()"
+              >
+                {{ i18n.t('common.save') }}
+              </button>
+            </div>
+            @if (taskError()) {
+              <st-alert tone="error">{{ taskError() }}</st-alert>
+            }
+          } @else {
+            <p class="st-hint">{{ i18n.t('supervision.tasksReadOnly') }}</p>
+          }
+        </section>
+
+        <section class="st-card" [attr.aria-label]="i18n.t('supervision.journalTitle')">
+          <div class="st-card__head">
+            <h2 class="st-card__title">{{ i18n.t('supervision.journalTitle') }}</h2>
+            <span class="st-hint">{{ i18n.t('supervision.journalHint') }}</span>
+          </div>
+          @if (dossier.journal.length === 0) {
+            <st-empty-state
+              [title]="i18n.t('common.empty.title')"
+              [body]="i18n.t('supervision.noJournal')"
+            />
+          } @else {
+            <ul class="st-rows">
+              @for (j of dossier.journal; track j.id) {
+                <li class="st-row">
+                  <div class="st-row__meta">
+                    <strong dir="auto">{{ j.title }}</strong>
+                    <span class="st-row__sub" dir="ltr">{{ j.entryDate }} · {{ j.status }}</span>
+                    @if (j.description) {
+                      <span class="st-row__sub" dir="auto">{{ j.description }}</span>
+                    }
+                    @if (j.validatedByName) {
+                      <span class="st-row__sub" dir="auto">
+                        {{ i18n.t('supervision.reviewedBy') }} {{ j.validatedByName }}
+                      </span>
+                    }
+                  </div>
+                  <div class="st-row__actions st-no-print">
+                    @if (j.status === 'SUBMITTED' && canSupervise()) {
+                      <button
+                        type="button"
+                        class="st-btn st-btn--secondary"
+                        (click)="openReview('journal', j.id, 'validate')"
+                        [disabled]="busy()"
+                      >
+                        {{ i18n.t('supervision.validate') }}
+                      </button>
+                      <button
+                        type="button"
+                        class="st-btn st-btn--danger"
+                        (click)="openReview('journal', j.id, 'reject')"
+                        [disabled]="busy()"
+                      >
+                        {{ i18n.t('supervision.reject') }}
+                      </button>
+                    } @else {
+                      <st-badge [label]="j.status" [tone]="reviewTone(j.status)" />
+                    }
+                  </div>
+                </li>
+              }
+            </ul>
+          }
+        </section>
+
+        <section class="st-card" [attr.aria-label]="i18n.t('supervision.deliverablesTitle')">
+          <div class="st-card__head">
+            <h2 class="st-card__title">{{ i18n.t('supervision.deliverablesTitle') }}</h2>
+            <span class="st-hint">{{ i18n.t('supervision.deliverablesHint') }}</span>
+          </div>
+          @if (dossier.deliverables.length === 0) {
+            <st-empty-state
+              [title]="i18n.t('common.empty.title')"
+              [body]="i18n.t('supervision.noDeliverables')"
+            />
+          } @else {
+            <ul class="st-rows">
+              @for (d of dossier.deliverables; track d.id) {
+                <li class="st-row">
+                  <div class="st-row__meta">
+                    <strong dir="auto">{{ d.title }}</strong>
+                    <span class="st-row__sub" dir="auto">
+                      {{ d.status }} · {{ i18n.t('supervision.version') }} {{ d.currentVersion }}
+                    </span>
+                    @if (d.description) {
+                      <span class="st-row__sub" dir="auto">{{ d.description }}</span>
+                    }
+                  </div>
+                  <div class="st-row__actions st-no-print">
+                    <button
+                      type="button"
+                      class="st-btn st-btn--secondary"
+                      (click)="downloadDeliverable(d.id, d.title)"
+                      [disabled]="busy()"
+                    >
+                      <st-icon name="download" [size]="14" /> {{ i18n.t('common.download') }}
+                    </button>
+                    @if (d.status === 'SUBMITTED' && canSupervise()) {
+                      <button
+                        type="button"
+                        class="st-btn st-btn--secondary"
+                        (click)="openReview('deliverable', d.id, 'validate')"
+                        [disabled]="busy()"
+                      >
+                        {{ i18n.t('supervision.validate') }}
+                      </button>
+                      <button
+                        type="button"
+                        class="st-btn st-btn--danger"
+                        (click)="openReview('deliverable', d.id, 'reject')"
+                        [disabled]="busy()"
+                      >
+                        {{ i18n.t('supervision.reject') }}
+                      </button>
+                    }
+                  </div>
+                </li>
+              }
+            </ul>
+          }
+        </section>
+
+        <section class="st-card" [attr.aria-label]="i18n.t('supervision.evaluationsTitle')">
+          <div class="st-card__head">
+            <h2 class="st-card__title">{{ i18n.t('supervision.evaluationsTitle') }}</h2>
+            <span class="st-hint">{{ i18n.t('supervision.evaluationsHint') }}</span>
+          </div>
+          @if (dossier.evaluations.length === 0) {
+            <st-empty-state
+              [title]="i18n.t('common.empty.title')"
+              [body]="i18n.t('supervision.noEvaluations')"
+            />
+          } @else {
+            <ul class="st-rows">
+              @for (e of dossier.evaluations; track e.id) {
+                <li class="st-row">
+                  <div class="st-row__meta">
+                    <strong dir="auto">{{ e.type }} · {{ e.templateName || '—' }}</strong>
+                    <span class="st-row__sub" dir="ltr">
+                      {{ e.evaluationDate }}
+                      @if (e.totalScore !== null) {
+                        <span> · {{ e.totalScore }}</span>
+                      }
+                    </span>
+                    @if (e.feedback) {
+                      <span class="st-row__sub" dir="auto">{{ e.feedback }}</span>
+                    }
+                  </div>
+                  <st-badge [label]="e.type" [tone]="e.type === 'FINAL' ? 'success' : 'neutral'" />
+                </li>
+              }
+            </ul>
+          }
+          @if (canSupervise()) {
+            <div class="st-evalform st-no-print">
+              <div class="st-grid2">
+                <label class="st-field">
+                  <span class="st-field__label">{{ i18n.t('supervision.evalType') }} *</span>
+                  <select class="st-input" [(ngModel)]="evalForm.type">
+                    @for (t of evalTypes; track t) {
+                      <option [value]="t">{{ t }}</option>
+                    }
+                  </select>
+                </label>
+                <label class="st-field">
+                  <span class="st-field__label">{{ i18n.t('supervision.evalDate') }} *</span>
+                  <input type="date" class="st-input" [(ngModel)]="evalForm.date" />
+                </label>
+              </div>
+              <label class="st-field">
+                <span class="st-field__label">{{ i18n.t('supervision.evalFeedback') }}</span>
+                <textarea
+                  class="st-input"
+                  rows="3"
+                  [(ngModel)]="evalForm.feedback"
+                  dir="auto"
+                  maxlength="4000"
+                ></textarea>
+              </label>
+              <button
+                type="button"
+                class="st-btn st-btn--primary"
+                [disabled]="busy() || !evalForm.date"
+                (click)="submitEvaluation()"
+              >
+                {{ i18n.t('supervision.submitEvaluation') }}
+              </button>
+            </div>
+            @if (evalError()) {
+              <st-alert tone="error">{{ evalError() }}</st-alert>
+            }
+          }
+        </section>
+      }
+
+      @if (tab() === 'validation' && canSeeValidation()) {
+        <section class="st-card" [attr.aria-label]="i18n.t('validation.recordTitle')">
+          <h2 class="st-card__title">{{ i18n.t('validation.recordTitle') }}</h2>
+          <dl class="st-defs">
+            <div>
+              <dt>{{ i18n.t('validation.intern') }}</dt>
+              <dd dir="auto">
+                {{ dossier.internship.candidateFullName }}
+                @if (dossier.candidate; as cand) {
+                  <span class="st-sub2" dir="ltr">{{ cand.email }} · {{ cand.phone || '—' }}</span>
+                  <span class="st-sub2" dir="auto">
+                    {{ cand.universityName }} · {{ cand.speciality || '—' }} ·
+                    {{ cand.diploma || '—' }}
+                  </span>
+                }
+              </dd>
+            </div>
+            <div>
+              <dt>{{ i18n.t('validation.periodType') }}</dt>
+              <dd dir="ltr">
+                {{ dossier.internship.startDate }} → {{ dossier.internship.endDate }} ·
+                {{ dossier.internship.type }}
+              </dd>
+            </div>
+            <div>
+              <dt>{{ i18n.t('validation.departmentSupervisor') }}</dt>
+              <dd dir="auto">
+                {{ currentAssignment()?.departmentName || '—' }} ·
+                {{ currentAssignment()?.supervisorName || i18n.t('validation.noSupervisor') }}
+              </dd>
+            </div>
+            <div>
+              <dt>{{ i18n.t('validation.progress') }}</dt>
+              <dd dir="auto">{{ validationProgress(dossier) }}</dd>
+            </div>
+            <div>
+              <dt>{{ i18n.t('validation.attendance') }}</dt>
+              <dd dir="auto">{{ i18n.t('validation.attendanceNote') }}</dd>
+            </div>
+            <div>
+              <dt>{{ i18n.t('validation.report') }}</dt>
+              <dd dir="auto">{{ validationReport(dossier) }}</dd>
+            </div>
+            <div>
+              <dt>{{ i18n.t('validation.supervisorReview') }}</dt>
+              <dd dir="auto">{{ validationSupervisorReview(dossier) }}</dd>
+            </div>
+          </dl>
+        </section>
+
+        <section class="st-card" [attr.aria-label]="i18n.t('validation.statusTitle')">
+          <h2 class="st-card__title">{{ i18n.t('validation.statusTitle') }}</h2>
+          <p>
+            <st-badge [label]="dossier.internship.status" [tone]="statusTone(dossier.internship.status)" />
+          </p>
+          <st-alert tone="info">{{ i18n.t('validation.awaiting') }}</st-alert>
+        </section>
+
+        @if (isAdmin()) {
+          <section class="st-card" [attr.aria-label]="i18n.t('validation.decisionTitle')">
+            <h2 class="st-card__title">{{ i18n.t('validation.decisionTitle') }}</h2>
+            <p class="st-hint">{{ i18n.t('validation.decisionHint') }}</p>
+            <div class="st-actions st-no-print">
+              <a
+                class="st-btn st-btn--primary"
+                [routerLink]="['/validation', dossier.internship.id]"
+              >
+                {{ i18n.t('validation.openWorkspace') }}
+              </a>
+            </div>
+          </section>
+        }
+      }
+
+      @if (tab() === 'documents') {
+        <section class="st-card" [attr.aria-label]="i18n.t('internshipDocs.checklistTitle')">
+          <div class="st-card__head">
+            <h2 class="st-card__title">{{ i18n.t('internshipDocs.checklistTitle') }}</h2>
+            <button
+              type="button"
+              class="st-btn st-btn--secondary st-no-print"
+              (click)="printSummary()"
+            >
+              <st-icon name="print" [size]="14" /> {{ i18n.t('internshipDocs.print') }}
+            </button>
+          </div>
+          <p class="st-hint">{{ i18n.t('internshipDocs.checklistHint') }}</p>
+          <ul class="st-checks">
+            @for (item of checklist(dossier); track item.key) {
+              <li class="st-check">
+                <st-badge
+                  [label]="item.met ? i18n.t('common.yes') : i18n.t('common.no')"
+                  [tone]="item.met ? 'success' : 'warning'"
+                />
+                <span>{{ i18n.t(item.key) }}</span>
+              </li>
+            }
+          </ul>
+        </section>
+
+        <section class="st-card" [attr.aria-label]="i18n.t('internshipDocs.title')">
+          <div class="st-card__head">
+            <h2 class="st-card__title">{{ i18n.t('internshipDocs.title') }}</h2>
+            @if (canUpload()) {
+              <button
+                type="button"
+                class="st-btn st-btn--primary st-no-print"
+                (click)="openUpload()"
+              >
+                <st-icon name="upload" [size]="14" /> {{ i18n.t('internshipDocs.upload') }}
+              </button>
+            }
+          </div>
+          @if (dossier.documents.length === 0) {
+            <st-empty-state
+              [title]="i18n.t('common.empty.title')"
+              [body]="i18n.t('internshipDocs.empty')"
+            />
+          } @else {
+            @for (group of groupedDocs(dossier.documents); track group.key) {
+              <h3 class="st-sub">{{ i18n.t(group.key) }}</h3>
+              <ul class="st-docs">
+                @for (item of group.items; track item.id) {
+                  <li
+                    class="st-docrow"
+                    [class.st-docrow--restricted]="item.document.restrictedAccess"
+                  >
+                    <div class="st-docrow__meta">
+                      <strong dir="auto">{{ item.document.originalFileName }}</strong>
+                      <span class="st-docrow__sub" dir="auto">
+                        {{ item.document.type }} · {{ item.document.reference }} ·
+                        {{ formatSize(item.document.sizeBytes) }} ·
+                        {{ item.document.mimeType }}
+                      </span>
+                      <span class="st-docrow__badges">
+                        @if (item.mandatory) {
+                          <st-badge [label]="i18n.t('dossier.mandatory')" tone="info" />
+                        }
+                        @if (item.generatedAutomatically) {
+                          <st-badge [label]="i18n.t('internshipDocs.generated')" tone="neutral" />
+                        }
+                        @if (item.document.restrictedAccess) {
+                          <st-badge
+                            [label]="i18n.t('common.sensitive')"
+                            tone="restricted"
+                            icon="shield"
+                          />
+                        }
+                      </span>
+                    </div>
+                    <div class="st-docrow__actions st-no-print">
+                      <button
+                        type="button"
+                        class="st-btn st-btn--secondary"
+                        [disabled]="isRestrictedBlocked(item) || busyDoc() === item.id + ':preview'"
+                        (click)="openDoc(item, true)"
+                      >
+                        <st-icon name="eye" [size]="14" /> {{ i18n.t('common.preview') }}
+                      </button>
+                      <button
+                        type="button"
+                        class="st-btn st-btn--secondary"
+                        [disabled]="
+                          isRestrictedBlocked(item) || busyDoc() === item.id + ':download'
+                        "
+                        (click)="openDoc(item, false)"
+                      >
+                        <st-icon name="download" [size]="14" /> {{ i18n.t('common.download') }}
+                      </button>
+                    </div>
+                  </li>
+                }
+              </ul>
+            }
+          }
+          @if (docForbiddenNote()) {
+            <st-alert tone="warning">{{ i18n.t('internshipDocs.restrictedBlocked') }}</st-alert>
+          }
+          <p class="st-hint">{{ i18n.t('internshipDocs.verifyNote') }}</p>
+        </section>
+
+        <!-- Print-only completion summary: references only, never PDF content. -->
+        <section class="st-print-only" aria-label="print summary">
+          <h2>{{ dossier.internship.reference }}</h2>
+          <p dir="auto">{{ dossier.internship.candidateFullName }}</p>
+          <p dir="ltr">{{ dossier.internship.startDate }} → {{ dossier.internship.endDate }}</p>
+          <p>
+            {{ dossier.internship.type }} · {{ dossier.internship.requirement }} ·
+            {{ dossier.internship.status }}
+          </p>
+          <ul>
+            @for (item of checklist(dossier); track item.key) {
+              <li>{{ item.met ? '[x]' : '[ ]' }} {{ i18n.t(item.key) }}</li>
+            }
+          </ul>
+          <ul>
+            @for (item of dossier.documents; track item.id) {
+              <li dir="auto">{{ item.document.type }} · {{ item.document.reference }}</li>
+            }
+          </ul>
+          @if (certificate(); as cert) {
+            <p dir="ltr">{{ cert.reference }} · {{ cert.status }}</p>
+          }
+        </section>
+      }
+
+      <!-- Dates editor -->
+      <st-dialog
+        [open]="datesOpen()"
+        [title]="i18n.t('internshipDetail.editDates')"
+        (close)="datesOpen.set(false)"
+      >
+        <st-alert tone="warning" [title]="i18n.t('internshipDetail.datesWarningTitle')">
+          {{ i18n.t('internshipDetail.datesWarningBody') }}
+        </st-alert>
+        <div class="st-grid2">
+          <label class="st-field">
+            <span class="st-field__label">{{ i18n.t('internshipDetail.startDate') }} *</span>
+            <input type="date" class="st-input" [(ngModel)]="datesForm.startDate" />
+          </label>
+          <label class="st-field">
+            <span class="st-field__label">{{ i18n.t('internshipDetail.endDate') }} *</span>
+            <input type="date" class="st-input" [(ngModel)]="datesForm.endDate" />
+          </label>
+        </div>
+        @if (isObservation()) {
+          <fieldset class="st-radio">
+            <legend>{{ i18n.t('internshipDetail.observationFlag') }}</legend>
+            <label>
+              <input
+                type="radio"
+                name="obsflag"
+                [value]="true"
+                [(ngModel)]="datesForm.observationObligatoire"
+              />
+              {{ i18n.t('internshipDetail.obligatoire') }}
+            </label>
+            <label>
+              <input
+                type="radio"
+                name="obsflag"
+                [value]="false"
+                [(ngModel)]="datesForm.observationObligatoire"
+              />
+              {{ i18n.t('internshipDetail.optional') }}
+            </label>
+          </fieldset>
+        } @else {
+          <p class="st-hint">{{ i18n.t('internshipDetail.nonObservationNote') }}</p>
+        }
+        @if (datesError()) {
+          <st-alert tone="error">{{ datesError() }}</st-alert>
+        }
+        <div slot="footer" class="st-dialog__actions">
+          <button type="button" class="st-btn st-btn--secondary" (click)="datesOpen.set(false)">
+            {{ i18n.t('common.cancel') }}
+          </button>
+          <button
+            type="button"
+            class="st-btn st-btn--primary"
+            [disabled]="busy()"
+            (click)="saveDates()"
+          >
+            {{ i18n.t('common.save') }}
+          </button>
+        </div>
+      </st-dialog>
+
+      <!-- Assign / reassign -->
+      <st-dialog
+        [open]="assignOpen()"
+        [title]="
+          currentAssignment()
+            ? i18n.t('internshipDetail.reassign')
+            : i18n.t('internshipDetail.assign')
+        "
+        (close)="assignOpen.set(false)"
+      >
+        @if (currentAssignment(); as current) {
+          <st-alert tone="warning">
+            {{
+              i18n.t('internshipDetail.reassignConsequence', {
+                name: current.supervisorName,
+                department: current.departmentName,
+              })
+            }}
+          </st-alert>
+        }
+        @if (refLoading()) {
+          <st-skeleton [rows]="3" />
+        } @else {
+          <div class="st-grid2">
+            <label class="st-field">
+              <span class="st-field__label">{{ i18n.t('internshipDetail.department') }} *</span>
+              <select class="st-input" [(ngModel)]="assignForm.departmentId">
+                <option value="">—</option>
+                @for (d of departments(); track d.id) {
+                  <option [value]="d.id">{{ d.name }} ({{ d.code }})</option>
+                }
+              </select>
+            </label>
+            <label class="st-field">
+              <span class="st-field__label">{{ i18n.t('internshipDetail.supervisor') }} *</span>
+              <select class="st-input" [(ngModel)]="assignForm.supervisorId">
+                <option value="">—</option>
+                @for (e of activeEmployees(); track e.id) {
+                  <option [value]="e.id">
+                    {{ e.firstName }} {{ e.lastName }} · {{ e.position || e.employeeNumber }}
+                  </option>
+                }
+              </select>
+            </label>
+            <label class="st-field">
+              <span class="st-field__label">{{ i18n.t('internshipDetail.startDate') }}</span>
+              <input type="date" class="st-input" [(ngModel)]="assignForm.startDate" />
+            </label>
+            <label class="st-field">
+              <span class="st-field__label">{{ i18n.t('internshipDetail.endDate') }}</span>
+              <input type="date" class="st-input" [(ngModel)]="assignForm.endDate" />
+            </label>
+          </div>
+          <label class="st-field">
+            <span class="st-field__label">{{ i18n.t('internshipDetail.reason') }}</span>
+            <textarea
+              class="st-input"
+              rows="3"
+              [(ngModel)]="assignForm.assignmentReason"
+              dir="auto"
+            ></textarea>
+          </label>
+        }
+        @if (assignError()) {
+          <st-alert tone="error">{{ assignError() }}</st-alert>
+        }
+        <div slot="footer" class="st-dialog__actions">
+          <button type="button" class="st-btn st-btn--secondary" (click)="assignOpen.set(false)">
+            {{ i18n.t('common.cancel') }}
+          </button>
+          <button
+            type="button"
+            class="st-btn st-btn--primary"
+            [disabled]="busy() || !assignForm.departmentId || !assignForm.supervisorId"
+            (click)="saveAssign()"
+          >
+            {{ i18n.t('common.confirm') }}
+          </button>
+        </div>
+      </st-dialog>
+
+      <st-confirm-dialog
+        [open]="confirmAction() !== null"
+        [title]="confirmTitle()"
+        [body]="confirmBody()"
+        [confirmLabel]="i18n.t('common.confirm')"
+        [cancelLabel]="i18n.t('common.cancel')"
+        [busy]="busy()"
+        (confirmed)="doConfirm()"
+        (cancel)="confirmAction.set(null)"
+      />
+
+      <!-- Journal / deliverable review -->
+      <st-dialog
+        [open]="reviewTarget() !== null"
+        [title]="
+          i18n.t(
+            reviewMode() === 'reject' ? 'supervision.rejectTitle' : 'supervision.validateTitle'
+          )
+        "
+        (close)="reviewTarget.set(null)"
+      >
+        <label class="st-field">
+          <span class="st-field__label">
+            {{ i18n.t('supervision.commentLabel') }}
+            @if (reviewMode() === 'reject') {
+              <span aria-hidden="true"> *</span>
+            }
+          </span>
+          <textarea
+            class="st-input"
+            rows="3"
+            [(ngModel)]="reviewComment"
+            dir="auto"
+            maxlength="2000"
+          ></textarea>
+        </label>
+        @if (reviewError()) {
+          <st-alert tone="error">{{ reviewError() }}</st-alert>
+        }
+        <div slot="footer" class="st-dialog__actions">
+          <button type="button" class="st-btn st-btn--secondary" (click)="reviewTarget.set(null)">
+            {{ i18n.t('common.cancel') }}
+          </button>
+          <button
+            type="button"
+            class="st-btn st-btn--primary"
+            [disabled]="busy()"
+            (click)="submitReview()"
+          >
+            {{ i18n.t('common.confirm') }}
+          </button>
+        </div>
+      </st-dialog>
+
+      <!-- Staff upload + attach -->
+      <st-dialog
+        [open]="uploadOpen()"
+        [title]="i18n.t('internshipDocs.uploadTitle')"
+        (close)="uploadOpen.set(false)"
+      >
+        <p class="st-hint">{{ i18n.t('internshipDocs.uploadHint') }}</p>
+        <div class="st-grid2">
+          <label class="st-field">
+            <span class="st-field__label">{{ i18n.t('internshipDocs.docType') }} *</span>
+            <select class="st-input" [(ngModel)]="uploadType">
+              @for (t of uploadTypes; track t) {
+                <option [value]="t">{{ t }}</option>
+              }
+            </select>
+          </label>
+          <label class="st-field st-field--check">
+            <input type="checkbox" [(ngModel)]="uploadMandatory" />
+            <span>{{ i18n.t('dossier.mandatory') }}</span>
+          </label>
+        </div>
+        <label class="st-field">
+          <span class="st-field__label">{{ i18n.t('internshipDocs.file') }} *</span>
+          <input type="file" class="st-input" (change)="onUploadFile($event)" />
+        </label>
+        @if (uploadError()) {
+          <st-alert tone="error">{{ uploadError() }}</st-alert>
+        }
+        <div slot="footer" class="st-dialog__actions">
+          <button type="button" class="st-btn st-btn--secondary" (click)="uploadOpen.set(false)">
+            {{ i18n.t('common.cancel') }}
+          </button>
+          <button
+            type="button"
+            class="st-btn st-btn--primary"
+            [disabled]="busy() || !uploadFile"
+            (click)="submitUpload()"
+          >
+            {{ i18n.t('internshipDocs.attach') }}
+          </button>
+        </div>
+      </st-dialog>
+    }
+  `,
+  styles: [
+    `
+      .st-flags {
+        display: flex;
+        gap: 0.4rem;
+        flex-wrap: wrap;
+        margin: 0 0 0.8rem;
+      }
+      .st-grid {
+        display: grid;
+        gap: 0.75rem;
+        grid-template-columns: 1fr 1fr;
+        margin-block-start: 0.8rem;
+      }
+      .st-grid2 {
+        display: grid;
+        gap: 0.6rem;
+        grid-template-columns: 1fr 1fr;
+      }
+      .st-card {
+        background: var(--bg-surface);
+        border: 1px solid var(--border-subtle);
+        border-radius: 0.7rem;
+        padding: 1rem;
+        margin-block-start: 0.8rem;
+      }
+      .st-grid .st-card {
+        margin-block-start: 0;
+      }
+      .st-card__head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+      }
+      .st-card__title {
+        margin: 0 0 0.6rem;
+        font-size: 0.95rem;
+      }
+      .st-card__head .st-card__title {
+        margin-block-end: 0;
+      }
+      .st-sub {
+        font-size: 0.85rem;
+        margin: 0.9rem 0 0.4rem;
+      }
+      .st-defs {
+        display: grid;
+        gap: 0.5rem;
+        margin: 0;
+      }
+      .st-defs div {
+        display: grid;
+        grid-template-columns: 10rem 1fr;
+        gap: 0.5rem;
+        font-size: 0.84rem;
+      }
+      .st-defs dt {
+        color: var(--text-muted);
+      }
+      .st-defs dd {
+        margin: 0;
+        overflow-wrap: anywhere;
+      }
+      .st-hint {
+        font-size: 0.78rem;
+        color: var(--text-secondary);
+      }
+      .st-rule {
+        font-size: 0.82rem;
+        background: var(--bg-page);
+        border-radius: 0.45rem;
+        padding: 0.5rem 0.65rem;
+        overflow-wrap: anywhere;
+      }
+      .st-table-wrap {
+        overflow-x: auto;
+        border: 1px solid var(--border-subtle);
+        border-radius: 0.6rem;
+        margin-block-start: 0.4rem;
+      }
+      .st-table {
+        inline-size: 100%;
+        border-collapse: collapse;
+        font-size: 0.83rem;
+        min-inline-size: 34rem;
+      }
+      thead th {
+        text-align: start;
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--text-muted);
+        padding: 0.6rem 0.75rem;
+        border-block-end: 1px solid var(--border-subtle);
+      }
+      tbody td {
+        padding: 0.55rem 0.75rem;
+        border-block-end: 1px solid var(--border-subtle);
+      }
+      tbody tr:last-child td {
+        border-block-end: 0;
+      }
+      .st-timeline {
+        list-style: none;
+        margin: 0.6rem 0 0;
+        padding: 0;
+        display: grid;
+        gap: 0.7rem;
+      }
+      .st-timeline__item {
+        display: flex;
+        gap: 0.7rem;
+      }
+      .st-timeline__seq {
+        flex: none;
+        inline-size: 1.7rem;
+        block-size: 1.7rem;
+        border-radius: 50%;
+        background: var(--bg-page);
+        border: 1px solid var(--border-default);
+        display: grid;
+        place-items: center;
+        font-size: 0.75rem;
+        font-weight: 700;
+      }
+      .st-timeline__head {
+        display: flex;
+        gap: 0.4rem;
+        align-items: center;
+        flex-wrap: wrap;
+        margin: 0;
+        font-size: 0.85rem;
+      }
+      .st-timeline__meta {
+        margin: 0.15rem 0 0;
+        font-size: 0.75rem;
+        color: var(--text-muted);
+      }
+      .st-timeline__comment {
+        margin: 0.25rem 0 0;
+        font-size: 0.83rem;
+        padding: 0.45rem 0.6rem;
+        background: var(--bg-page);
+        border-radius: 0.45rem;
+        overflow-wrap: anywhere;
+      }
+      .st-radio {
+        border: 1px solid var(--border-subtle);
+        border-radius: 0.55rem;
+        padding: 0.6rem 0.8rem;
+        display: grid;
+        gap: 0.4rem;
+        font-size: 0.85rem;
+      }
+      .st-radio legend {
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        padding-inline: 0.3rem;
+      }
+      .st-radio label {
+        display: flex;
+        gap: 0.45rem;
+        align-items: center;
+      }
+      .st-dialog__actions {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: flex-end;
+      }
+      .st-checks {
+        list-style: none;
+        margin: 0.6rem 0 0;
+        padding: 0;
+        display: grid;
+        gap: 0.45rem;
+      }
+      .st-check {
+        display: flex;
+        gap: 0.55rem;
+        align-items: center;
+        font-size: 0.85rem;
+      }
+      .st-docs {
+        list-style: none;
+        margin: 0.4rem 0 0;
+        padding: 0;
+        display: grid;
+        gap: 0.6rem;
+      }
+      .st-docrow {
+        display: flex;
+        gap: 0.7rem;
+        justify-content: space-between;
+        align-items: flex-start;
+        flex-wrap: wrap;
+        border: 1px solid var(--border-subtle);
+        border-radius: 0.6rem;
+        padding: 0.7rem 0.8rem;
+      }
+      .st-docrow--restricted {
+        border-color: color-mix(in srgb, var(--action-danger) 45%, transparent);
+      }
+      .st-docrow__meta {
+        display: grid;
+        gap: 0.25rem;
+        flex: 1;
+        min-inline-size: 14rem;
+        font-size: 0.85rem;
+      }
+      .st-docrow__sub {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        overflow-wrap: anywhere;
+      }
+      .st-docrow__badges {
+        display: flex;
+        gap: 0.35rem;
+        flex-wrap: wrap;
+      }
+      .st-docrow__actions {
+        display: flex;
+        gap: 0.4rem;
+        flex-wrap: wrap;
+      }
+      .st-field--check {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .st-field--check input {
+        inline-size: 1.1rem;
+        block-size: 1.1rem;
+      }
+      .st-print-only {
+        display: none;
+      }
+      .st-rows {
+        list-style: none;
+        margin: 0.6rem 0 0;
+        padding: 0;
+        display: grid;
+        gap: 0.55rem;
+      }
+      .st-row {
+        display: flex;
+        gap: 0.7rem;
+        justify-content: space-between;
+        align-items: flex-start;
+        flex-wrap: wrap;
+        border: 1px solid var(--border-subtle);
+        border-radius: 0.6rem;
+        padding: 0.65rem 0.75rem;
+      }
+      .st-row__meta {
+        display: grid;
+        gap: 0.2rem;
+        flex: 1;
+        min-inline-size: 14rem;
+        font-size: 0.85rem;
+      }
+      .st-row__sub {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        overflow-wrap: anywhere;
+      }
+      .st-row__actions {
+        display: flex;
+        gap: 0.4rem;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      .st-actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-block-start: 0.5rem;
+      }
+      .st-inline-form {
+        display: flex;
+        gap: 0.6rem;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        margin-block-start: 0.8rem;
+      }
+      .st-evalform {
+        display: grid;
+        gap: 0.6rem;
+        margin-block-start: 0.8rem;
+      }
+      .st-sub2 {
+        display: block;
+        font-size: 0.72rem;
+        color: var(--text-muted);
+      }
+      @media (max-width: 900px) {
+        .st-grid,
+        .st-grid2 {
+          grid-template-columns: 1fr;
+        }
+      }
+    `,
+  ],
+})
+export class InternshipDetailComponent implements OnInit {
+  readonly i18n = inject(I18nService);
+  readonly auth = inject(AuthService);
+  private readonly crumbs = inject(BreadcrumbService);
+  private readonly service = inject(InternshipService);
+  private readonly realtime = inject(RealtimeService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly toast = inject(ToastService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+
+  readonly loading = signal(true);
+  readonly busy = signal(false);
+  readonly error = signal(false);
+  readonly errorMessage = signal('');
+  readonly bundle = signal<InternshipBundle | null>(null);
+  readonly tab = signal('overview');
+
+  readonly datesOpen = signal(false);
+  readonly datesError = signal('');
+  readonly datesForm = { startDate: '', endDate: '', observationObligatoire: false as boolean };
+
+  readonly assignOpen = signal(false);
+  readonly refLoading = signal(false);
+  readonly assignError = signal('');
+  readonly departments = signal<readonly Department[]>([]);
+  readonly employees = signal<readonly Employee[]>([]);
+  readonly assignForm = {
+    departmentId: '',
+    supervisorId: '',
+    startDate: '',
+    endDate: '',
+    assignmentReason: '',
+  };
+
+  readonly confirmAction = signal<'activate' | 'complete' | 'cancel' | 'certificate' | null>(null);
+  readonly certificate = signal<CertificateInfo | null>(null);
+
+  readonly uploadOpen = signal(false);
+  readonly uploadError = signal('');
+  readonly uploadTypes = INTERNSHIP_UPLOAD_TYPES;
+  uploadType: DocumentType = 'STEG_INTERNSHIP_REPORT';
+  uploadMandatory = false;
+  uploadFile: File | null = null;
+  readonly docForbiddenNote = signal(false);
+  readonly busyDoc = signal<string | null>(null);
+
+  /* ---------------- Supervision state ---------------- */
+
+  readonly taskForm = { title: '', dueDate: '' };
+  readonly taskError = signal('');
+  readonly evalTypes: EvaluationType[] = ['FINAL', 'MID_TERM', 'WEEKLY', 'DAILY', 'CUSTOM'];
+  readonly evalForm: { type: EvaluationType; date: string; feedback: string } = {
+    type: 'FINAL',
+    date: '',
+    feedback: '',
+  };
+  readonly evalError = signal('');
+  readonly reviewTarget = signal<{ kind: 'journal' | 'deliverable'; id: string } | null>(null);
+  readonly reviewMode = signal<'validate' | 'reject'>('validate');
+  reviewComment = '';
+  readonly reviewError = signal('');
+
+  /* ---------------- Validation state ---------------- */
+
+  currentAssignment(): InternshipAssignment | null {
+    const bundle = this.bundle();
+    return bundle ? activeAssignment(bundle.assignments) : null;
+  }
+
+  activeEmployees(): readonly Employee[] {
+    return this.employees().filter((e) => e.active);
+  }
+
+  isObservation(): boolean {
+    return this.bundle()?.internship.type === 'OBSERVATION';
+  }
+
+  tabs(): { id: string; label: string; count?: number }[] {
+    const bundle = this.bundle();
+    const tabs: { id: string; label: string; count?: number }[] = [
+      { id: 'overview', label: this.i18n.t('internshipDetail.tabOverview') },
+      {
+        id: 'assignment',
+        label: this.i18n.t('internshipDetail.tabAssignment'),
+        count: bundle?.assignments.length,
+      },
+      {
+        id: 'supervision',
+        label: this.i18n.t('internshipDetail.tabSupervision'),
+        count: (bundle?.tasks.length ?? 0) + (bundle?.journal.length ?? 0),
+      },
+    ];
+    if (this.canSeeValidation()) {
+      tabs.push({
+        id: 'validation',
+        label: this.i18n.t('internshipDetail.tabValidation'),
+      });
+    }
+    tabs.push(
+      {
+        id: 'documents',
+        label: this.i18n.t('internshipDetail.tabDocuments'),
+        count: bundle?.documents.length,
+      },
+    );
+    return tabs;
+  }
+
+  /** Validation tab is for validated internships (S7 workspace owns decisions). */
+  canSeeValidation(): boolean {
+    const bundle = this.bundle();
+    if (!bundle) return false;
+    if (!this.auth.hasPermission('INTERNSHIP_VIEW')) return false;
+    return bundle.internship.status === 'VALIDATED';
+  }
+
+  /** Only administrators (ADMIN) open the validation workspace (S7). */
+  isAdmin(): boolean {
+    return this.auth.role() === 'ADMIN';
+  }
+
+  /** Certificate generation is an administrative act (ADMIN only, after approval). */
+  canGenerateCertificate(): boolean {
+    return this.auth.role() === 'ADMIN';
+  }
+
+  /** A validated internship (explicit §4 status) unlocks certificate generation. */
+  isValidated(): boolean {
+    return this.bundle()?.internship.status === 'VALIDATED';
+  }
+
+  canManage(): boolean {
+    return this.auth.hasPermission('INTERNSHIP_ASSIGN');
+  }
+
+  ngOnInit(): void {
+    this.crumbs.set([
+      { labelKey: 'nav.internships', labelFallback: 'Internships', url: '/internships' },
+      { labelKey: 'internshipDetail.title', labelFallback: 'Internship' },
+    ]);
+    this.load();
+    this.realtime.internshipUpdates$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((e) => {
+      const currentId = this.route.snapshot.paramMap.get('id');
+      if (!e.entityId || e.entityId === currentId) this.load();
+    });
+  }
+
+  load(): void {
+    const id = this.route.snapshot.paramMap.get('id');
+    if (!id) {
+      void this.router.navigate(['/internships']);
+      return;
+    }
+    this.loading.set(true);
+    this.error.set(false);
+    this.errorMessage.set('');
+    this.service.loadBundle(id).subscribe({
+      next: (bundle) => {
+        this.bundle.set(bundle);
+        this.loading.set(false);
+      },
+      error: (e: unknown) => {
+        this.error.set(true);
+        this.errorMessage.set(extractMessage(e));
+        this.loading.set(false);
+      },
+    });
+  }
+
+  openDates(): void {
+    const internship = this.bundle()?.internship;
+    if (!internship) return;
+    this.datesForm.startDate = internship.startDate;
+    this.datesForm.endDate = internship.endDate;
+    this.datesForm.observationObligatoire = internship.requirement === 'OBLIGATOIRE';
+    this.datesError.set('');
+    this.datesOpen.set(true);
+  }
+
+  saveDates(): void {
+    const id = this.bundle()?.internship.id;
+    if (!id) return;
+    if (!this.datesForm.startDate || !this.datesForm.endDate) {
+      this.datesError.set(this.i18n.t('internshipDetail.datesRequired'));
+      return;
+    }
+    if (this.datesForm.endDate < this.datesForm.startDate) {
+      this.datesError.set(this.i18n.t('internshipDetail.datesInvalid'));
+      return;
+    }
+    this.busy.set(true);
+    this.service
+      .updateDates(id, {
+        startDate: this.datesForm.startDate,
+        endDate: this.datesForm.endDate,
+        // Only meaningful for observation; the backend ignores/forces otherwise.
+        observationObligatoire: this.isObservation() ? this.datesForm.observationObligatoire : null,
+      })
+      .subscribe({
+        next: (updated) => {
+          this.busy.set(false);
+          this.datesOpen.set(false);
+          this.toast.show(
+            'success',
+            this.i18n.t('internshipDetail.datesSaved', {
+              type: updated.type,
+              requirement: updated.requirement,
+            }),
+          );
+          this.load();
+        },
+        error: (e: unknown) => {
+          this.busy.set(false);
+          this.datesError.set(actionErrorMessage(e, this.i18n));
+        },
+      });
+  }
+
+  openAssign(): void {
+    this.assignForm.departmentId = '';
+    this.assignForm.supervisorId = '';
+    this.assignForm.startDate = '';
+    this.assignForm.endDate = '';
+    this.assignForm.assignmentReason = '';
+    this.assignError.set('');
+    this.assignOpen.set(true);
+    if (this.departments().length === 0) {
+      this.refLoading.set(true);
+      this.service.referenceData().subscribe({
+        next: ({ departments, employees }) => {
+          this.departments.set(departments.filter((d) => d.active));
+          this.employees.set(employees);
+          this.refLoading.set(false);
+        },
+        error: (e: unknown) => {
+          this.refLoading.set(false);
+          this.assignError.set(actionErrorMessage(e, this.i18n));
+        },
+      });
+    }
+  }
+
+  saveAssign(): void {
+    const id = this.bundle()?.internship.id;
+    if (!id || !this.assignForm.departmentId || !this.assignForm.supervisorId) return;
+    this.busy.set(true);
+    this.service
+      .assign(id, {
+        departmentId: this.assignForm.departmentId,
+        supervisorId: this.assignForm.supervisorId,
+        ...(this.assignForm.startDate ? { startDate: this.assignForm.startDate } : {}),
+        ...(this.assignForm.endDate ? { endDate: this.assignForm.endDate } : {}),
+        ...(this.assignForm.assignmentReason.trim()
+          ? { assignmentReason: this.assignForm.assignmentReason.trim() }
+          : {}),
+      })
+      .subscribe({
+        next: () => {
+          this.busy.set(false);
+          this.assignOpen.set(false);
+          this.toast.show('success', this.i18n.t('internshipDetail.assignSaved'));
+          this.load();
+        },
+        error: (e: unknown) => {
+          this.busy.set(false);
+          this.assignError.set(actionErrorMessage(e, this.i18n));
+        },
+      });
+  }
+
+  confirmTitle(): string {
+    switch (this.confirmAction()) {
+      case 'activate':
+        return this.i18n.t('internshipDetail.activate');
+      case 'complete':
+        return this.i18n.t('internshipDetail.complete');
+      case 'cancel':
+        return this.i18n.t('internshipDetail.cancel');
+      default:
+        return this.i18n.t('internshipDetail.generateCertificate');
+    }
+  }
+
+  confirmBody(): string {
+    switch (this.confirmAction()) {
+      case 'activate':
+        return this.i18n.t('internshipDetail.activateBody');
+      case 'complete':
+        return this.i18n.t('internshipDetail.completeBody');
+      case 'cancel':
+        return this.i18n.t('internshipDetail.cancelBody');
+      default:
+        return this.i18n.t('internshipDetail.certificateBody');
+    }
+  }
+
+  doConfirm(): void {
+    const action = this.confirmAction();
+    const id = this.bundle()?.internship.id;
+    if (!action || !id) return;
+    this.busy.set(true);
+    const done = (message: string) => {
+      this.busy.set(false);
+      this.confirmAction.set(null);
+      this.toast.show('success', message);
+      this.load();
+    };
+    const fail = (e: unknown) => {
+      this.busy.set(false);
+      this.confirmAction.set(null);
+      this.toast.show('error', actionErrorMessage(e, this.i18n));
+    };
+    if (action === 'activate')
+      this.service
+        .activate(id)
+        .subscribe({ next: () => done(this.i18n.t('internshipDetail.activated')), error: fail });
+    else if (action === 'complete')
+      this.service
+        .complete(id)
+        .subscribe({ next: () => done(this.i18n.t('internshipDetail.completed')), error: fail });
+    else if (action === 'cancel')
+      this.service
+        .cancel(id)
+        .subscribe({ next: () => done(this.i18n.t('internshipDetail.cancelled')), error: fail });
+    else
+      this.service.generateCertificate(id).subscribe({
+        next: (cert) => {
+          this.certificate.set(cert);
+          this.busy.set(false);
+          this.confirmAction.set(null);
+          this.toast.show('success', this.i18n.t('internshipDetail.certificateGenerated'));
+        },
+        error: fail,
+      });
+  }
+
+  downloadCert(cert: CertificateInfo): void {
+    this.busy.set(true);
+    this.service.downloadCertificate(cert.id).subscribe({
+      next: (blob) => {
+        this.busy.set(false);
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = `${cert.reference}.pdf`;
+        anchor.click();
+        window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      },
+      error: (e: unknown) => {
+        this.busy.set(false);
+        this.toast.show('error', actionErrorMessage(e, this.i18n));
+      },
+    });
+  }
+
+  /** Open the generated certificate in a new tab (bytes stay behind the JWT call). */
+  previewCert(cert: CertificateInfo): void {
+    this.busy.set(true);
+    this.service.downloadCertificate(cert.id).subscribe({
+      next: (blob) => {
+        this.busy.set(false);
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank', 'noopener');
+        window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      },
+      error: (e: unknown) => {
+        this.busy.set(false);
+        this.toast.show('error', actionErrorMessage(e, this.i18n));
+      },
+    });
+  }
+
+  /* ---------------- Supervision ---------------- */
+
+  /** Any staff with internship visibility may supervise; the backend re-checks participation. */
+  canSupervise(): boolean {
+    return this.auth.hasPermission('INTERNSHIP_VIEW');
+  }
+
+  nextTaskStatus(status: string): TaskStatus | null {
+    if (status === 'TODO') return 'IN_PROGRESS';
+    if (status === 'IN_PROGRESS') return 'COMPLETED';
+    return null;
+  }
+
+  taskTone(status: string): BadgeTone {
+    switch (status) {
+      case 'COMPLETED':
+        return 'success';
+      case 'IN_PROGRESS':
+        return 'info';
+      case 'CANCELLED':
+        return 'error';
+      default:
+        return 'neutral';
+    }
+  }
+
+  reviewTone(status: string): BadgeTone {
+    switch (status) {
+      case 'VALIDATED':
+        return 'success';
+      case 'REJECTED':
+        return 'error';
+      case 'SUBMITTED':
+        return 'warning';
+      default:
+        return 'neutral';
+    }
+  }
+
+  createTask(): void {
+    const id = this.bundle()?.internship.id;
+    const title = this.taskForm.title.trim();
+    if (!id || !title) return;
+    this.busy.set(true);
+    this.taskError.set('');
+    this.service.createTask(id, title, this.taskForm.dueDate || null).subscribe({
+      next: () => {
+        this.taskForm.title = '';
+        this.taskForm.dueDate = '';
+        this.busy.set(false);
+        this.toast.show('success', this.i18n.t('supervision.taskCreated'));
+        this.load();
+      },
+      error: (e: unknown) => {
+        this.busy.set(false);
+        this.taskError.set(actionErrorMessage(e, this.i18n));
+      },
+    });
+  }
+
+  advanceTask(taskId: string, next: TaskStatus): void {
+    this.busy.set(true);
+    this.service.setTaskStatus(taskId, next).subscribe({
+      next: () => {
+        this.busy.set(false);
+        this.toast.show('success', this.i18n.t('supervision.taskUpdated'));
+        this.load();
+      },
+      error: (e: unknown) => {
+        this.busy.set(false);
+        this.toast.show('error', actionErrorMessage(e, this.i18n));
+      },
+    });
+  }
+
+  openReview(kind: 'journal' | 'deliverable', id: string, mode: 'validate' | 'reject'): void {
+    this.reviewTarget.set({ kind, id });
+    this.reviewMode.set(mode);
+    this.reviewComment = '';
+    this.reviewError.set('');
+  }
+
+  submitReview(): void {
+    const target = this.reviewTarget();
+    if (!target) return;
+    const comment = this.reviewComment.trim();
+    if (this.reviewMode() === 'reject' && !comment) {
+      this.reviewError.set(this.i18n.t('supervision.reasonRequired'));
+      return;
+    }
+    this.busy.set(true);
+    const done = (): void => {
+      this.busy.set(false);
+      this.reviewTarget.set(null);
+      this.toast.show('success', this.i18n.t('supervision.reviewSaved'));
+      this.load();
+    };
+    const fail = (e: unknown): void => {
+      this.busy.set(false);
+      this.reviewError.set(actionErrorMessage(e, this.i18n));
+    };
+    if (target.kind === 'journal') {
+      if (this.reviewMode() === 'reject')
+        this.service.rejectJournal(target.id, comment).subscribe({ next: done, error: fail });
+      else
+        this.service
+          .validateJournal(target.id, comment || undefined)
+          .subscribe({ next: done, error: fail });
+    } else {
+      if (this.reviewMode() === 'reject')
+        this.service.rejectDeliverable(target.id, comment).subscribe({ next: done, error: fail });
+      else
+        this.service
+          .validateDeliverable(target.id, comment || undefined)
+          .subscribe({ next: done, error: fail });
+    }
+  }
+
+  downloadDeliverable(deliverableId: string, title: string): void {
+    this.busy.set(true);
+    this.service.downloadDeliverable(deliverableId).subscribe({
+      next: (blob) => {
+        this.busy.set(false);
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = `${title || deliverableId}.pdf`;
+        anchor.click();
+        window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      },
+      error: (e: unknown) => {
+        this.busy.set(false);
+        this.toast.show('error', actionErrorMessage(e, this.i18n));
+      },
+    });
+  }
+
+  submitEvaluation(): void {
+    const id = this.bundle()?.internship.id;
+    if (!id || !this.evalForm.date) return;
+    this.busy.set(true);
+    this.evalError.set('');
+    this.service
+      .submitEvaluation(id, {
+        type: this.evalForm.type,
+        evaluationDate: this.evalForm.date,
+        ...(this.evalForm.feedback.trim() ? { feedback: this.evalForm.feedback.trim() } : {}),
+      })
+      .subscribe({
+        next: () => {
+          this.busy.set(false);
+          this.evalForm.feedback = '';
+          this.toast.show('success', this.i18n.t('supervision.evaluationSaved'));
+          this.load();
+        },
+        error: (e: unknown) => {
+          this.busy.set(false);
+          this.evalError.set(actionErrorMessage(e, this.i18n));
+        },
+      });
+  }
+
+  /* ---------------- Administrative validation ---------------- */
+
+  validationProgress(bundle: InternshipBundle): string {
+    const done = bundle.tasks.filter((t) => t.status === 'COMPLETED').length;
+    const journalOk = bundle.journal.filter((j) => j.status === 'VALIDATED').length;
+    return this.i18n.t('validation.progressValue', {
+      tasksDone: String(done),
+      tasksTotal: String(bundle.tasks.length),
+      journalOk: String(journalOk),
+      journalTotal: String(bundle.journal.length),
+      evaluations: String(bundle.evaluations.length),
+    });
+  }
+
+  validationReport(bundle: InternshipBundle): string {
+    const report = bundle.deliverables.find((d) => d.status !== 'REJECTED');
+    if (!report) return this.i18n.t('validation.noReport');
+    return `${report.title} · ${report.status} · v${report.currentVersion}`;
+  }
+
+  validationSupervisorReview(bundle: InternshipBundle): string {
+    const finals = bundle.evaluations.filter((e) => e.type === 'FINAL');
+    if (finals.length === 0 && bundle.evaluations.length === 0)
+      return this.i18n.t('validation.noEvaluation');
+    const latest =
+      finals.length > 0
+        ? finals[finals.length - 1]
+        : bundle.evaluations[bundle.evaluations.length - 1];
+    if (!latest) return this.i18n.t('validation.noEvaluation');
+    const score = latest.totalScore !== null ? ` · ${latest.totalScore}` : '';
+    return `${latest.type} · ${latest.evaluationDate}${score}`;
+  }
+
+  /* ---------------- Documents tab ---------------- */
+
+  canUpload(): boolean {
+    return this.auth.hasPermission('INTERNSHIP_ASSIGN');
+  }
+
+  canViewRestrictedDocs(): boolean {
+    return this.auth.hasPermission('DOCUMENT_VIEW_RESTRICTED');
+  }
+
+  isRestrictedBlocked(item: InternshipDocumentItem): boolean {
+    return item.document.restrictedAccess && !this.canViewRestrictedDocs();
+  }
+
+  /** Presence-only checklist from backend-exposed prerequisites (finance decides). */
+  checklist(bundle: InternshipBundle): { key: string; met: boolean }[] {
+    const present = new Set(bundle.documents.map((d) => d.document.type));
+    return [
+      { key: 'internshipDocs.checkValidated', met: bundle.internship.status === 'VALIDATED' },
+      { key: 'internshipDocs.checkAssignment', met: activeAssignment(bundle.assignments) !== null },
+      {
+        key: 'internshipDocs.checkRequiredDocs',
+        met: REQUIRED_DOSSIER_TYPES.every((t) => present.has(t)),
+      },
+      { key: 'internshipDocs.checkEligible', met: bundle.internship.paymentEligible },
+      { key: 'internshipDocs.checkCertificate', met: this.certificate() !== null },
+    ];
+  }
+
+  groupedDocs(
+    documents: readonly InternshipDocumentItem[],
+  ): { key: string; items: InternshipDocumentItem[] }[] {
+    const groups: { key: string; items: InternshipDocumentItem[] }[] = [
+      { key: 'internshipDocs.groupRestricted', items: [] },
+      { key: 'internshipDocs.groupRequired', items: [] },
+      { key: 'internshipDocs.groupReports', items: [] },
+      { key: 'internshipDocs.groupCertificates', items: [] },
+      { key: 'internshipDocs.groupOther', items: [] },
+    ];
+    for (const item of documents) {
+      const type = item.document.type;
+      if (item.document.restrictedAccess) groups[0]?.items.push(item);
+      else if ((REQUIRED_DOSSIER_TYPES as readonly string[]).includes(type))
+        groups[1]?.items.push(item);
+      else if (
+        type === 'STEG_INTERNSHIP_REPORT' ||
+        type === 'CAHIER_DES_CHARGES' ||
+        type === 'PROJECT_DEMO_IMAGE'
+      )
+        groups[2]?.items.push(item);
+      else if (
+        type === 'INTERNSHIP_CERTIFICATE' ||
+        type === 'INTERNSHIP_LOGBOOK' ||
+        type === 'INTERNSHIP_CONVENTION'
+      )
+        groups[3]?.items.push(item);
+      else groups[4]?.items.push(item);
+    }
+    return groups.filter((g) => g.items.length > 0);
+  }
+
+  openUpload(): void {
+    this.uploadType = 'STEG_INTERNSHIP_REPORT';
+    this.uploadMandatory = false;
+    this.uploadFile = null;
+    this.uploadError.set('');
+    this.uploadOpen.set(true);
+  }
+
+  onUploadFile(event: Event): void {
+    const input = event.target as HTMLInputElement | null;
+    const file = input?.files?.[0] ?? null;
+    this.uploadError.set('');
+    if (!file) {
+      this.uploadFile = null;
+      return;
+    }
+    // Indicative client pre-check only (25 MB); backend validates MIME/size/content.
+    if (file.size > 25 * 1024 * 1024) {
+      this.uploadError.set(this.i18n.t('internshipDocs.fileTooLarge'));
+      this.uploadFile = null;
+      return;
+    }
+    this.uploadFile = file;
+  }
+
+  submitUpload(): void {
+    const id = this.bundle()?.internship.id;
+    const file = this.uploadFile;
+    if (!id || !file) return;
+    this.busy.set(true);
+    this.service.uploadThenAttach(id, this.uploadType, file, this.uploadMandatory).subscribe({
+      next: () => {
+        this.busy.set(false);
+        this.uploadOpen.set(false);
+        this.toast.show('success', this.i18n.t('internshipDocs.uploaded'));
+        this.load();
+      },
+      error: (e: unknown) => {
+        this.busy.set(false);
+        this.uploadError.set(actionErrorMessage(e, this.i18n));
+      },
+    });
+  }
+
+  openDoc(item: InternshipDocumentItem, preview: boolean): void {
+    if (this.isRestrictedBlocked(item)) {
+      this.docForbiddenNote.set(true);
+      return;
+    }
+    const tag = `${item.id}:${preview ? 'preview' : 'download'}`;
+    this.busyDoc.set(tag);
+    this.service.downloadDocument(item.document.id, item.document.restrictedAccess).subscribe({
+      next: (blob) => {
+        this.busyDoc.set(null);
+        const url = URL.createObjectURL(blob);
+        if (preview) {
+          window.open(url, '_blank', 'noopener');
+          window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+        } else {
+          const anchor = document.createElement('a');
+          anchor.href = url;
+          anchor.download = item.document.originalFileName || `${item.document.reference}.pdf`;
+          anchor.click();
+          window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+        }
+      },
+      error: (e: unknown) => {
+        this.busyDoc.set(null);
+        if (isForbidden(e)) {
+          this.docForbiddenNote.set(true);
+          this.toast.show('error', this.i18n.t('internshipDocs.restrictedBlocked'));
+        } else {
+          this.toast.show('error', actionErrorMessage(e, this.i18n));
+        }
+      },
+    });
+  }
+
+  printSummary(): void {
+    document.body.classList.add('st-printing-summary');
+    const done = (): void => {
+      document.body.classList.remove('st-printing-summary');
+      window.removeEventListener('afterprint', done);
+    };
+    window.addEventListener('afterprint', done);
+    window.print();
+    // Fallback for browsers without afterprint.
+    window.setTimeout(() => document.body.classList.remove('st-printing-summary'), 2000);
+  }
+
+  formatSize(bytes: number): string {
+    if (bytes >= 1_048_576) return `${(bytes / 1_048_576).toFixed(1)} MB`;
+    if (bytes >= 1024) return `${Math.round(bytes / 1024)} KB`;
+    return `${bytes} B`;
+  }
+
+  statusTone(status: string): BadgeTone {
+    switch (status) {
+      case 'IN_PROGRESS':
+        return 'success';
+      case 'UNDER_VALIDATION':
+      case 'VALIDATED':
+      case 'RECEIPT_ISSUED':
+        return 'info';
+      case 'CANCELLED':
+      case 'ARCHIVED':
+        return 'error';
+      default:
+        return 'warning';
+    }
+  }
+
+  assignmentTone(status: string): BadgeTone {
+    switch (status) {
+      case 'ACTIVE':
+        return 'success';
+      case 'PLANNED':
+        return 'info';
+      case 'CANCELLED':
+        return 'error';
+      default:
+        return 'neutral';
+    }
+  }
+
+  formatDateTime(iso: string): string {
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) return iso;
+    return date.toLocaleString(this.i18n.locale());
+  }
+}
+
+function extractMessage(error: unknown): string {
+  if (typeof error === 'object' && error !== null) {
+    const status = (error as { status?: number }).status;
+    if (status === 403) return '';
+    const envelope = (error as { error?: { message?: string } }).error;
+    if (envelope?.message) return envelope.message;
+  }
+  return '';
+}
+
+function actionErrorMessage(error: unknown, i18n: I18nService): string {
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    (error as { status?: number }).status === 403
+  ) {
+    return i18n.t('common.forbidden.body');
+  }
+  const message = extractMessage(error);
+  return message || i18n.t('common.error.body');
+}

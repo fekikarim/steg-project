@@ -1,0 +1,47 @@
+# Phase B0 — front-office CI: clean install, lint, typecheck, build.
+# Reproduces locally with: npm ci && npm run lint && npm run typecheck && npm run build
+# No secrets required: the production build needs no backend credentials
+# (API calls resolve the backend URL at request time, server-side).
+
+name: front-office-ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  ci:
+    name: install, lint, typecheck, build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node 24.20.x LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.20.x
+          cache: npm
+
+      - name: Clean install from lockfile
+        run: npm ci --no-audit --no-fund
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+
+      - name: Lint
+        run: npm run lint -- --max-warnings=0
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+
+      - name: Typecheck
+        run: npm run typecheck
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+
+      - name: Production build
+        run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1

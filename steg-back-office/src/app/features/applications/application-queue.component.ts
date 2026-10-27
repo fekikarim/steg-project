@@ -1,0 +1,365 @@
+import { Component, inject, signal, OnInit, OnDestroy, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Router, RouterLink, ActivatedRoute } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { I18nService } from '../../core/i18n.service';
+import { RealtimeService } from '../../core/realtime.service';
+import { BreadcrumbService } from '../../core/breadcrumb.service';
+import { AuthService } from '../../core/auth.service';
+import { ApiClient } from '../../core/api-client.service';
+import { ApplicationQueueStore } from './application-queue-store';
+import { PageHeaderComponent } from '../../shared/ui/page-header.component';
+import { LiveStatusComponent } from '../../shared/ui/live-status.component';
+import { DataTableComponent, type SortState } from '../../shared/ui/data-table.component';
+import { PaginationComponent } from '../../shared/ui/pagination.component';
+import { BadgeComponent, type BadgeTone } from '../../shared/ui/badge.component';
+import { SkeletonComponent } from '../../shared/ui/skeleton.component';
+import { EmptyStateComponent, ErrorStateComponent } from '../../shared/ui/states.component';
+import { DateRangeComponent } from '../../shared/ui/date-range.component';
+import { StIconComponent } from '../../shared/ui/icon.component';
+import type {
+  ApplicationQueueQuery,
+  ApplicationQueueRow,
+  ApplicationStatus,
+} from '../../core/api-models';
+
+/**
+ * Column key → backend sort property. The queue sorts SERVER-side; the
+ * backend additionally whitelists properties, so unknown keys are dropped
+ * (it then falls back to createdAt DESC).
+ */
+const SORT_PROPERTY: Record<string, string> = {
+  reference: 'reference',
+  candidateName: 'candidate.lastName',
+  universityName: 'candidate.university.name',
+  status: 'status',
+  calculatedType: 'calculatedType',
+  submissionDate: 'submissionDate',
+};
+
+/**
+ * Staff application queue (AGENTS.md §5.2). Pagination, search, filters and
+ * sort run server-side on `GET /api/applications/manage`; the client renders
+ * exactly one page. Scope (Admin: all, Supervisor: own candidates) is derived
+ * by the backend and never sent from here. The university list feeding the
+ * filter comes from the scoped candidate list.
+ */
+@Component({
+  selector: 'st-applications',
+  standalone: true,
+  imports: [
+    FormsModule,
+    RouterLink,
+    LiveStatusComponent,
+    PageHeaderComponent,
+    DataTableComponent,
+    PaginationComponent,
+    BadgeComponent,
+    SkeletonComponent,
+    EmptyStateComponent,
+    ErrorStateComponent,
+    DateRangeComponent,
+    StIconComponent,
+  ],
+  template: `
+    <st-page-header
+      [title]="i18n.t('applications.queueTitle')"
+      [subtitle]="i18n.t('applications.queueSubtitle')"
+    >
+      <st-live-status />
+      @if (canReview()) {
+        <a routerLink="/applications/new" class="st-btn st-btn--primary">
+          <st-icon name="plus" [size]="15" /> {{ i18n.t('applications.newManual') }}
+        </a>
+      }
+    </st-page-header>
+
+    <section class="st-filters" [attr.aria-label]="i18n.t('table.filters')">
+      <label class="st-field st-field--grow">
+        <span class="st-field__label">{{ i18n.t('table.search') }}</span>
+        <input
+          type="search"
+          class="st-input"
+          [(ngModel)]="search"
+          (keyup.enter)="onFilter()"
+          [placeholder]="i18n.t('applications.searchPlaceholder')"
+          dir="auto"
+        />
+      </label>
+      <label class="st-field">
+        <span class="st-field__label">{{ i18n.t('table.status') }}</span>
+        <select class="st-input" [(ngModel)]="status" (change)="onFilter()">
+          <option value="">{{ i18n.t('table.all') }}</option>
+          @for (s of statuses; track s) {
+            <option [value]="s">{{ s }}</option>
+          }
+        </select>
+      </label>
+
+      <st-date-range (apply)="onDates($event)" (reset)="onDates({ from: '', to: '' })" />
+    </section>
+
+    @if (error()) {
+      <st-error-state
+        [title]="i18n.t('common.error.title')"
+        [body]="serverMessage() || i18n.t('common.error.body')"
+        [retryLabel]="i18n.t('common.retry')"
+        (retry)="load()"
+      />
+    } @else if (loading()) {
+      <st-skeleton [rows]="8" />
+    } @else if (rows().length === 0) {
+      <st-empty-state [title]="i18n.t('common.empty.title')" [body]="i18n.t('common.empty.body')" />
+    } @else {
+      <st-data-table
+        [columns]="columns"
+        [sort]="sort()"
+        [hasActions]="true"
+        (sortChange)="onSort($event)"
+      >
+        @for (row of rows(); track row.id) {
+          <tr>
+            <td dir="ltr">
+              <a [routerLink]="['/applications', row.id]" class="st-ref">{{ row.reference }}</a>
+            </td>
+            <td dir="auto">{{ row.candidateName }}</td>
+            <td dir="auto" data-priority="medium">{{ row.universityName || '—' }}</td>
+            <td><st-badge [label]="row.status" [tone]="tone(row.status)" /></td>
+            <td data-priority="low">{{ row.calculatedType ?? '—' }}</td>
+            <td data-priority="low">
+              <st-badge
+                [label]="
+                  row.submittedOnline
+                    ? i18n.t('applications.online')
+                    : i18n.t('applications.manual')
+                "
+                tone="neutral"
+              />
+            </td>
+            <td data-priority="low" dir="ltr">
+              {{ (row.submissionDate ?? '').slice(0, 10) || '—' }}
+            </td>
+            <td>
+              <button type="button" class="st-btn st-btn--text" (click)="open(row.id)">
+                {{ i18n.t('common.view') }}
+              </button>
+            </td>
+          </tr>
+        }
+      </st-data-table>
+      <st-pagination
+        [page]="page()"
+        [size]="size()"
+        [totalPages]="totalPages()"
+        (prev)="setPage(page() - 1)"
+        (next)="setPage(page() + 1)"
+        (sizeChange)="size.set($event); setPage(0)"
+      />
+    }
+  `,
+  styles: [
+    `
+      .st-filters {
+        display: flex;
+        gap: 0.6rem;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        background: var(--bg-surface);
+        border: 1px solid var(--border-subtle);
+        border-radius: 0.7rem;
+        padding: 0.8rem;
+        margin-block-end: 0.8rem;
+      }
+      .st-field--grow {
+        flex: 1;
+        min-inline-size: 12rem;
+      }
+      .st-ref {
+        font-weight: 600;
+        color: var(--action-primary);
+        text-decoration: none;
+      }
+      .st-ref:hover {
+        text-decoration: underline;
+      }
+    `,
+  ],
+})
+export class ApplicationsComponent implements OnInit, OnDestroy {
+  readonly i18n = inject(I18nService);
+  readonly auth = inject(AuthService);
+  private readonly crumbs = inject(BreadcrumbService);
+  private readonly api = inject(ApiClient);
+  private readonly realtime = inject(RealtimeService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly store = inject(ApplicationQueueStore);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+
+  readonly columns = [
+    { key: 'reference', label: 'Reference', sortable: true, priority: 'high' as const },
+    { key: 'candidateName', label: 'Candidate', sortable: true, priority: 'high' as const },
+    { key: 'universityName', label: 'University', sortable: true, priority: 'medium' as const },
+    { key: 'status', label: 'Status', sortable: true, priority: 'high' as const },
+    { key: 'calculatedType', label: 'Type', sortable: false, priority: 'low' as const },
+    { key: 'source', label: 'Source', sortable: false, priority: 'low' as const },
+    { key: 'submissionDate', label: 'Submitted', sortable: true, priority: 'low' as const },
+  ];
+  /** Explicit statuses only (AGENTS.md §4) — no ACCEPTED / NEEDS_CORRECTION. */
+  readonly statuses: readonly ApplicationStatus[] = [
+    'DRAFT',
+    'SUBMITTED',
+    'UNDER_REVIEW',
+    'MODIFICATION_REQUESTED',
+    'RESUBMITTED',
+    'APPROVED',
+    'REJECTED',
+    'WITHDRAWN',
+  ];
+
+  readonly loading = signal(true);
+  readonly error = signal(false);
+  readonly serverMessage = signal('');
+  /** The current server-side page — never the whole list. */
+  readonly rows = signal<readonly ApplicationQueueRow[]>([]);
+  readonly totalElements = signal(0);
+  readonly totalPages = signal(1);
+  readonly search = signal('');
+  readonly status = signal('');
+  readonly page = signal(0);
+  readonly size = signal(20);
+  readonly sort = signal<SortState | null>({ key: 'submissionDate', direction: 'desc' });
+  private dates = { from: '', to: '' };
+
+  canReview(): boolean {
+    return this.auth.hasPermission('APPLICATION_REVIEW');
+  }
+
+  ngOnDestroy(): void {}
+
+  ngOnInit(): void {
+    this.crumbs.set([
+      { labelKey: 'nav.section.operations', labelFallback: 'Operations' },
+      { labelKey: 'nav.applications', labelFallback: 'Applications' },
+    ]);
+    const saved = this.store.get();
+    this.search.set(saved.search);
+    this.status.set(saved.status);
+    this.page.set(saved.page);
+    this.size.set(saved.size);
+    this.sort.set({ key: saved.sortKey, direction: saved.sortDirection });
+    this.dates = { from: saved.from, to: saved.to };
+    // Dashboard drill-down wins over preserved state: /applications?status=MODIFICATION_REQUESTED
+    const preset = this.route.snapshot.queryParamMap.get('status');
+    if (preset && this.statuses.includes(preset as ApplicationStatus)) {
+      this.status.set(preset);
+      this.page.set(0);
+    }
+    this.load();
+    this.realtime.applicationUpdates$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.load());
+  }
+
+  onFilter(): void {
+    this.page.set(0);
+    this.persist();
+    this.load();
+  }
+
+  onDates(range: { from: string; to: string }): void {
+    this.dates = range;
+    this.page.set(0);
+    this.persist();
+    this.load();
+  }
+
+  onSort(sort: SortState): void {
+    this.sort.set(sort);
+    this.page.set(0);
+    this.persist();
+    this.load();
+  }
+
+  setPage(page: number): void {
+    this.page.set(Math.max(0, page));
+    this.persist();
+    this.load();
+  }
+
+  open(id: string): void {
+    this.persist();
+    void this.router.navigate(['/applications', id]);
+  }
+
+  /** One server round-trip per page/filter change — the backend does the rest. */
+  load(): void {
+    this.loading.set(true);
+    this.error.set(false);
+    this.serverMessage.set('');
+    const sort = this.sort();
+    const property = sort ? SORT_PROPERTY[sort.key] : undefined;
+    const query: ApplicationQueueQuery = {
+      page: this.page(),
+      size: this.size(),
+      sort: property ? `${property},${sort?.direction ?? 'desc'}` : undefined,
+      q: this.search().trim() || undefined,
+      status: (this.status() || undefined) as ApplicationStatus | undefined,
+      from: this.dates.from || undefined,
+      to: this.dates.to || undefined,
+    };
+    this.api.searchApplications(query).subscribe({
+      next: (queue) => {
+        this.rows.set(queue.content);
+        this.totalElements.set(queue.totalElements);
+        this.totalPages.set(Math.max(1, queue.totalPages));
+        this.loading.set(false);
+      },
+      error: (e: unknown) => {
+        this.error.set(true);
+        this.serverMessage.set(userMessage(e));
+        this.loading.set(false);
+      },
+    });
+  }
+
+  private persist(): void {
+    this.store.set({
+      search: this.search(),
+      status: this.status(),
+      from: this.dates.from,
+      to: this.dates.to,
+      page: this.page(),
+      size: this.size(),
+      sortKey: this.sort()?.key ?? 'submissionDate',
+      sortDirection: this.sort()?.direction ?? 'desc',
+    });
+  }
+
+  tone(status: string): BadgeTone {
+    switch (status) {
+      case 'APPROVED':
+        return 'success';
+      case 'REJECTED':
+      case 'WITHDRAWN':
+        return 'error';
+      case 'MODIFICATION_REQUESTED':
+      case 'DRAFT':
+        return 'warning';
+      case 'UNDER_REVIEW':
+      case 'SUBMITTED':
+      case 'RESUBMITTED':
+        return 'info';
+      default:
+        return 'neutral';
+    }
+  }
+}
+
+function userMessage(error: unknown): string {
+  if (typeof error === 'object' && error !== null && 'error' in error) {
+    const envelope = (error as { error?: { message?: string } }).error;
+    if (envelope?.message) return envelope.message;
+  }
+  return '';
+}

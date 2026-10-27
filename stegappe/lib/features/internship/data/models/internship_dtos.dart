@@ -1,0 +1,765 @@
+import '../../../../core/network/api_exception.dart';
+import '../../domain/entities/evaluation.dart';
+import '../../domain/entities/internship.dart';
+import '../../domain/dashboard.dart';
+import '../../domain/entities/logbook.dart';
+import '../../domain/entities/task_classification.dart';
+import '../../domain/entities/supervisor_tasks.dart';
+import '../../domain/entities/task_drafts.dart';
+import '../../domain/entities/work_items.dart';
+
+DateTime? _date(dynamic v) {
+  if (v == null) return null;
+  if (v is String && v.isNotEmpty) return DateTime.tryParse(v);
+  return null;
+}
+
+DateTime _dateOrNow(dynamic v) => _date(v) ?? DateTime.now();
+
+String _str(dynamic v, [String fallback = '']) => v is String ? v : fallback;
+
+String _ymd(DateTime d) =>
+    '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+Internship internshipFromJson(Map<String, dynamic> json) => Internship(
+  id: _str(json['id']),
+  reference: _str(json['reference']),
+  startDate: _dateOrNow(json['startDate']),
+  endDate: _dateOrNow(json['endDate']),
+  status: internshipStatusFrom(json['status'] as String?),
+  type: internshipTypeFrom(json['type'] as String?),
+  requirement: _str(json['requirement']),
+  paymentEligible: json['paymentEligible'] == true,
+  subject: json['subject'] as String?,
+  candidateFullName: json['candidateFullName'] as String?,
+);
+
+InternshipAssignment assignmentFromJson(Map<String, dynamic> json) =>
+    InternshipAssignment(
+      id: _str(json['id']),
+      departmentName: _str(json['departmentName']),
+      supervisorName: _str(json['supervisorName']),
+      status: _str(json['status']),
+      startDate: _date(json['startDate']),
+      endDate: _date(json['endDate']),
+    );
+
+/// `TaskResponse` → domain. Every field the board needs is read from the
+/// authoritative contract: status (all six values), the denial reason
+/// (`reviewReason`, BR-12), the review timestamp and the authorship ids that
+/// decide whether the student may edit the task (BR-14).
+InternTask taskFromJson(Map<String, dynamic> json) => InternTask(
+  id: _str(json['id']),
+  title: _str(json['title']),
+  description: json['description'] as String?,
+  status: taskStatusFrom(json['status'] as String?),
+  dueDate: _date(json['dueDate']),
+  completedAt: _date(json['completedAt']),
+  createdById: json['createdById']?.toString(),
+  assignedToId: json['assignedToId']?.toString(),
+  reviewReason: json['reviewReason'] as String?,
+  reviewedAt: _date(json['reviewedAt']),
+  // T04/D8: absolute server instant (ISO-8601); absent/null = immediate.
+  visibleFrom: _date(json['visibleFrom']),
+);
+
+/// Parses one T12/B2 supervised-internship row. Period dates are NOT NULL
+/// server-side (`internships.start_date/end_date`); a row without them is a
+/// contract violation and throws instead of rendering a fabricated bar.
+SupervisedIntern supervisedInternFromJson(Map<String, dynamic> json) {
+  final start = _date(json['startDate']);
+  final end = _date(json['endDate']);
+  if (start == null || end == null) {
+    throw const FormatException('supervised internship without period dates');
+  }
+  return SupervisedIntern(
+    internshipId: _str(json['internshipId']),
+    reference: _str(json['reference']),
+    internName: (json['internName'] as String?)?.trim().isNotEmpty == true
+        ? (json['internName'] as String).trim()
+        : '—',
+    status: internshipStatusFrom(json['status'] as String?),
+    type: internshipTypeFrom(json['type'] as String?),
+    startDate: DateTime(start.year, start.month, start.day),
+    endDate: DateTime(end.year, end.month, end.day),
+    departmentName:
+        (json['departmentName'] as String?)?.trim().isNotEmpty == true
+        ? (json['departmentName'] as String).trim()
+        : '—',
+    tasksCompleted: (json['tasksCompleted'] as num?)?.toInt() ?? 0,
+    tasksTotal: (json['tasksTotal'] as num?)?.toInt() ?? 0,
+    pendingJournal: (json['pendingJournal'] as num?)?.toInt() ?? 0,
+    submittedJournal: (json['submittedJournal'] as num?)?.toInt() ?? 0,
+    pendingDeliverables: (json['pendingDeliverables'] as num?)?.toInt() ?? 0,
+    evaluationsCount: (json['evaluationsCount'] as num?)?.toInt() ?? 0,
+  );
+}
+
+/// Parses the T13/B13 one-call home snapshot. Every section reuses the item
+/// parser of its list screen, so home rows are byte-identical to list rows;
+/// totals are authoritative server values (never recomputed here). Sections
+/// accept both the nested page shape (`{content: [...]}`) and bare lists.
+InternshipSummary internshipSummaryFromJson(Map<String, dynamic> json) {
+  List<T> section<T>(String key, T Function(Map<String, dynamic>) parse) {
+    final node = json[key];
+    if (node is List) {
+      return [
+        for (final e in node)
+          if (e is Map<String, dynamic>) parse(e),
+      ];
+    }
+    if (node is Map<String, dynamic>) {
+      final content = node['content'];
+      if (content is List) {
+        return [
+          for (final e in content)
+            if (e is Map<String, dynamic>) parse(e),
+        ];
+      }
+    }
+    return const [];
+  }
+
+  int total(String key) => (json[key] as num?)?.toInt() ?? 0;
+
+  final assignments = section('assignments', assignmentFromJson);
+  return InternshipSummary(
+    internship: internshipFromJson(
+      (json['internship'] as Map?)?.cast<String, dynamic>() ?? {},
+    ),
+    assignments: assignments,
+    tasks: section('tasks', taskFromJson),
+    tasksCompletedTotal: total('tasksCompletedTotal'),
+    tasksGrandTotal: total('tasksGrandTotal'),
+    journal: section('journal', journalFromJson),
+    pendingJournalTotal: total('pendingJournalTotal'),
+    journalValidatedTotal: total('journalValidatedTotal'),
+    deliverables: section('deliverables', deliverableFromJson),
+    deliverablesTotal: total('deliverablesTotal'),
+    evaluations: section('evaluations', evaluationFromJson),
+    notifications: section('notifications', notificationFromJson),
+  );
+}
+
+JournalEntry journalFromJson(Map<String, dynamic> json) => JournalEntry(
+  id: _str(json['id']),
+  title: _str(json['title']),
+  description: json['description'] as String?,
+  status: journalStatusFrom(json['status'] as String?),
+  entryDate: _dateOrNow(json['entryDate']),
+  validatedByName: json['validatedByName'] as String?,
+  submittedAt: _date(json['submittedAt']),
+  validatedAt: _date(json['validatedAt']),
+);
+
+DeliverableSummary deliverableFromJson(Map<String, dynamic> json) =>
+    DeliverableSummary(
+      id: _str(json['id']),
+      title: _str(json['title']),
+      status: deliverableStatusFrom(json['status'] as String?),
+      currentVersion: (json['currentVersion'] as num?)?.toInt() ?? 1,
+    );
+
+EvaluationSummary evaluationFromJson(Map<String, dynamic> json) =>
+    EvaluationSummary(
+      id: _str(json['id']),
+      type: _str(json['type']),
+      evaluationDate: _dateOrNow(json['evaluationDate']),
+      totalScore: (json['totalScore'] as num?)?.toDouble(),
+      feedback: json['feedback'] as String?,
+    );
+
+DeliverableVersionInfo deliverableVersionFromJson(Map<String, dynamic> json) =>
+    DeliverableVersionInfo(
+      id: _str(json['id']),
+      versionNumber: (json['versionNumber'] as num?)?.toInt() ?? 1,
+      fileName: _str(json['fileName']),
+      mimeType: _str(json['mimeType']),
+      size: (json['size'] as num?)?.toInt() ?? 0,
+      uploadedByEmail: _str(json['uploadedByEmail']),
+      changeSummary: json['changeSummary'] as String?,
+      uploadedAt: _dateOrNow(json['uploadedAt']),
+    );
+
+/// T09/B5 — `GET /api/internships/{id}/journal-eligibility`. Every business
+/// fact (window, remaining days, ratio) is the server's.
+JournalEligibility journalEligibilityFromJson(Map<String, dynamic> json) =>
+    JournalEligibility(
+      eligible: json['eligible'] == true,
+      opensAt: _date(json['opensAt']),
+      closesAt: _date(json['closesAt']),
+      reason: _str(json['reason']),
+      daysUntilOpen: (json['daysUntilOpen'] as num?)?.toInt() ?? 0,
+      windowDays: (json['windowDays'] as num?)?.toInt() ?? 0,
+      taskCount: (json['taskCount'] as num?)?.toInt() ?? 0,
+      approvedTasks: (json['approvedTasks'] as num?)?.toInt() ?? 0,
+      belowThreshold: json['belowThreshold'] == true,
+    );
+
+/// T09/B6 — the journal generation response (created DRAFT deliverable + the
+/// task facts the student was warned about).
+JournalGenerationResult journalGenerationFromJson(Map<String, dynamic> json) {
+  final deliverable =
+      (json['deliverable'] as Map?)?.cast<String, dynamic>() ?? const {};
+  final latest =
+      (deliverable['latestVersion'] as Map?)?.cast<String, dynamic>() ??
+      const {};
+  return JournalGenerationResult(
+    deliverableId: _str(deliverable['id']),
+    title: _str(deliverable['title']),
+    status: deliverableStatusFrom(deliverable['status'] as String?),
+    currentVersion: (deliverable['currentVersion'] as num?)?.toInt() ?? 1,
+    fileName: _str(latest['fileName']),
+    source: _str(json['source']),
+    taskCount: (json['taskCount'] as num?)?.toInt() ?? 0,
+    approvedTasks: (json['approvedTasks'] as num?)?.toInt() ?? 0,
+    belowThreshold: json['belowThreshold'] == true,
+    replacedDraft: json['replacedDraft'] == true,
+    previousSubmitted: json['previousSubmitted'] == true,
+  );
+}
+
+JournalEntriesResult journalEntriesFromJson(Map<String, dynamic> json) {
+  final deliverable =
+      (json['deliverable'] as Map?)?.cast<String, dynamic>() ?? const {};
+  final latest =
+      (deliverable['latestVersion'] as Map?)?.cast<String, dynamic>() ??
+      const {};
+  return JournalEntriesResult(
+    deliverableId: _str(deliverable['id']),
+    title: _str(deliverable['title']),
+    status: deliverableStatusFrom(deliverable['status'] as String?),
+    currentVersion: (deliverable['currentVersion'] as num?)?.toInt() ?? 1,
+    fileName: _str(latest['fileName']),
+    source: _str(json['source']),
+    entryCount: (json['entryCount'] as num?)?.toInt() ?? 0,
+    dayCount: (json['dayCount'] as num?)?.toInt() ?? 0,
+    firstDate: _str(json['firstDate']),
+    lastDate: _str(json['lastDate']),
+    pageCount: (json['pageCount'] as num?)?.toInt() ?? 0,
+    replacedDraft: json['replacedDraft'] == true,
+    previousSubmitted: json['previousSubmitted'] == true,
+  );
+}
+
+DeliverableDetail deliverableDetailFromJson(
+  Map<String, dynamic> json, [
+  List<DeliverableVersionInfo> versions = const [],
+]) => DeliverableDetail(
+  id: _str(json['id']),
+  title: _str(json['title']),
+  description: json['description'] as String?,
+  status: deliverableStatusFrom(json['status'] as String?),
+  currentVersion: (json['currentVersion'] as num?)?.toInt() ?? 1,
+  internshipId: json['internshipId'] as String?,
+  documentKind: json['documentKind'] as String?,
+  submittedAt: _date(json['submittedAt']),
+  validatedAt: _date(json['validatedAt']),
+  validatedByName: json['validatedByName'] as String?,
+  versions: versions,
+);
+
+/// T10/B7 — `GET /api/internships/{id}/submission-window`. Every business
+/// fact (open flag, dates, reason, days) is the server's (BR-22).
+SubmissionWindow submissionWindowFromJson(Map<String, dynamic> json) =>
+    SubmissionWindow(
+      open: json['open'] == true,
+      opensAt: _date(json['opensAt']),
+      closesAt: _date(json['closesAt']),
+      reason: _str(json['reason']),
+      daysUntilOpen: (json['daysUntilOpen'] as num?)?.toInt() ?? 0,
+      windowDays: (json['windowDays'] as num?)?.toInt() ?? 0,
+    );
+
+AppNotification notificationFromJson(Map<String, dynamic> json) =>
+    AppNotification(
+      id: _str(json['id']),
+      title: _str(json['title']),
+      message: _str(json['message']),
+      priority: _str(json['priority'], 'NORMAL'),
+      createdAt: _dateOrNow(json['createdAt']),
+      isRead: json['read'] == true,
+    );
+
+JournalComment journalCommentFromJson(Map<String, dynamic> json) =>
+    JournalComment(
+      id: _str(json['id']),
+      content: _str(json['content']),
+      authorEmail: _str(json['authorEmail']),
+      createdAt: _date(json['createdAt']) ?? DateTime.now(),
+    );
+
+/// Parses the server-authoritative LogbookResponse.
+LogbookState logbookFromJson(Map<String, dynamic> json) => LogbookState(
+  id: _str(json['id']),
+  internshipId: _str(json['internshipId']),
+  status: LogbookStatus.fromApi(json['status'] as String?),
+  draftText: json['draftText'] as String?,
+  finalText: json['finalText'] as String?,
+  submittedById: json['submittedById'] as String?,
+  submittedAt: _date(json['submittedAt']),
+  validatedById: json['validatedById'] as String?,
+  validatedAt: _date(json['validatedAt']),
+  rejectionReason: json['rejectionReason'] as String?,
+  createdAt: _date(json['createdAt']),
+  updatedAt: _date(json['updatedAt']),
+);
+
+/// Parses the intern-assistant answer from AiAnalysisResultResponse.
+///
+/// The authoritative field is `responseText` (backend
+/// `AiAnalysisResultResponse.responseText`; the sibling logbook parser
+/// above reads the same key). There is no `displayText` in the contract —
+/// a body carrying only `displayText` is rejected so a renamed field can
+/// never silently render as "unavailable" again (T11 regression guard).
+/// Backend marker written into `analysis.outputSummary` when the AI provider
+/// could not answer (`AiService.queryInternAssistant`: `AI_UNAVAILABLE: …`).
+/// The 200 envelope then carries a provider-facing sentence in
+/// `responseText`; it is a degradation notice, not an answer.
+const String kAssistantUnavailableMarker = 'AI_UNAVAILABLE';
+
+/// Parses the assistant envelope `{analysis, recommendations, responseText}`.
+///
+/// A degraded envelope is surfaced as a typed failure (mapped to the
+/// localized "AI unavailable" sentence, retryable) instead of being rendered
+/// as the assistant's answer: the raw provider error must never reach the
+/// UI, and the degraded text is not localized for the caller's language.
+String assistantAnswerFromJson(Map<String, dynamic> json) {
+  final analysis = (json['analysis'] as Map?)?.cast<String, dynamic>();
+  final summary = analysis?['outputSummary'];
+  if (summary is String && summary.startsWith(kAssistantUnavailableMarker)) {
+    throw const ApiException(
+      kind: ApiErrorKind.unknown,
+      message: 'The AI service is unavailable.',
+      code: 'AI_UNAVAILABLE',
+    );
+  }
+  final text = json['responseText'];
+  if (text is String && text.trim().isNotEmpty) return text;
+  throw const FormatException('empty assistant answer');
+}
+
+/// Parses AiAnalysisResultResponse (LOGBOOK_GENERATION).
+LogbookDraft logbookDraftFromJson(Map<String, dynamic> json) {
+  final analysis =
+      (json['analysis'] as Map?)?.cast<String, dynamic>() ??
+      const <String, dynamic>{};
+  final recs = <String>[];
+  final rawRecs = json['recommendations'];
+  if (rawRecs is List) {
+    for (final e in rawRecs) {
+      if (e is Map<String, dynamic>) {
+        final text = (e['recommendationText'] ?? '').toString();
+        if (text.isNotEmpty) recs.add(text);
+      }
+    }
+  }
+  return LogbookDraft(
+    analysisId: _str(analysis['id']),
+    analysisType: _str(analysis['type'], 'LOGBOOK_GENERATION'),
+    modelUsed: _str(analysis['modelUsed']),
+    cinExcluded: analysis['cinExcluded'] != false,
+    createdAt: _dateOrNow(analysis['createdAt']),
+    draftText: (json['responseText'] ?? '').toString(),
+    recommendations: recs,
+  );
+}
+
+EvaluationTemplate templateFromJson(Map<String, dynamic> json) =>
+    EvaluationTemplate(
+      id: _str(json['id']),
+      name: _str(json['name']),
+      description: json['description'] as String?,
+      active: json['active'] != false,
+    );
+
+EvaluationCriterion criterionFromJson(Map<String, dynamic> json) =>
+    EvaluationCriterion(
+      id: _str(json['id']),
+      templateId: _str(json['templateId']),
+      name: _str(json['name']),
+      description: json['description'] as String?,
+      weight: (json['weight'] as num?)?.toDouble() ?? 0,
+      maxScore: (json['maxScore'] as num?)?.toDouble() ?? 0,
+    );
+
+EvaluationScore evalScoreFromJson(Map<String, dynamic> json) => EvaluationScore(
+  criterionId: _str(json['criterionId']),
+  criterionName: _str(json['criterionName']),
+  score: (json['score'] as num?)?.toDouble() ?? 0,
+  maxScore: (json['maxScore'] as num?)?.toDouble() ?? 0,
+  weight: (json['weight'] as num?)?.toDouble() ?? 0,
+  comment: json['comment'] as String?,
+);
+
+EvaluationTaskReview taskReviewFromJson(Map<String, dynamic> json) =>
+    EvaluationTaskReview(
+      taskId: _str(json['taskId']),
+      taskTitle: _str(json['taskTitle']),
+      completed: json['completed'] == true,
+      score: (json['score'] as num?)?.toDouble(),
+      comment: json['comment'] as String?,
+    );
+
+/// Write payloads mirror EvaluationRequest / EvaluationScoreRequest /
+/// EvaluationTaskReviewRequest.
+Map<String, dynamic> evaluationWriteJson({
+  String? templateId,
+  required EvaluationKind kind,
+  required DateTime date,
+  String? feedback,
+}) {
+  final map = <String, dynamic>{
+    'type': evaluationKindToApi(kind),
+    'evaluationDate': _ymd(date),
+  };
+  if (templateId != null) map['templateId'] = templateId;
+  if (feedback != null && feedback.isNotEmpty) {
+    map['feedback'] = feedback;
+  }
+  return map;
+}
+
+Map<String, dynamic> scoreWriteJson({
+  required String criterionId,
+  required double score,
+  String? comment,
+}) {
+  final map = <String, dynamic>{'criterionId': criterionId, 'score': score};
+  if (comment != null && comment.isNotEmpty) {
+    map['comment'] = comment;
+  }
+  return map;
+}
+
+Map<String, dynamic> taskReviewWriteJson({
+  required String taskId,
+  required bool completed,
+  double? score,
+  String? comment,
+}) {
+  final map = <String, dynamic>{'taskId': taskId, 'completed': completed};
+  if (score != null) map['score'] = score;
+  if (comment != null && comment.isNotEmpty) {
+    map['comment'] = comment;
+  }
+  return map;
+}
+
+/// Minimal PRIVATE-conversation projection for internship-id discovery.
+class ConversationLink {
+  const ConversationLink({required this.type, this.internshipId});
+
+  final String type;
+  final String? internshipId;
+
+  factory ConversationLink.fromJson(Map<String, dynamic> json) =>
+      ConversationLink(
+        type: _str(json['type']),
+        internshipId: json['internshipId'] as String?,
+      );
+}
+
+int unreadCountFromJson(Map<String, dynamic> json) =>
+    (json['unreadCount'] as num?)?.toInt() ?? 0;
+
+/// Write payloads mirror TaskRequest / JournalEntryRequest.
+Map<String, dynamic> taskWriteJson({
+  required String title,
+  String? description,
+  DateTime? dueDate,
+  TaskStatus? status,
+  DateTime? visibleFrom,
+}) {
+  final map = <String, dynamic>{'title': title};
+  if (description != null) map['description'] = description;
+  if (dueDate != null) map['dueDate'] = _ymd(dueDate);
+  if (status != null) {
+    final api = taskStatusToApi(status);
+    // `unknown` is not a backend value: never send it.
+    if (api != null) map['status'] = api;
+  }
+  // T04/D8: absolute UTC instant (ISO-8601); the server validates it against
+  // the internship period. Null on update = leave unchanged.
+  if (visibleFrom != null) {
+    map['visibleFrom'] = visibleFrom.toUtc().toIso8601String();
+  }
+  return map;
+}
+
+Map<String, dynamic> journalWriteJson({
+  required String title,
+  required String description,
+  required DateTime entryDate,
+}) => {
+  'title': title,
+  'description': description,
+  'entryDate': _ymd(entryDate),
+};
+
+// --- T03 task classification (student-defined categories + AI proposals) ---
+
+TaskCategory taskCategoryFromJson(Map<String, dynamic> json) => TaskCategory(
+  id: _str(json['id']),
+  name: _str(json['name']),
+  // Unknown future colour tokens survive verbatim (tolerant parse);
+  // the chip renderer falls back to the default swatch.
+  colorToken: json['color'] as String?,
+  position: (json['position'] as num?)?.toInt() ?? 0,
+);
+
+/// `TaskCategoryBoardResponse`: categories + task→category assignments.
+/// Malformed category rows are skipped (never a crash); malformed
+/// assignment pairs are ignored (never trusted blindly).
+ClassificationBoard classificationBoardFromJson(dynamic json) {
+  if (json is! Map<String, dynamic>) return ClassificationBoard.empty;
+  final rawCats = json['categories'];
+  final categories = <TaskCategory>[];
+  if (rawCats is List) {
+    for (final e in rawCats) {
+      if (e is! Map<String, dynamic>) continue;
+      final cat = taskCategoryFromJson(e);
+      if (cat.id.isEmpty || cat.name.trim().isEmpty) continue;
+      categories.add(cat);
+    }
+  }
+  final assignments = <String, String>{};
+  final rawAssign = json['assignments'];
+  if (rawAssign is Map) {
+    rawAssign.forEach((k, v) {
+      final taskId = k.toString();
+      final catId = v?.toString() ?? '';
+      if (taskId.isNotEmpty && catId.isNotEmpty) {
+        assignments[taskId] = catId;
+      }
+    });
+  }
+  return ClassificationBoard(categories: categories, assignments: assignments);
+}
+
+/// `CategoryProposalResponse`: tolerant — a proposal without a task id is
+/// dropped; confidence outside 0..1 is clamped.
+CategoryProposal? categoryProposalFromJson(dynamic json) {
+  if (json is! Map<String, dynamic>) return null;
+  final taskId = json['taskId']?.toString() ?? '';
+  if (taskId.isEmpty) return null;
+  final categoryId = json['categoryId']?.toString();
+  final newName = json['newCategoryName'] as String?;
+  final rawConfidence = json['confidence'];
+  double confidence = 0.5;
+  if (rawConfidence is num) {
+    confidence = rawConfidence.toDouble().clamp(0.0, 1.0);
+  }
+  return CategoryProposal(
+    taskId: taskId,
+    categoryId: (categoryId == null || categoryId.isEmpty) ? null : categoryId,
+    newCategoryName: (newName == null || newName.trim().isEmpty)
+        ? null
+        : newName.trim(),
+    confidence: confidence,
+  );
+}
+
+List<CategoryProposal> categoryProposalsFromJson(dynamic json) {
+  final raw = json is Map<String, dynamic> ? json['proposals'] : null;
+  if (raw is! List) return const [];
+  final out = <CategoryProposal>[];
+  for (final e in raw) {
+    final p = categoryProposalFromJson(e);
+    if (p != null) out.add(p);
+  }
+  return out;
+}
+
+List<ApplyCategoryResult> applyResultsFromJson(dynamic json) {
+  final raw = json is Map<String, dynamic> ? json['items'] : null;
+  if (raw is! List) return const [];
+  return [
+    for (final e in raw)
+      if (e is Map<String, dynamic> &&
+          (e['taskId']?.toString() ?? '').isNotEmpty)
+        ApplyCategoryResult(
+          taskId: e['taskId'].toString(),
+          status: (e['status']?.toString() ?? 'UNKNOWN').toUpperCase(),
+          categoryId: e['categoryId']?.toString(),
+        ),
+  ];
+}
+
+Map<String, dynamic> assignCategoryJson({
+  String? categoryId,
+  String? expectedCategoryId,
+  bool force = false,
+}) => {
+  'categoryId': categoryId,
+  'expectedCategoryId': expectedCategoryId,
+  'force': force,
+};
+
+Map<String, dynamic> applyItemJson({
+  required String taskId,
+  String? categoryId,
+  String? newCategoryName,
+  String? expectedCategoryId,
+}) {
+  final map = <String, dynamic>{
+    'taskId': taskId,
+    'expectedCategoryId': expectedCategoryId,
+  };
+  if (categoryId != null) map['categoryId'] = categoryId;
+  if (newCategoryName != null) map['newCategoryName'] = newCategoryName;
+  return map;
+}
+
+// --- T04 supervisor review + bulk ---
+
+/// `POST .../tasks/{id}/review` body: approve, or deny with a required
+/// comment (the backend refuses a blank denial with REVIEW_REASON_REQUIRED).
+Map<String, dynamic> taskReviewJson({required bool approve, String? comment}) {
+  final map = <String, dynamic>{'approve': approve};
+  if (comment != null) map['comment'] = comment;
+  return map;
+}
+
+/// One `BulkTaskMutation`: action + targets + the task payload. Only CREATE
+/// carries `internshipId`; UPDATE/DELETE carry `taskId`.
+Map<String, dynamic> bulkMutationJson({
+  required String action,
+  String? internshipId,
+  String? taskId,
+  Map<String, dynamic>? task,
+}) {
+  final map = <String, dynamic>{'action': action};
+  if (internshipId != null) map['internshipId'] = internshipId;
+  if (taskId != null) map['taskId'] = taskId;
+  if (task != null) map['task'] = task;
+  return map;
+}
+
+SupervisorBulkItem _bulkItemFromJson(Map<String, dynamic> json) =>
+    SupervisorBulkItem(
+      index: (json['index'] as num?)?.toInt() ?? 0,
+      action: (json['action']?.toString() ?? '').toUpperCase(),
+      taskId: json['taskId']?.toString(),
+      internshipId: json['internshipId']?.toString(),
+      status: (json['status']?.toString() ?? 'UNKNOWN').toUpperCase(),
+    );
+
+/// `BulkTaskResponse`: per-item entries in request order + deleted count.
+SupervisorBulkResult supervisorBulkResultFromJson(dynamic json) {
+  if (json is! Map<String, dynamic>) return const SupervisorBulkResult();
+  final raw = json['items'];
+  final items = <SupervisorBulkItem>[];
+  if (raw is List) {
+    for (final e in raw) {
+      if (e is Map<String, dynamic>) items.add(_bulkItemFromJson(e));
+    }
+  }
+  items.sort((a, b) => a.index.compareTo(b.index));
+  return SupervisorBulkResult(
+    items: items,
+    deletedCount: (json['deletedCount'] as num?)?.toInt() ?? 0,
+  );
+}
+
+// --- T05 supervisor AI task drafts (proposals, never real tasks) ---
+
+/// `TaskDraftResponse` → domain. Tolerant: a row without id/title is
+/// dropped by the list parser, never a crash.
+TaskDraft? taskDraftFromJson(dynamic json) {
+  if (json is! Map<String, dynamic>) return null;
+  final id = json['id']?.toString() ?? '';
+  final title = (json['title'] as String?)?.trim() ?? '';
+  if (id.isEmpty || title.isEmpty) return null;
+  final rawDue = json['dueDate'];
+  DateTime? due;
+  if (rawDue is String && rawDue.isNotEmpty) {
+    // Backend sends yyyy-MM-dd; DateTime parses it as UTC midnight.
+    due = DateTime.tryParse(rawDue);
+  }
+  return TaskDraft(
+    id: id,
+    referenceInternshipId: json['referenceInternshipId']?.toString() ?? '',
+    title: title,
+    description: json['description'] as String?,
+    dueDate: due,
+    createdAt: _date(json['createdAt']),
+  );
+}
+
+List<TaskDraft> taskDraftListFromJson(dynamic json) {
+  if (json is! List) return const [];
+  final out = <TaskDraft>[];
+  for (final e in json) {
+    final d = taskDraftFromJson(e);
+    if (d != null) out.add(d);
+  }
+  return out;
+}
+
+Map<String, dynamic> manualDraftJson({
+  required String referenceInternshipId,
+  required String title,
+  String? description,
+  DateTime? dueDate,
+}) {
+  final map = <String, dynamic>{
+    'referenceInternshipId': referenceInternshipId,
+    'title': title,
+  };
+  if (description != null) map['description'] = description;
+  if (dueDate != null) map['dueDate'] = _ymd(dueDate);
+  return map;
+}
+
+Map<String, dynamic> updateDraftJson({
+  String? title,
+  String? description,
+  DateTime? dueDate,
+}) {
+  final map = <String, dynamic>{};
+  if (title != null) map['title'] = title;
+  if (description != null) map['description'] = description;
+  if (dueDate != null) map['dueDate'] = _ymd(dueDate);
+  return map;
+}
+
+DraftBulkItem _draftBulkItemFromJson(Map<String, dynamic> json) =>
+    DraftBulkItem(
+      index: (json['index'] as num?)?.toInt() ?? 0,
+      draftId: json['draftId']?.toString() ?? '',
+      internshipId: json['internshipId']?.toString() ?? '',
+      taskId: json['taskId']?.toString(),
+      status: (json['status']?.toString() ?? 'UNKNOWN').toUpperCase(),
+    );
+
+/// `BulkAddDraftsResponse`: per-pair entries in request order.
+DraftBulkResult draftBulkResultFromJson(dynamic json) {
+  final raw = json is Map<String, dynamic> ? json['items'] : null;
+  if (raw is! List) return const DraftBulkResult();
+  final items = <DraftBulkItem>[];
+  for (final e in raw) {
+    if (e is Map<String, dynamic> &&
+        (e['draftId']?.toString() ?? '').isNotEmpty) {
+      items.add(_draftBulkItemFromJson(e));
+    }
+  }
+  items.sort((a, b) => a.index.compareTo(b.index));
+  return DraftBulkResult(items: items);
+}
+
+Map<String, dynamic> bulkAddDraftsJson({
+  required List<String> draftIds,
+  required List<String> internshipIds,
+  DateTime? visibleFrom,
+}) {
+  final map = <String, dynamic>{
+    'draftIds': draftIds,
+    'internshipIds': internshipIds,
+  };
+  // T05/D8 optional batch schedule (T04 rule, validated per target).
+  if (visibleFrom != null) {
+    map['visibleFrom'] = visibleFrom.toUtc().toIso8601String();
+  }
+  return map;
+}

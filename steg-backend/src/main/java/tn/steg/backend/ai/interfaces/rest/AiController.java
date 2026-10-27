@@ -1,0 +1,79 @@
+package tn.steg.backend.ai.interfaces.rest;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
+import tn.steg.backend.ai.application.AiService;
+import tn.steg.backend.ai.application.dto.AiAnalysisResultResponse;
+import tn.steg.backend.ai.application.dto.AiRecommendationResponse;
+import tn.steg.backend.ai.application.dto.AiRecommendationReviewRequest;
+import tn.steg.backend.ai.application.dto.CandidateAssistantQueryRequest;
+import tn.steg.backend.common.domain.annotation.RateLimited;
+import tn.steg.backend.common.domain.model.UserPrincipal;
+
+import java.util.UUID;
+
+@RestController
+@RequestMapping("/api/ai")
+@RequiredArgsConstructor
+@Tag(name = "AI Assistance", description = "Endpoints for advisory AI analysis, candidate Q&A, and recommendation review")
+public class AiController {
+
+    private final AiService aiService;
+
+    @PostMapping("/applications/{id}/analyze")
+    @PreAuthorize("hasRole('ADMIN')")
+    @RateLimited(name = "ai-analyze", limit = 20, windowSeconds = 60)
+    @Operation(summary = "Analyze application documents (Advisory, staff-triggered)")
+    public ResponseEntity<AiAnalysisResultResponse> analyzeApplication(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UserPrincipal actor) {
+        return ResponseEntity.ok(aiService.analyzeApplication(id, actor));
+    }
+
+    @PostMapping("/finance-cases/{id}/analyze")
+    @PreAuthorize("hasRole('ADMIN')")
+    @RateLimited(name = "ai-finance-analyze", limit = 20, windowSeconds = 60)
+    @Operation(summary = "Analyze finance case dossier (Advisory, FINANCE-role only)")
+    public ResponseEntity<AiAnalysisResultResponse> analyzeFinanceCase(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UserPrincipal actor) {
+        return ResponseEntity.ok(aiService.analyzeFinanceCase(id, actor));
+    }
+
+    @PostMapping("/internships/{id}/logbook/generate")
+    @PreAuthorize("hasRole('ADMIN') or @authz.isParticipantOf(#id)")
+    @RateLimited(name = "ai-logbook-generate", limit = 10, windowSeconds = 60)
+    @Operation(summary = "Generate draft logbook based on journal, tasks, and deliverables (Intern/Supervisor)")
+    public ResponseEntity<AiAnalysisResultResponse> generateLogbook(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UserPrincipal actor) {
+        return ResponseEntity.ok(aiService.generateLogbookDraft(id, actor));
+    }
+
+    @PostMapping("/assistant/query")
+    @PreAuthorize("hasAnyRole('CANDIDATE', 'INTERN', 'SUPERVISOR', 'ADMIN')")
+    @RateLimited(name = "ai-assistant", limit = 20, windowSeconds = 60)
+    @Operation(summary = "Virtual assistant Q&A (role-scoped: candidate/intern context, supervisor assignments, staff aggregates)")
+    public ResponseEntity<AiAnalysisResultResponse> queryAssistant(
+            @Valid @RequestBody CandidateAssistantQueryRequest request,
+            @AuthenticationPrincipal UserPrincipal actor) {
+        return ResponseEntity.ok(aiService.queryCandidateAssistant(request, actor));
+    }
+
+    @PostMapping("/recommendations/{id}/review")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPERVISOR')")
+    @RateLimited(name = "ai-review", limit = 20, windowSeconds = 60)
+    @Operation(summary = "Review AI recommendation (Human marks ACCEPTED_BY_HUMAN or DISMISSED for traceability)")
+    public ResponseEntity<AiRecommendationResponse> reviewRecommendation(
+            @PathVariable UUID id,
+            @Valid @RequestBody AiRecommendationReviewRequest request,
+            @AuthenticationPrincipal UserPrincipal actor) {
+        return ResponseEntity.ok(aiService.reviewRecommendation(id, request, actor));
+    }
+}

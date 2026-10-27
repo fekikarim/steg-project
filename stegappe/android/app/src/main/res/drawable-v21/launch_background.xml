@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  API 21+ variant of the branded launch screen. Kept byte-identical to
+  drawable/launch_background.xml so the first frame looks the same on every
+  supported device (minSdk 24).
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/steg_navy" />
+    <item
+        android:width="220dp"
+        android:height="60dp"
+        android:gravity="center">
+        <bitmap
+            android:gravity="fill"
+            android:src="@drawable/launch_logo" />
+    </item>
+</layer-list>

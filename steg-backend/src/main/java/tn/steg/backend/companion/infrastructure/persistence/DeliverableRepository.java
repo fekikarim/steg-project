@@ -1,0 +1,16 @@
+package tn.steg.backend.companion.infrastructure.persistence;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+import tn.steg.backend.companion.domain.model.Deliverable;
+
+import java.util.List;
+import java.util.UUID;
+
+@Repository
+public interface DeliverableRepository extends JpaRepository<Deliverable, UUID>, tn.steg.backend.companion.domain.repository.DeliverableRepository {
+    List<Deliverable> findByInternshipId(UUID internshipId);
+    Page<Deliverable> findByInternshipId(UUID internshipId, Pageable pageable);
+}

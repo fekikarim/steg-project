@@ -1,0 +1,314 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import '../../support/queue_harness.dart';
+import 'package:stegappe/core/connectivity/connectivity_service.dart';
+import 'package:stegappe/core/l10n/app_localizations.dart';
+import 'package:stegappe/core/network/api_exception.dart';
+import 'package:stegappe/core/theme/steg_theme.dart';
+import 'package:stegappe/features/auth/domain/entities/app_user.dart';
+import 'package:stegappe/features/auth/domain/repositories/auth_repository.dart';
+import 'package:stegappe/features/auth/presentation/providers/auth_providers.dart';
+import 'package:stegappe/features/internship/presentation/providers/workspace_providers.dart';
+import 'package:stegappe/features/internship/presentation/screens/intern_home_screen.dart';
+import 'package:stegappe/features/internship/presentation/screens/task_list_screen.dart';
+import 'package:stegappe/features/internship/presentation/screens/timeline_screen.dart';
+import 'package:stegappe/features/internship/presentation/widgets/status_labels.dart';
+import 'package:stegappe/features/internship/domain/entities/work_items.dart';
+
+import '../../test_fixtures.dart';
+
+const _intern = AppUser(id: 'u1', email: 'intern@u.tn', roles: ['INTERN']);
+
+class _FakeAuthRepo implements AuthRepository {
+  @override
+  Future<AppUser> login({required String email, required String password}) =>
+      throw UnimplementedError();
+  @override
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {}
+  @override
+  Future<void> logout() async {}
+  @override
+  Future<bool> refreshSession() async => true;
+  @override
+  Future<AppUser?> restoreSession() async => _intern;
+}
+
+Future<void> pumpWorkspace(
+  WidgetTester tester,
+  Widget page, {
+  FakeInternshipRepository? fake,
+  bool online = true,
+  Locale locale = const Locale('fr'),
+  List<Override> extra = const [],
+  Size? surfaceSize,
+}) async {
+  final repo = fake ?? FakeInternshipRepository();
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        authRepositoryProvider.overrideWithValue(_FakeAuthRepo()),
+        internshipRepositoryProvider.overrideWithValue(repo),
+        isOnlineProvider.overrideWith((ref) => online),
+        await queueOverride(),
+        ...extra,
+      ],
+      child: MaterialApp(
+        locale: locale,
+        supportedLocales: StegLocales.supported,
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        theme: StegTheme.light(),
+        home: Scaffold(body: page),
+      ),
+    ),
+  );
+  if (surfaceSize != null) {
+    tester.view.physicalSize = surfaceSize;
+    tester.view.devicePixelRatio = 1.0;
+  }
+  final ctx = tester.element(find.byType(Scaffold).first);
+  await ProviderScope.containerOf(ctx)
+      .read(authControllerProvider.notifier)
+      .bootstrap();
+  await tester.pumpAndSettle();
+}
+
+void main() {
+  group('Intern dashboard (acceptance)', () {
+    testWidgets('shows today, progress, journal, deliverables, notifications', (
+      tester,
+    ) async {
+      await pumpWorkspace(tester, const InternHomeScreen(user: _intern));
+
+      // "What should I do?"
+      expect(find.text('Aujourd’hui'), findsWidgets);
+      expect(find.text('Today task'), findsOneWidget);
+      expect(find.text('Overdue task'), findsOneWidget);
+      // "How am I progressing?"
+      expect(find.text('Ma progression'), findsOneWidget);
+      expect(find.text('Tâches accomplies'), findsOneWidget);
+      // "What did I do?"
+      expect(find.textContaining('Journal en attente'), findsOneWidget);
+      expect(find.text('Livrables'), findsOneWidget);
+      expect(find.text('Notifications (1)'), findsOneWidget);
+      // Backend-derived identity: the internal reference is deliberately not
+      // a home chip any more (back-office bookkeeping — the profile screen
+      // keeps it), so the identity row is the localized internship type.
+      final l10n = const AppLocalizations(Locale('fr'));
+      final internship = fixtureDashboard(DateTime.now()).internship;
+      expect(find.text(internshipTypeLabel(internship.type, l10n)),
+          findsOneWidget);
+      expect(find.textContaining('DSI'), findsOneWidget);
+    });
+
+    testWidgets('no linked internship shows honest empty state', (
+      tester,
+    ) async {
+      final fake = FakeInternshipRepository()..noInternship = true;
+      await pumpWorkspace(
+        tester,
+        const InternHomeScreen(user: _intern),
+        fake: fake,
+      );
+      expect(find.text('Aucun stage lié pour le moment'), findsOneWidget);
+    });
+
+    testWidgets('offline with cache shows stale notice, not blank', (
+      tester,
+    ) async {
+      final data = fixtureDashboard(DateTime.now());
+      await pumpWorkspace(
+        tester,
+        const InternHomeScreen(user: _intern),
+        online: false,
+        extra: [
+          dashboardProvider.overrideWith((ref) {
+            throw ApiException.network();
+          }),
+          lastDashboardProvider.overrideWith((ref) => data),
+        ],
+      );
+      expect(
+        find.text('Données hors ligne — peuvent être obsolètes.'),
+        findsOneWidget,
+      );
+      // The cached snapshot still carries the backend identity (department +
+      // supervisor line); the reference is no longer a home chip.
+      expect(find.textContaining('DSI'), findsOneWidget);
+    });
+
+    testWidgets('arabic dashboard is genuinely RTL', (tester) async {
+      await pumpWorkspace(
+        tester,
+        const InternHomeScreen(user: _intern),
+        locale: const Locale('ar'),
+      );
+      final ctx = tester.element(find.byType(InternHomeScreen));
+      expect(Directionality.of(ctx), TextDirection.rtl);
+      expect(find.text('اليوم'), findsWidgets);
+      expect(find.text('المهام المنجزة'), findsOneWidget);
+    });
+
+    testWidgets('timeline shows phase and backend milestones', (tester) async {
+      await pumpWorkspace(tester, const TimelineScreen());
+      expect(find.text('Chronologie du stage'), findsOneWidget);
+      expect(find.text('Stage en cours'), findsOneWidget);
+      expect(find.text('Début du stage'), findsOneWidget);
+      expect(find.text('Fin du stage'), findsOneWidget);
+      expect(find.textContaining('DSI'), findsOneWidget);
+    });
+  });
+
+  group('Task list', () {
+    testWidgets('renders filter chips and tasks', (tester) async {
+      await pumpWorkspace(tester, const TaskListScreen());
+      expect(find.text('Toutes'), findsOneWidget);
+      // 'À faire' labels both the filter chip and open-task status chips.
+      expect(find.text('À faire'), findsWidgets);
+      expect(find.text('En cours'), findsWidgets);
+      // 'Terminées' labels the filter chip AND the board's done-group header.
+      expect(find.text('Terminées'), findsWidgets);
+      expect(find.text('Today task'), findsOneWidget);
+    });
+
+    testWidgets('live search narrows the board while typing (no submit)',
+        (tester) async {
+      await pumpWorkspace(
+        tester,
+        const TaskListScreen(),
+        surfaceSize: const Size(800, 1200),
+      );
+      expect(find.text('Today task'), findsOneWidget);
+      expect(find.text('Week task'), findsOneWidget);
+
+      // Typing filters immediately (debounced): the search key is never used.
+      await tester.enterText(find.byType(TextField).first, 'Week');
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Week task'), findsOneWidget);
+      expect(find.text('Today task'), findsNothing);
+    });
+
+    testWidgets('clearing the search restores every task', (tester) async {
+      await pumpWorkspace(
+        tester,
+        const TaskListScreen(),
+        surfaceSize: const Size(800, 1200),
+      );
+      await tester.enterText(find.byType(TextField).first, 'Week');
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pumpAndSettle();
+      expect(find.text('Today task'), findsNothing);
+
+      await tester.tap(find.byTooltip('Effacer la recherche'));
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Today task'), findsOneWidget);
+      expect(find.text('Week task'), findsOneWidget);
+    });
+
+    testWidgets('a refresh keeps the rows on screen instead of a full spinner',
+        (tester) async {
+      final fake = FakeInternshipRepository();
+      await pumpWorkspace(
+        tester,
+        const TaskListScreen(),
+        fake: fake,
+        surfaceSize: const Size(800, 1200),
+      );
+      expect(find.text('Today task'), findsOneWidget);
+
+      // Pull-to-refresh: the board must stay rendered while refetching.
+      await tester.fling(
+        find.text('Today task'),
+        const Offset(0, 300),
+        1000,
+      );
+      await tester.pump();
+      expect(find.text('Today task'), findsOneWidget);
+      await tester.pumpAndSettle();
+      expect(find.text('Today task'), findsOneWidget);
+    });
+
+    testWidgets('the phone board settles and stacks its groups (no duplicate tabs)',
+        (tester) async {
+      // Regression 1: the paged board was a Column with Expanded inside a
+      // CustomScrollView sliver — unbounded height threw on every frame and the
+      // screen never settled.
+      // Regression 2: it also rendered a second row of group tabs
+      // ("To do / In progress / …") that duplicated the status filter above.
+      await pumpWorkspace(
+        tester,
+        const TaskListScreen(),
+        surfaceSize: const Size(400, 800),
+      );
+      // pumpAndSettle inside pumpWorkspace is the assertion: it would time
+      // out on the unbounded-flex loop.
+      expect(tester.takeException(), isNull);
+
+      // The groups are stacked inline, each with its own header…
+      expect(find.text('Week task'), findsOneWidget);
+      expect(find.text('Today task'), findsOneWidget);
+
+      // … and there is no second tab row: the status filter chips are the
+      // only "To do / In progress" row.
+      expect(find.byType(ChoiceChip), findsWidgets);
+      expect(find.widgetWithText(ChoiceChip, 'À faire'), findsOneWidget);
+    });
+
+    testWidgets('filter chip queries the backend with status', (tester) async {
+      final fake = FakeInternshipRepository();
+      // Board uses _columns mode at tablet width — no nested-scroll conflict in
+      // the CustomScrollView (the prior session's board view uses different scroll
+      // directions there).
+      await pumpWorkspace(
+        tester,
+        const TaskListScreen(),
+        fake: fake,
+        surfaceSize: const Size(800, 1200),
+      );
+      // Tap the filter chip specifically — the board's done-group header
+      // carries the same 'Terminées' label. It is off-screen at this surface
+      // size, so bring it into view first.
+      final chip = find.widgetWithText(ChoiceChip, 'Terminées');
+      await tester.ensureVisible(chip);
+      await tester.pumpAndSettle();
+      await tester.tap(chip);
+      await tester.pumpAndSettle();
+      expect(fake.lastStatusFilter?.name, 'approved');
+      expect(find.text('Done task'), findsOneWidget);
+      expect(find.text('Today task'), findsNothing);
+    });
+
+    testWidgets('detail sheet offers server-confirmed transitions', (
+      tester,
+    ) async {
+      final fake = FakeInternshipRepository();
+      await pumpWorkspace(
+        tester,
+        const TaskListScreen(),
+        fake: fake,
+        surfaceSize: const Size(800, 1200),
+      );
+      // Explicit details chevron next to 'Today task' (checkbox taps
+      // must never open the sheet as a side effect).
+      await tester.tap(find.byTooltip('Today task'));
+      await tester.pumpAndSettle();
+      expect(find.text('Envoyer pour validation'), findsOneWidget);
+      await tester.tap(find.text('Envoyer pour validation'));
+      await tester.pumpAndSettle();
+      expect(fake.statusUpdates, contains(('t-today', TaskStatus.awaitingApproval)));
+    });
+  });
+}

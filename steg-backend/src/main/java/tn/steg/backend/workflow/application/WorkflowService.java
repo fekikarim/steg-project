@@ -1,0 +1,423 @@
+package tn.steg.backend.workflow.application;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import tn.steg.backend.application.domain.model.ApplicationStatus;
+import tn.steg.backend.application.domain.model.InternshipApplication;
+import tn.steg.backend.common.domain.event.ApplicationAcceptedEvent;
+import tn.steg.backend.common.domain.event.ApplicationModificationRequestedEvent;
+import tn.steg.backend.common.domain.event.ApplicationRejectedEvent;
+import tn.steg.backend.common.domain.exception.BusinessRuleException;
+import tn.steg.backend.common.domain.exception.InvalidStateTransitionException;
+import tn.steg.backend.common.domain.exception.ResourceNotFoundException;
+import tn.steg.backend.common.domain.model.UserPrincipal;
+import tn.steg.backend.iam.domain.model.User;
+import tn.steg.backend.iam.domain.repository.UserRepository;
+import tn.steg.backend.workflow.application.dto.WorkflowActionResponse;
+import tn.steg.backend.workflow.application.dto.WorkflowInstanceResponse;
+import tn.steg.backend.workflow.application.dto.WorkflowTransitionRequest;
+import tn.steg.backend.workflow.domain.guard.WorkflowTransitionGuard;
+import tn.steg.backend.workflow.domain.model.*;
+import tn.steg.backend.workflow.domain.repository.WorkflowActionRepository;
+import tn.steg.backend.workflow.domain.repository.WorkflowDefinitionRepository;
+import tn.steg.backend.workflow.domain.repository.WorkflowInstanceRepository;
+import tn.steg.backend.workflow.domain.repository.WorkflowStepDefinitionRepository;
+import tn.steg.backend.audit.application.AuditService;
+
+import java.time.Instant;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.UUID;
+import java.util.Map;
+
+/**
+ * Central workflow orchestrator for the Phase A5 engine.
+ * <p>
+ * Responsibilities:
+ * <ul>
+ *   <li>Spawning WorkflowInstances for applications, internships, and payment cases.</li>
+ *   <li>Validating transitions via the appropriate {@link WorkflowTransitionGuard}.</li>
+ *   <li>Recording every transition as a {@link WorkflowAction} (audit trail).</li>
+ *   <li>Propagating resulting state changes back to the business aggregate.</li>
+ * </ul>
+ *
+ * <p>All mutating methods are wrapped in a single transaction to guarantee
+ * that the WorkflowAction and the aggregate status change are atomic.</p>
+ */
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class WorkflowService {
+
+    private static final String DEF_CODE_APPLICATION = "application-review";
+    private static final String DEF_CODE_INTERNSHIP  = "internship-lifecycle";
+    private static final String DEF_CODE_PAYMENT     = "payment-approval";
+
+    private final WorkflowDefinitionRepository       definitionRepository;
+    private final WorkflowStepDefinitionRepository   stepRepository;
+    private final WorkflowInstanceRepository         instanceRepository;
+    private final WorkflowActionRepository           actionRepository;
+    private final UserRepository                     userRepository;
+    private final AuditService                       auditService;
+
+    /** Business facts for cross-cutting concerns (notifications); the workflow
+     * module never depends on those consumers (Phase A10). */
+    private final ApplicationEventPublisher          eventPublisher;
+
+    /** All registered guards — Spring injects every bean implementing this interface. */
+    @SuppressWarnings("rawtypes")
+    private final List<WorkflowTransitionGuard> guards;
+
+    // =========================================================================
+    // Instance spawning
+    // =========================================================================
+
+    /**
+     * Creates and persists a new ApplicationWorkflowInstance for the given application.
+     * Sets the initial step to SUBMITTED and marks the instance as RUNNING.
+     */
+    @Transactional
+    public ApplicationWorkflowInstance spawnApplicationWorkflow(InternshipApplication application) {
+        WorkflowDefinition def = requireDefinition(DEF_CODE_APPLICATION);
+        WorkflowStepDefinition initialStep = requireStep(def.getId(), "SUBMITTED");
+
+        ApplicationWorkflowInstance instance = new ApplicationWorkflowInstance(def, application);
+        instance.setCurrentStep(initialStep);
+        instance.setStatus(WorkflowStatus.RUNNING);
+
+        instance = (ApplicationWorkflowInstance) instanceRepository.save(instance);
+        log.info("Spawned ApplicationWorkflowInstance id={} for application ref={}",
+                instance.getId(), application.getReference());
+        return instance;
+    }
+
+    /**
+     * Creates and persists a new PaymentWorkflowInstance for the given finance case.
+     * Sets the initial step to CASE_OPENED and marks the instance as RUNNING.
+     */
+    @Transactional
+    public PaymentWorkflowInstance spawnPaymentWorkflow(tn.steg.backend.finance.domain.model.FinanceCase financeCase) {
+        WorkflowDefinition def = requireDefinition(DEF_CODE_PAYMENT);
+        WorkflowStepDefinition initialStep = requireStep(def.getId(), "CASE_OPENED");
+
+        PaymentWorkflowInstance instance = new PaymentWorkflowInstance(def, financeCase);
+        instance.setCurrentStep(initialStep);
+        instance.setStatus(WorkflowStatus.RUNNING);
+
+        instance = (PaymentWorkflowInstance) instanceRepository.save(instance);
+        log.info("Spawned PaymentWorkflowInstance id={} for finance case ref={}",
+                instance.getId(), financeCase.getReference());
+        return instance;
+    }
+
+    /**
+     * Executes a workflow transition on an ApplicationWorkflowInstance.
+     * <p>
+     * Steps:
+     * <ol>
+     *   <li>Load the workflow instance linked to the given application ID.</li>
+     *   <li>Find the target WorkflowStepDefinition by code.</li>
+     *   <li>Validate the transition via {@link WorkflowTransitionGuard}.</li>
+     *   <li>Advance the aggregate status to match the workflow step.</li>
+     *   <li>Persist a {@link WorkflowAction} record (audit trail).</li>
+     *   <li>Update instance.currentStep and close instance if terminal step reached.</li>
+     * </ol>
+     *
+     * @param applicationId the UUID of the InternshipApplication
+     * @param request       transition parameters (target step, action type, decision, comment)
+     * @param actor         the authenticated user performing the action
+     * @return the recorded WorkflowAction as a DTO
+     */
+    @Transactional
+    public WorkflowActionResponse transitionApplication(UUID applicationId,
+                                                        WorkflowTransitionRequest request,
+                                                        UserPrincipal actor) {
+        ApplicationWorkflowInstance instance = instanceRepository
+                .findApplicationInstanceByApplicationId(applicationId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "No active workflow found for application: " + applicationId));
+
+        WorkflowStepDefinition targetStep = requireStep(instance.getDefinition().getId(), request.targetStepCode());
+        User performer = requireUser(actor.getId());
+
+        // Guard validation (throws BusinessRuleException on illegal transitions)
+        resolveGuard(ApplicationWorkflowInstance.class).validateTransition(instance, request.targetStepCode(),
+                request.actionType(), request.decision());
+
+        // Apply aggregate state change
+        applyApplicationStatusTransition(instance.getApplication(), request.targetStepCode(), request.decision(), request.comment());
+
+        // Advance workflow state
+        instance.setCurrentStep(targetStep);
+        if (isTerminalApplicationStep(request.targetStepCode(), request.decision())) {
+            instance.setStatus(WorkflowStatus.COMPLETED);
+            instance.setCompletedAt(Instant.now());
+        }
+        instanceRepository.save(instance);
+
+        // Record action
+        WorkflowAction action = persistAction(instance, targetStep, performer, request);
+        log.info("ApplicationWorkflow transition: appId={} → step={} decision={} by actor={}",
+                applicationId, request.targetStepCode(), request.decision(), actor.getId());
+
+        auditApplicationTransition(applicationId, request, action, actor);
+
+        // Phase A10: notify the candidate on final accept/reject (consumed
+        // AFTER_COMMIT, so no alert fires if this transaction rolls back).
+        if ("FINAL_DECISION".equalsIgnoreCase(request.targetStepCode())) {
+            InternshipApplication decided = instance.getApplication();
+            UUID candidateUserId = decided.getCandidate().getUser().getId();
+            if (request.decision() == ApprovalDecision.APPROVED) {
+                eventPublisher.publishEvent(new ApplicationAcceptedEvent(
+                        decided.getId(), decided.getReference(), candidateUserId, actor.getId()));
+            } else if (request.decision() == ApprovalDecision.REJECTED) {
+                eventPublisher.publishEvent(new ApplicationRejectedEvent(
+                        decided.getId(), decided.getReference(), candidateUserId, actor.getId(), request.comment()));
+            } else if (request.decision() == ApprovalDecision.MODIFICATION_REQUESTED) {
+                // §5.2: the candidate is informed of the modification request
+                // (front-office status + notification with the required message).
+                eventPublisher.publishEvent(new ApplicationModificationRequestedEvent(
+                        decided.getId(), decided.getReference(), candidateUserId, actor.getId(), request.comment()));
+            }
+        }
+        return WorkflowActionResponse.from(action);
+    }
+
+    /**
+     * Executes a workflow transition on a PaymentWorkflowInstance.
+     *
+     * <p>Phase A11 routes every FinanceCase status change through here so the
+     * payment pipeline keeps the same immutable WorkflowAction history as the
+     * other lifecycles. The FinanceCase status itself is owned by
+     * {@code FinanceService}; this method only advances the workflow instance
+     * and records the action (both in the caller's transaction).
+     *
+     * @param financeCaseId the UUID of the FinanceCase
+     * @param request       transition parameters
+     * @param actor         the authenticated user performing the action
+     * @return the recorded WorkflowAction as a DTO
+     */
+    @Transactional
+    public WorkflowActionResponse transitionPayment(UUID financeCaseId,
+                                                    WorkflowTransitionRequest request,
+                                                    UserPrincipal actor) {
+        PaymentWorkflowInstance instance = instanceRepository
+                .findPaymentInstanceByFinanceCaseId(financeCaseId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "No active workflow found for finance case: " + financeCaseId));
+
+        WorkflowStepDefinition targetStep = requireStep(instance.getDefinition().getId(), request.targetStepCode());
+        User performer = requireUser(actor.getId());
+
+        resolveGuard(PaymentWorkflowInstance.class).validateTransition(instance, request.targetStepCode(),
+                request.actionType(), request.decision());
+
+        instance.setCurrentStep(targetStep);
+        if ("PAYMENT_APPROVED".equalsIgnoreCase(request.targetStepCode())) {
+            instance.setStatus(WorkflowStatus.COMPLETED);
+            instance.setCompletedAt(Instant.now());
+        }
+        instanceRepository.save(instance);
+
+        WorkflowAction action = persistAction(instance, targetStep, performer, request);
+        log.info("PaymentWorkflow transition: financeCaseId={} → step={} decision={} by actor={}",
+                financeCaseId, request.targetStepCode(), request.decision(), actor.getId());
+        return WorkflowActionResponse.from(action);
+    }
+
+    // =========================================================================
+    // Query methods
+    // =========================================================================
+
+    /**
+     * Returns the current workflow state for an application.
+     * IDOR: candidates may only read their own application's state; staff
+     * (ADMIN) may read any. Unknown/other-owned ids yield 404 without
+     * revealing existence (B6 hardening).
+     */
+    @Transactional(readOnly = true)
+    public WorkflowInstanceResponse getApplicationWorkflowState(UUID applicationId, UserPrincipal actor) {
+        ApplicationWorkflowInstance instance = instanceRepository
+                .findApplicationInstanceByApplicationId(applicationId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "No workflow found for application: " + applicationId));
+        if (!actor.hasRole("ADMIN")) {
+            UUID ownerId = instance.getApplication().getCandidate().getUser().getId();
+            if (!ownerId.equals(actor.getId())) {
+                throw new ResourceNotFoundException(
+                        "No workflow found for application: " + applicationId);
+            }
+        }
+        return WorkflowInstanceResponse.from(instance);
+    }
+
+    /**
+     * Returns the current workflow state for a finance case.
+     */
+    @Transactional(readOnly = true)
+    public WorkflowInstanceResponse getPaymentWorkflowState(UUID financeCaseId) {
+        PaymentWorkflowInstance instance = instanceRepository
+                .findPaymentInstanceByFinanceCaseId(financeCaseId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "No workflow found for finance case: " + financeCaseId));
+        return WorkflowInstanceResponse.from(instance);
+    }
+
+    /**
+     * A14 N+1 fix: bulk variant used by the finance-case list view — resolves
+     * payment workflow instance ids for a whole page in one query. Cases without
+     * an instance yet are simply absent from the map (same lenient semantics as
+     * the per-case lookup's catch branch in {@code FinanceService}).
+     */
+    @Transactional(readOnly = true)
+    public Map<UUID, UUID> paymentWorkflowInstanceIdsFor(Collection<UUID> financeCaseIds) {
+        if (financeCaseIds == null || financeCaseIds.isEmpty()) {
+            return Map.of();
+        }
+        Map<UUID, UUID> ids = new HashMap<>();
+        for (PaymentWorkflowInstance instance : instanceRepository.findPaymentInstancesByFinanceCaseIdIn(financeCaseIds)) {
+            if (instance.getFinanceCase() != null) {
+                ids.put(instance.getFinanceCase().getId(), instance.getId());
+            }
+        }
+        return ids;
+    }
+
+    /**
+     * Lists all recorded actions for a given workflow instance (audit trail).
+     */
+    @Transactional(readOnly = true)
+    public List<WorkflowActionResponse> listActions(UUID instanceId) {
+        return actionRepository.findByInstanceIdOrderBySequenceNumberAsc(instanceId)
+                .stream()
+                .map(WorkflowActionResponse::from)
+                .toList();
+    }
+
+    // =========================================================================
+    // Private helpers
+    // =========================================================================
+
+    private WorkflowDefinition requireDefinition(String code) {
+        return definitionRepository.findByCode(code)
+                .orElseThrow(() -> new BusinessRuleException("WORKFLOW_DEFINITION_NOT_FOUND",
+                        "Workflow definition not found for code: " + code));
+    }
+
+    private WorkflowStepDefinition requireStep(UUID definitionId, String code) {
+        return stepRepository.findByDefinitionIdAndCode(definitionId, code)
+                .orElseThrow(() -> new BusinessRuleException("WORKFLOW_STEP_NOT_FOUND",
+                        "Workflow step not found: " + code + " in definition " + definitionId));
+    }
+
+    private User requireUser(UUID userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private <T extends WorkflowInstance> WorkflowTransitionGuard<T> resolveGuard(Class<T> instanceType) {
+        return (WorkflowTransitionGuard<T>) guards.stream()
+                .filter(g -> {
+                    // instantiate a dummy to test supports() won't work — match by generic type
+                    // We rely on the guard's supports() test against the actual class.
+                    // Since we're dispatching by class name here, match guard by name convention.
+                    String guardClassName = g.getClass().getSimpleName();
+                    String instanceSimpleName = instanceType.getSimpleName(); // e.g. "ApplicationWorkflowInstance"
+                    return guardClassName.contains(instanceSimpleName.replace("WorkflowInstance", ""));
+                })
+                .findFirst()
+                .orElseThrow(() -> new BusinessRuleException("WORKFLOW_GUARD_NOT_FOUND",
+                        "No guard registered for type: " + instanceType.getSimpleName()));
+    }
+
+    private WorkflowAction persistAction(WorkflowInstance instance, WorkflowStepDefinition step,
+                                         User performer, WorkflowTransitionRequest request) {
+        long nextSeq = actionRepository.countByInstanceId(instance.getId()) + 1;
+        WorkflowAction action = new WorkflowAction(
+                instance, step, performer,
+                request.actionType(), request.decision(), request.comment(), nextSeq);
+        return actionRepository.save(action);
+    }
+
+    /**
+     * Maps decision-bearing application workflow transitions onto the global
+     * AuditLog (requirement §89: application acceptance/rejection must be
+     * auditable). The immutable WorkflowAction row remains the transition's
+     * authoritative in-workflow record; this entry adds the unified audit trail.
+     */
+    private void auditApplicationTransition(UUID applicationId, WorkflowTransitionRequest request,
+                                            WorkflowAction action, UserPrincipal actor) {
+        String auditAction;
+        if ("FINAL_DECISION".equalsIgnoreCase(request.targetStepCode())
+                && request.decision() == ApprovalDecision.APPROVED) {
+            auditAction = "APPLICATION_ACCEPTED";
+        } else if ("FINAL_DECISION".equalsIgnoreCase(request.targetStepCode())
+                && request.decision() == ApprovalDecision.REJECTED) {
+            auditAction = "APPLICATION_REJECTED";
+        } else if ("FINAL_DECISION".equalsIgnoreCase(request.targetStepCode())
+                && request.decision() == ApprovalDecision.MODIFICATION_REQUESTED) {
+            auditAction = "APPLICATION_MODIFICATION_REQUESTED";
+        } else if ("UNDER_REVIEW".equalsIgnoreCase(request.targetStepCode())) {
+            auditAction = "APPLICATION_UNDER_REVIEW";
+        } else {
+            auditAction = null;
+        }
+        if (auditAction == null) {
+            return;
+        }
+        auditService.log(auditAction, "InternshipApplication", applicationId,
+                Map.of("step", "CURRENT"),
+                Map.of("targetStep", request.targetStepCode(),
+                        "decision", request.decision() != null ? request.decision().name() : "NONE",
+                        "workflowActionId", action.getId()), actor.getId(), null);
+    }
+
+    /**
+     * Applies the business aggregate status change for an application transition.
+     * This is the ONLY place that may directly update InternshipApplication.status from Phase A5+.
+     */
+    private void applyApplicationStatusTransition(InternshipApplication application,
+                                                   String targetStepCode,
+                                                   ApprovalDecision decision,
+                                                   String comment) {
+        switch (targetStepCode.toUpperCase()) {
+            case "UNDER_REVIEW" -> application.setStatus(ApplicationStatus.UNDER_REVIEW);
+            case "FINAL_DECISION" -> {
+                if (decision == ApprovalDecision.APPROVED) {
+                    application.setStatus(ApplicationStatus.APPROVED);
+                } else if (decision == ApprovalDecision.REJECTED) {
+                    if (comment == null || comment.isBlank()) {
+                        throw new InvalidStateTransitionException(
+                                "A non-blank denial reason is required when rejecting an application.");
+                    }
+                    application.setStatus(ApplicationStatus.REJECTED);
+                    application.setRejectionReason(comment);
+                } else if (decision == ApprovalDecision.MODIFICATION_REQUESTED) {
+                    if (comment == null || comment.isBlank()) {
+                        throw new InvalidStateTransitionException(
+                                "A non-blank modification message is required when requesting corrections.");
+                    }
+                    application.setStatus(ApplicationStatus.MODIFICATION_REQUESTED);
+                    application.setCorrectionComment(comment);
+                } else {
+                    throw new BusinessRuleException("INVALID_DECISION",
+                            "A decision (APPROVED/REJECTED/MODIFICATION_REQUESTED) is required for FINAL_DECISION step.");
+                }
+            }
+            default -> throw new BusinessRuleException("UNKNOWN_APPLICATION_STEP",
+                    "Unknown application workflow step: " + targetStepCode);
+        }
+    }
+
+    /**
+     * A FINAL_DECISION step terminates the application workflow instance.
+     */
+    private boolean isTerminalApplicationStep(String stepCode, ApprovalDecision decision) {
+        return "FINAL_DECISION".equalsIgnoreCase(stepCode) && decision != null;
+    }
+}

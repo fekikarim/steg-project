@@ -1,0 +1,50 @@
+name: stegappe
+description: "STEG Smart Internship & Administrative Workflow Platform — Mobile Internship Companion (Flutter)."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.13.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  # State management (single, consistent choice — see docs/DECISIONS.md)
+  flutter_riverpod: ^2.6.1
+  # Networking
+  http: ^1.4.0
+  # Secure token storage (JWT/refresh). Never use SharedPreferences for tokens.
+  flutter_secure_storage: ^9.2.4
+  # Non-sensitive prefs only (locale, theme)
+  shared_preferences: ^2.5.3
+  # Connectivity
+  connectivity_plus: ^6.1.4
+  # Value equality for entities (optional, lightweight)
+  equatable: ^2.0.7
+  intl: ^0.20.2
+  share_plus: ^12.0.2
+  path_provider: ^2.1.6
+  http_parser: ^4.1.2
+  stomp_dart_client: ^3.0.1
+  file_selector: ^1.1.0
+  # Application version/build for the About screen (T14 SH-SET-04).
+  # Chosen over hardcoding (drifts from pubspec) and --dart-define
+  # (needs build wiring on every platform): the canonical Flutter
+  # Community package, no platform setup required for version reads.
+  package_info_plus: ^9.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  mocktail: ^1.0.4
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/logo-steg-1200x327.png
+    - assets/favicon.ico

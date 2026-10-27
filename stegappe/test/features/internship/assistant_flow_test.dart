@@ -1,0 +1,712 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:stegappe/core/connectivity/connectivity_service.dart';
+import 'package:stegappe/core/l10n/app_localizations.dart';
+import 'package:stegappe/core/network/api_exception.dart';
+import 'package:stegappe/core/network/error_messages.dart';
+import 'package:stegappe/core/theme/steg_theme.dart';
+import 'package:stegappe/features/auth/domain/entities/app_user.dart';
+import 'package:stegappe/features/auth/domain/repositories/auth_repository.dart';
+import 'package:stegappe/features/auth/presentation/providers/auth_providers.dart';
+import 'package:stegappe/features/internship/data/cache/assistant_history_store.dart';
+import 'package:stegappe/features/internship/data/models/internship_dtos.dart';
+import 'package:stegappe/features/internship/domain/entities/assistant.dart';
+import 'package:stegappe/features/internship/presentation/providers/assistant_providers.dart';
+import 'package:stegappe/features/internship/presentation/providers/workspace_providers.dart';
+import 'package:stegappe/features/internship/presentation/screens/assistant_screen.dart';
+
+import '../../test_fixtures.dart';
+
+const _intern = AppUser(id: 'u1', email: 'intern@u.tn', roles: ['INTERN']);
+
+class _FakeAuth implements AuthRepository {
+  _FakeAuth(this.user);
+  final AppUser user;
+
+  @override
+  Future<AppUser> login({required String email, required String password}) =>
+      throw UnimplementedError();
+  @override
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {}
+  @override
+  Future<void> logout() async {}
+  @override
+  Future<bool> refreshSession() async => true;
+  @override
+  Future<AppUser?> restoreSession() async => user;
+}
+
+Future<ProviderContainer> makeContainer({
+  FakeInternshipRepository? fake,
+  MemoryAssistantHistoryStore? store,
+  bool online = true,
+  AppUser user = _intern,
+}) async {
+  final container = ProviderContainer(
+    overrides: [
+      authRepositoryProvider.overrideWithValue(_FakeAuth(user)),
+      internshipRepositoryProvider.overrideWithValue(
+          fake ?? FakeInternshipRepository()),
+      assistantHistoryStoreProvider.overrideWithValue(
+          store ?? MemoryAssistantHistoryStore()),
+      assistantControllerProvider
+          .overrideWith((ref) => AssistantController(ref)),
+      isOnlineProvider.overrideWith((ref) => online),
+    ],
+  );
+  addTearDown(container.dispose);
+  await container.read(authControllerProvider.notifier).bootstrap();
+  return container;
+}
+
+Future<({FakeInternshipRepository repo, MemoryAssistantHistoryStore store})>
+    pumpAssistant(
+  WidgetTester tester,
+  Widget page, {
+  FakeInternshipRepository? fake,
+  MemoryAssistantHistoryStore? store,
+  bool online = true,
+  Locale locale = const Locale('fr'),
+}) async {
+  final repo = fake ?? FakeInternshipRepository();
+  final history = store ?? MemoryAssistantHistoryStore();
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        authRepositoryProvider.overrideWithValue(_FakeAuth(_intern)),
+        internshipRepositoryProvider.overrideWithValue(repo),
+        assistantHistoryStoreProvider.overrideWithValue(history),
+        assistantControllerProvider
+            .overrideWith((ref) => AssistantController(ref)),
+        isOnlineProvider.overrideWith((ref) => online),
+      ],
+      child: MaterialApp(
+        locale: locale,
+        supportedLocales: StegLocales.supported,
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        theme: StegTheme.light(),
+        home: Scaffold(body: page),
+      ),
+    ),
+  );
+  final ctx = tester.element(find.byType(Scaffold).first);
+  await ProviderScope.containerOf(ctx)
+      .read(authControllerProvider.notifier)
+      .bootstrap();
+  await tester.pumpAndSettle();
+  return (repo: repo, store: history);
+}
+
+Future<AppLocalizations> loadL10n(String code) =>
+    AppLocalizations.delegate.load(Locale(code));
+
+String _l10nGet(AppLocalizations l10n, String key) => switch (key) {
+      'errAiTemporarilyUnavailable' => l10n.errAiTemporarilyUnavailable,
+      'errAiFormatFailed' => l10n.errAiFormatFailed,
+      'errAiQuotaExceeded' => l10n.errAiQuotaExceeded,
+      _ => throw ArgumentError('unknown key $key'),
+    };
+
+void main() {
+  group('T11 contract: responseText is authoritative', () {
+    test('decodes the backend responseText field', () {
+      expect(
+        assistantAnswerFromJson({
+          'analysis': {'id': 'a'},
+          'recommendations': [],
+          'responseText': 'Voici un résumé.',
+        }),
+        'Voici un résumé.',
+      );
+    });
+
+    test('a displayText-only body is rejected (the T11 regression)', () {
+      // The old client read m['displayText']; the contract never carried
+      // it, so every success rendered as "unavailable". A body without
+      // responseText must throw here — never silently degrade.
+      expect(
+        () => assistantAnswerFromJson({'displayText': 'Bonjour'}),
+        throwsFormatException,
+      );
+    });
+
+    test('blank or absent answers throw instead of rendering empty', () {
+      expect(() => assistantAnswerFromJson({'responseText': '  '}),
+          throwsFormatException);
+      expect(() => assistantAnswerFromJson({'responseText': ''}),
+          throwsFormatException);
+      expect(() => assistantAnswerFromJson({}), throwsFormatException);
+      expect(() => assistantAnswerFromJson({'responseText': 42}),
+          throwsFormatException);
+    });
+
+    test('responseText wins when both keys are present', () {
+      expect(
+        assistantAnswerFromJson(
+            {'responseText': 'real', 'displayText': 'stale'}),
+        'real',
+      );
+    });
+
+    test('a degraded envelope never renders the provider text as an answer',
+        () {
+      // The backend answers 200 with `responseText` = a French-only
+      // "service unavailable: <provider error>" sentence and marks the run
+      // in `analysis.outputSummary` (AiService#queryInternAssistant).
+      // Rendering that as an answer leaks the provider error into an
+      // en/ar UI and makes a failure look like a reply.
+      const degraded = {
+        'analysis': {'id': 'a', 'outputSummary': 'AI_UNAVAILABLE: quota exhausted'},
+        'recommendations': <Object>[],
+        'responseText':
+            "Service d'assistance temporairement indisponible: quota exhausted",
+      };
+      expect(
+        () => assistantAnswerFromJson(degraded),
+        throwsA(isA<ApiException>()
+            .having((e) => e.code, 'code', kCodeAiUnavailable)),
+      );
+    });
+
+    test('the degraded failure maps to its own specific, localized sentence',
+        () async {
+      // Not a single catch-all "AI unavailable": the user is told WHY it
+      // failed, because the causes need different actions.
+      const cases = {
+        kCodeAiUnavailable: null, // -> errAiNotConfigured
+        'AI_TEMPORARILY_UNAVAILABLE': 'errAiTemporarilyUnavailable',
+        'AI_GENERATION_FAILED': 'errAiFormatFailed',
+        'AI_GENERATION_INVALID': 'errAiFormatFailed',
+      };
+      for (final entry in cases.entries) {
+        for (final code in ['fr', 'en', 'ar']) {
+          final l10n = await loadL10n(code);
+          final mapped = userMessageOf(
+            ApiException(
+              kind: ApiErrorKind.unknown,
+              statusCode: 503,
+              code: entry.key,
+              message: 'The AI service is unavailable. quota exhausted',
+            ),
+            l10n,
+          );
+          final expected = entry.value == null
+              ? l10n.errAiNotConfigured
+              : _l10nGet(l10n, entry.value!);
+          expect(mapped, expected, reason: 'code ${entry.key} / $code');
+          // The raw provider sentence never leaks into any locale.
+          expect(mapped, isNot(contains('quota exhausted')));
+          expect(mapped, isNot(contains('AI_')));
+        }
+      }
+    });
+
+    test('a normal answer whose outputSummary holds content still decodes',
+        () {
+      expect(
+        assistantAnswerFromJson({
+          'analysis': {'outputSummary': 'Plan de stage en 3 phases.'},
+          'responseText': 'Plan de stage en 3 phases.',
+        }),
+        'Plan de stage en 3 phases.',
+      );
+    });
+  });
+
+  group('T11 history store: local, bounded, per-user', () {
+    test('round-trips messages for one user only', () async {
+      final store = MemoryAssistantHistoryStore();
+      await store.save('u1', const [
+        AssistantMessage(mine: true, text: 'q'),
+        AssistantMessage(mine: false, text: 'a'),
+      ]);
+      expect(await store.load('u1'), hasLength(2));
+      expect(await store.load('u2'), isEmpty);
+      await store.clear('u1');
+      expect(await store.load('u1'), isEmpty);
+    });
+
+    test('keeps only the newest 100 rows', () async {
+      final store = MemoryAssistantHistoryStore();
+      await store.save('u1', [
+        for (var i = 0; i < 105; i++)
+          AssistantMessage(mine: true, text: 'q$i'),
+      ]);
+      final rows = await store.load('u1');
+      expect(rows, hasLength(100));
+      expect(rows.first.text, 'q5');
+      expect(rows.last.text, 'q104');
+    });
+
+    test('message JSON survives the prefs codec', () {
+      const m = AssistantMessage(mine: false, text: 'a', failed: true);
+      expect(AssistantMessage.fromJson(m.toJson()), m);
+    });
+  });
+
+  group('T11 controller: server-confirmed conversation', () {
+    test('send appends the pair, persists and clears the error', () async {
+      final fake = FakeInternshipRepository();
+      final store = MemoryAssistantHistoryStore();
+      final container =
+          await makeContainer(fake: fake, store: store);
+      final notifier = container.read(assistantControllerProvider.notifier);
+
+      expect(await notifier.send('  Bonjour  '), isTrue);
+      final state = container.read(assistantControllerProvider);
+      expect(state.messages, hasLength(2));
+      expect(state.messages[0].mine, isTrue);
+      expect(state.messages[0].text, 'Bonjour');
+      expect(state.messages[1].text, contains('Bonjour'));
+      expect(state.pending, isFalse);
+      expect(state.error, isNull);
+      expect(fake.askedQuestions, ['Bonjour']);
+      expect(await store.load('u1'), hasLength(2));
+    });
+
+    test('empty text and double-submit never dispatch twice', () async {
+      final fake = FakeInternshipRepository();
+      final container = await makeContainer(fake: fake);
+      final notifier = container.read(assistantControllerProvider.notifier);
+
+      expect(await notifier.send('   '), isFalse);
+      final first = notifier.send('première');
+      expect(await notifier.send('seconde'), isFalse);
+      expect(await first, isTrue);
+      expect(fake.askedQuestions, ['première']);
+    });
+
+    test('failure renders a failed row and keeps the raw error', () async {
+      final fake = FakeInternshipRepository()..failAi = true;
+      final container = await makeContainer(fake: fake);
+      final notifier = container.read(assistantControllerProvider.notifier);
+
+      expect(await notifier.send('aie'), isTrue);
+      final state = container.read(assistantControllerProvider);
+      expect(state.messages, hasLength(2));
+      expect(state.messages[1].failed, isTrue);
+      expect(state.error, isNotNull);
+      // The failed row persists: retry stays possible after a restart.
+      expect(state.messages[1].text, isEmpty);
+    });
+
+    test('retry replaces the failed row with the answer', () async {
+      final fake = FakeInternshipRepository()..failAi = true;
+      final store = MemoryAssistantHistoryStore();
+      final container =
+          await makeContainer(fake: fake, store: store);
+      final notifier = container.read(assistantControllerProvider.notifier);
+
+      await notifier.send('recommence');
+      fake.failAi = false;
+      expect(await notifier.retry(1), isTrue);
+      final state = container.read(assistantControllerProvider);
+      expect(state.messages, hasLength(2));
+      expect(state.messages[1].failed, isFalse);
+      expect(state.messages[1].text, contains('recommence'));
+      expect(fake.askedQuestions, ['recommence', 'recommence']);
+    });
+
+    test('retry rejects nonsense indexes and non-failed rows', () async {
+      final container = await makeContainer();
+      final notifier = container.read(assistantControllerProvider.notifier);
+      await notifier.send('ok');
+      expect(await notifier.retry(99), isFalse);
+      expect(await notifier.retry(0), isFalse); // user row, not failed
+      expect(await notifier.retry(1), isFalse); // succeeded row
+    });
+
+    test('clear wipes memory and the persisted rows', () async {
+      final store = MemoryAssistantHistoryStore();
+      final container = await makeContainer(store: store);
+      final notifier = container.read(assistantControllerProvider.notifier);
+      await notifier.send('salut');
+      await notifier.clear();
+      expect(
+          container.read(assistantControllerProvider).messages, isEmpty);
+      expect(await store.load('u1'), isEmpty);
+    });
+
+    test('restore reloads the persisted conversation', () async {
+      final store = MemoryAssistantHistoryStore();
+      await store.save('u1', const [
+        AssistantMessage(mine: true, text: 'avant'),
+        AssistantMessage(mine: false, text: 'réponse avant'),
+      ]);
+      final container = await makeContainer(store: store);
+      await container.read(assistantControllerProvider.notifier).restore();
+      expect(
+          container.read(assistantControllerProvider).messages, hasLength(2));
+    });
+
+    test('offline send fails honestly without dispatching', () async {
+      final fake = FakeInternshipRepository();
+      final container = await makeContainer(fake: fake, online: false);
+      final notifier = container.read(assistantControllerProvider.notifier);
+
+      expect(await notifier.send('hors ligne'), isFalse);
+      final state = container.read(assistantControllerProvider);
+      expect(state.messages, isEmpty);
+      expect(state.error, isA<ApiException>());
+      expect(
+          (state.error! as ApiException).kind, ApiErrorKind.network);
+      expect(fake.askedQuestions, isEmpty);
+    });
+
+    test('a 404 stays raw for the no-internship empty state', () async {
+      final fake = FakeInternshipRepository()
+        ..assistantError = const ApiException(
+            kind: ApiErrorKind.notFound, message: 'No internship');
+      final container = await makeContainer(fake: fake);
+      final notifier = container.read(assistantControllerProvider.notifier);
+      await notifier.send('où en suis-je ?');
+      final error = container.read(assistantControllerProvider).error;
+      expect(error, isA<ApiException>());
+      expect((error! as ApiException).kind, ApiErrorKind.notFound);
+    });
+  });
+
+  group('T11 screen: honest states, retry, clear, offline', () {
+    testWidgets('empty state then a real answer renders', (tester) async {
+      final l10n = await loadL10n('fr');
+      await pumpAssistant(tester, const AssistantScreen());
+      expect(find.text(l10n.assistantWelcome), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField), 'Bonjour');
+      await tester.tap(find.byTooltip(l10n.assistantSend));
+      await tester.pumpAndSettle();
+      // 'Bonjour' shows as the user's bubble AND as the thread title.
+      expect(find.text('Bonjour'), findsWidgets);
+      expect(find.textContaining('Réponse de test'), findsOneWidget);
+      // The composer clears only after a dispatched send.
+      expect(find.byType(TextField), findsOneWidget);
+    });
+
+    testWidgets('failure shows a failed row with retry, then recovers',
+        (tester) async {
+      final fake = FakeInternshipRepository()..failAi = true;
+      final l10n = await loadL10n('fr');
+      await pumpAssistant(tester, const AssistantScreen(), fake: fake);
+
+      await tester.enterText(find.byType(TextField), 'aie');
+      await tester.tap(find.byTooltip(l10n.assistantSend));
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.assistantUnavailable), findsWidgets);
+      expect(find.text(l10n.retry), findsWidgets);
+
+      fake.failAi = false;
+      await tester.tap(find.text(l10n.retry).first);
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Réponse de test'), findsOneWidget);
+      expect(find.text(l10n.assistantUnavailable), findsNothing);
+    });
+
+    testWidgets('offline disables the composer with an explicit reason',
+        (tester) async {
+      final h = await pumpAssistant(tester, const AssistantScreen(),
+          online: false);
+      final l10n = await loadL10n('fr');
+      expect(find.text(l10n.assistantOffline), findsOneWidget);
+      final send = tester.widget<IconButton>(
+          find.ancestor(
+            of: find.byTooltip(l10n.assistantSend),
+            matching: find.byType(IconButton),
+          ).first);
+      expect(send.onPressed, isNull);
+      expect(h.repo.askedQuestions, isEmpty);
+    });
+
+    testWidgets('clear asks for confirmation and wipes the thread',
+        (tester) async {
+      final h = await pumpAssistant(tester, const AssistantScreen());
+      final l10n = await loadL10n('fr');
+      await tester.enterText(find.byType(TextField), 'salut');
+      await tester.tap(find.byTooltip(l10n.assistantSend));
+      await tester.pumpAndSettle();
+      // Bubble + auto-named thread title.
+      expect(find.text('salut'), findsWidgets);
+
+      await tester.tap(find.byTooltip(l10n.assistantClearTitle));
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.assistantClearMessage), findsOneWidget);
+      await tester.tap(find.text(l10n.assistantClearConfirm));
+      await tester.pumpAndSettle();
+      expect(find.text('salut'), findsNothing);
+      expect(find.text(l10n.assistantWelcome), findsOneWidget);
+      expect(await h.store.load('u1'), isEmpty);
+    });
+
+    testWidgets('no internship renders the dedicated empty state',
+        (tester) async {
+      final fake = FakeInternshipRepository()
+        ..assistantError = const ApiException(
+            kind: ApiErrorKind.notFound, message: 'No internship');
+      final l10n = await loadL10n('fr');
+      await pumpAssistant(tester, const AssistantScreen(), fake: fake);
+      await tester.enterText(find.byType(TextField), 'où en suis-je ?');
+      await tester.tap(find.byTooltip(l10n.assistantSend));
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.assistantNoInternship), findsOneWidget);
+    });
+
+    testWidgets('rate limit surfaces the wait hint, text is kept',
+        (tester) async {
+      final fake = FakeInternshipRepository()
+        ..assistantError =
+            const ApiException(kind: ApiErrorKind.unknown, message: 'slow down', statusCode: 429);
+      final l10n = await loadL10n('fr');
+      await pumpAssistant(tester, const AssistantScreen(), fake: fake);
+      await tester.enterText(find.byType(TextField), 'vite');
+      await tester.tap(find.byTooltip(l10n.assistantSend));
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.errRateLimited), findsOneWidget);
+      // The failed row offers retry; the answer never fabricates.
+      expect(find.text(l10n.retry), findsWidgets);
+    });
+
+    testWidgets('a degraded provider renders the unavailable state, not an answer',
+        (tester) async {
+      final fake = FakeInternshipRepository()
+        ..assistantError = const ApiException(
+            kind: ApiErrorKind.unknown,
+            message: 'The AI service is unavailable.',
+            code: kCodeAiUnavailable);
+      final l10n = await loadL10n('en');
+      await pumpAssistant(tester, const AssistantScreen(),
+          fake: fake, locale: const Locale('en'));
+      await tester.enterText(find.byType(TextField), 'where am I?');
+      await tester.tap(find.byTooltip(l10n.assistantSend));
+      await tester.pumpAndSettle();
+      // Localized banner + a failed row with retry; the French provider
+      // sentence never appears.
+      expect(find.text(l10n.errAiNotConfigured), findsOneWidget);
+      expect(find.text(l10n.assistantUnavailable), findsOneWidget);
+      expect(find.text(l10n.retry), findsWidgets);
+      expect(find.textContaining('indisponible'), findsNothing);
+    });
+
+    testWidgets('arabic renders the thread (RTL smoke)', (tester) async {
+      await pumpAssistant(tester, const AssistantScreen(),
+          locale: const Locale('ar'));
+      final l10n = await loadL10n('ar');
+      await tester.enterText(find.byType(TextField), 'مرحبا');
+      await tester.tap(find.byTooltip(l10n.assistantSend));
+      await tester.pumpAndSettle();
+      // Bubble + auto-named thread title.
+      expect(find.text('مرحبا'), findsWidgets);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('a very long answer renders without overflow', (tester) async {
+      await pumpAssistant(tester, const AssistantScreen());
+      final l10n = await loadL10n('fr');
+      await tester.enterText(find.byType(TextField), 'x' * 2000);
+      await tester.tap(find.byTooltip(l10n.assistantSend));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Réponse de test'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('Chatbot: independent conversations per user', () {
+    test('a first question opens a thread named after it', () async {
+      final container = await makeContainer();
+      await container
+          .read(assistantControllerProvider.notifier)
+          .send('Quels documents sont obligatoires ?');
+
+      final state = container.read(assistantControllerProvider);
+      expect(state.conversations, hasLength(1));
+      expect(state.active, isNotNull);
+      expect(state.active!.title, 'Quels documents sont obligatoires ?');
+      expect(state.messages, hasLength(2));
+    });
+
+    test('"new chat" starts an empty thread without losing the old one',
+        () async {
+      final container = await makeContainer();
+      final notifier = container.read(assistantControllerProvider.notifier);
+
+      await notifier.send('première question');
+      final firstId = container.read(assistantControllerProvider).activeId;
+      expect(firstId, isNotNull);
+
+      await notifier.newConversation();
+      var state = container.read(assistantControllerProvider);
+      expect(state.conversations, hasLength(2));
+      expect(state.messages, isEmpty);
+
+      await notifier.send('deuxième question');
+      state = container.read(assistantControllerProvider);
+      // Two independent threads, each with only its own exchange.
+      expect(state.conversations, hasLength(2));
+      expect(
+        state.conversations.firstWhere((c) => c.id == firstId).messages,
+        hasLength(2),
+      );
+      expect(
+        state.conversations.firstWhere((c) => c.id != firstId).messages,
+        hasLength(2),
+      );
+
+      // Switching back restores the first thread.
+      await notifier.selectConversation(firstId!);
+      expect(container.read(assistantControllerProvider).messages,
+          hasLength(2));
+      expect(container.read(assistantControllerProvider).messages.first.text,
+          'première question');
+    });
+
+    test('deleting the open thread opens the next one, never a dead view',
+        () async {
+      final container = await makeContainer();
+      final notifier = container.read(assistantControllerProvider.notifier);
+      await notifier.send('une');
+      final firstId = container.read(assistantControllerProvider).activeId;
+      await notifier.newConversation();
+      await notifier.send('deux');
+
+      await notifier.deleteConversation(firstId!);
+      final state = container.read(assistantControllerProvider);
+      expect(state.conversations, hasLength(1));
+      expect(state.active, isNotNull);
+      expect(state.active!.messages.first.text, 'deux');
+    });
+
+    test('rename changes the thread title only', () async {
+      final container = await makeContainer();
+      final notifier = container.read(assistantControllerProvider.notifier);
+      await notifier.send('sujet');
+      final id = container.read(assistantControllerProvider).activeId!;
+
+      await notifier.renameConversation(id, '  Révision du journal  ');
+      final c = container
+          .read(assistantControllerProvider)
+          .conversations
+          .firstWhere((c) => c.id == id);
+      expect(c.title, 'Révision du journal');
+      expect(c.messages, hasLength(2)); // messages untouched
+    });
+
+    test('each user sees only their own threads', () async {
+      final store = MemoryAssistantHistoryStore();
+      final alice = await makeContainer(store: store);
+      await alice.read(assistantControllerProvider.notifier).send('alice');
+      expect(alice.read(assistantControllerProvider).conversations, hasLength(1));
+
+      final bob = await makeContainer(
+          store: store, user: const AppUser(
+              id: 'u2', email: 'bob@u.tn', roles: ['INTERN']));
+      await bob.read(assistantControllerProvider.notifier).restore();
+      // Bob starts empty: no cross-user leak.
+      expect(bob.read(assistantControllerProvider).conversations, isEmpty);
+    });
+
+    test('threads survive a restart through the store', () async {
+      final store = MemoryAssistantHistoryStore();
+      final first = await makeContainer(store: store);
+      await first.read(assistantControllerProvider.notifier).send('persistée');
+      final id = first.read(assistantControllerProvider).activeId;
+
+      final second = await makeContainer(store: store);
+      await second.read(assistantControllerProvider.notifier).restore();
+      final restored = second.read(assistantControllerProvider);
+      expect(restored.conversations, hasLength(1));
+      expect(restored.activeId, id);
+      expect(restored.messages, hasLength(2));
+    });
+
+    test('a pre-multi-chat history is migrated, not dropped', () async {
+      final store = MemoryAssistantHistoryStore();
+      // The legacy flat format.
+      await store.save('u1', const [
+        AssistantMessage(mine: true, text: 'ancienne question'),
+        AssistantMessage(mine: false, text: 'ancienne réponse'),
+      ]);
+
+      final container = await makeContainer(store: store);
+      await container.read(assistantControllerProvider.notifier).restore();
+      final state = container.read(assistantControllerProvider);
+      expect(state.conversations, hasLength(1));
+      expect(state.messages, hasLength(2));
+      expect(state.active!.title, 'ancienne question');
+    });
+  });
+
+  group('Chatbot: guidance prompts cover the knowledge base', () {
+    test('starter questions are offered and localized', () async {
+      final l10n = await loadL10n('fr');
+      final questions = assistantStarterQuestions(l10n);
+      expect(questions, hasLength(7));
+      for (final q in questions) {
+        expect(q.trim(), isNotEmpty);
+      }
+      // Distinct, not duplicated copy.
+      expect(questions.toSet(), hasLength(questions.length));
+    });
+
+    testWidgets('a starter chip asks the question', (tester) async {
+      final l10n = await loadL10n('fr');
+      final h = await pumpAssistant(tester, const AssistantScreen());
+      expect(find.text(l10n.assistantAskDocuments), findsOneWidget);
+      await tester.tap(find.text(l10n.assistantAskDocuments));
+      await tester.pumpAndSettle();
+      expect(h.repo.askedQuestions, [l10n.assistantAskDocuments]);
+      expect(find.text(l10n.assistantWelcome), findsNothing);
+    });
+
+    testWidgets('history screen lists threads and can delete one',
+        (tester) async {
+      final l10n = await loadL10n('fr');
+      await pumpAssistant(tester, const AssistantScreen());
+      await tester.enterText(find.byType(TextField), 'sujet un');
+      await tester.tap(find.byTooltip(l10n.assistantSend));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip(l10n.assistantNewChat));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'sujet deux');
+      await tester.tap(find.byTooltip(l10n.assistantSend));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip(l10n.assistantHistory));
+      await tester.pumpAndSettle();
+      expect(find.text('sujet un'), findsOneWidget);
+      expect(find.text('sujet deux'), findsOneWidget);
+
+      // Delete the OLDER thread: the list is newest-first, so it is last.
+      await tester.tap(find.byIcon(Icons.more_vert_outlined).last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.assistantDeleteTitle).last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.assistantDeleteConfirm));
+      await tester.pumpAndSettle();
+
+      expect(find.text('sujet un'), findsNothing);
+      expect(find.text('sujet deux'), findsOneWidget);
+    });
+  });
+
+  group('T11 l10n: new assistant keys', () {
+    test('offline/no-internship/clear keys exist in fr/en/ar', () async {
+      for (final locale in ['fr', 'en', 'ar']) {
+        final l10n = await loadL10n(locale);
+        expect(l10n.assistantOffline.trim(), isNotEmpty);
+        expect(l10n.assistantNoInternship.trim(), isNotEmpty);
+        expect(l10n.assistantClearTitle.trim(), isNotEmpty);
+        expect(l10n.assistantClearMessage.trim(), isNotEmpty);
+        expect(l10n.assistantClearConfirm.trim(), isNotEmpty);
+      }
+    });
+  });
+}

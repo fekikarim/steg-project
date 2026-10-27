@@ -1,0 +1,218 @@
+spring:
+  application:
+    name: steg-backend
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
+  # Unknown /api/* paths must reach the @RestControllerAdvice as
+  # NoHandlerFoundException (clean 404 envelope) instead of failing deeper
+  # with a generic 500.
+  mvc:
+    throw-exception-if-no-handler-found: true
+  web:
+    resources:
+      add-mappings: false
+  messages:
+    basename: messages/messages
+    encoding: UTF-8
+    fallback-to-system-locale: false
+
+  # JPA & Hibernate Defaults
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          batch_size: 25
+        order_inserts: true
+        order_updates: true
+
+  # Flyway Migrations
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+    locations: classpath:db/migration
+
+  # Resend transactional email (used only when notifications.mail.enabled=true).
+  # Credentials come exclusively from environment/secret management and are
+  # never logged (the startup validator only checks presence/shape).
+  # No SMTP — Resend REST API (https://api.resend.com/emails) is used.
+  resend:
+    api-key: ${RESEND_API_KEY:}
+
+  # Multipart upload ceiling. This is a coarse transport guard only: the
+  # authoritative per-DocumentType caps live in DocumentValidationService
+  # (10 MB default, 15 MB demo image, 25 MB internship report). The ceiling
+  # must stay above the largest domain cap so oversized files always reach
+  # domain validation and receive a useful FILE_TOO_LARGE (422/413) error
+  # instead of dying at the servlet layer.
+  servlet:
+    multipart:
+      max-file-size: 25MB
+      max-request-size: 25MB
+
+
+# Management & Observability (Actuator)
+# Phase A13 hardening: only the operations-required endpoints are exposed.
+# Health/probes/info stay reachable by load-balancer probes; metrics and
+# Prometheus carry internal operational detail and are therefore ADMIN-only
+# (enforced in SecurityConfig). All other endpoints (env, configprops, beans,
+# threaddump, heapdump, loggers, shutdown, mappings) remain unexposed.
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      # Liveness = "is this process wedged", never "is a dependency healthy".
+      # The Python AI service is excluded so a degraded AI service cannot make
+      # Docker/orchestrators restart the API and drop everyone's live session;
+      # its real state is reported by the pythonAiService health component and
+      # surfaced in the UI as an explicit generation error.
+      group:
+        liveness:
+          include: livenessState
+        readiness:
+          include: readinessState
+      # "DEGRADED" is an optional dependency that is present but unusable (the
+      # Python AI service). It is ordered BELOW UP on purpose: the aggregate
+      # /actuator/health must stay 200/UP because the core API still serves every
+      # non-AI feature, while the pythonAiService component still reports its
+      # real DEGRADED state to authorized operators. Dropping it to DOWN would
+      # either mark a working API unhealthy or force restarts that kill live
+      # sessions.
+      status:
+        order: down,out-of-service,up,degraded,unknown
+      # Anonymous probes see only the bare status; details require a
+      # successful authentication (authorized) of an ADMIN/ops account.
+      show-details: when_authorized
+      # Only NAME + UP/DOWN per component for authorized ops users; values
+      # are never emitted.
+      show-components: when_authorized
+  health:
+    # Resend connectivity is NOT a serving-readiness dependency of this API
+    # (mailing is fire-and-forget with its own failure handling).
+    mail:
+      enabled: false
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+
+# SpringDoc OpenAPI Documentation
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+    tagsSorter: alpha
+  # Expand Spring Data Pageable into explicit page/size/sort query parameters so
+  # client generators do not have to resolve the framework-level Pageable schema.
+  model-converters:
+    pageable-converter:
+      enabled: true
+    enabled: true
+
+# Custom STEG Platform Properties (Externalized)
+steg:
+  # Application time zone for every calendar-day date-range filter
+  # (candidates, applications, audit, notifications). Default Africa/Tunis.
+  timezone: ${APP_TIMEZONE:Africa/Tunis}
+  security:
+    jwt:
+      issuer: ${JWT_ISSUER:steg-platform}
+      # Centralized token lifetimes (see JwtProperties). The access token is
+      # deliberately short-lived; both clients renew it silently well before
+      # it expires, so its length is NOT the user's session length.
+      access-token-expiration-minutes: ${JWT_ACCESS_EXP_MINUTES:15}
+      refresh-token-expiration-days: ${JWT_REFRESH_EXP_DAYS:7}
+      # Clock drift tolerance: without it a token minted at a boundary is
+      # rejected a second early, which looks like a random logout.
+      clock-skew-seconds: ${JWT_CLOCK_SKEW_SECONDS:60}
+      secret-key: ${STEG_JWT_SECRET}
+    lockout:
+      max-failed-attempts: ${LOCKOUT_MAX_ATTEMPTS:5}
+      duration-minutes: ${LOCKOUT_DURATION_MINUTES:30}
+    malware:
+      # noop (default, dev only) | clamav (production: scan every upload via clamd).
+      # Untrusted uploads must NOT be accepted in production while mode=noop.
+      mode: ${MALWARE_MODE:noop}
+      clamav-host: ${CLAMAV_HOST:127.0.0.1}
+      clamav-port: ${CLAMAV_PORT:3310}
+      timeout-millis: ${MALWARE_TIMEOUT_MILLIS:10000}
+      max-scan-bytes: ${MALWARE_MAX_SCAN_BYTES:26214400}
+      # reject (default, fail-closed) | allow (fail-open emergency degraded mode only).
+      on-error: ${MALWARE_ON_ERROR:reject}
+  storage:
+    provider: ${STORAGE_PROVIDER:local}
+    local-root-path: ${STORAGE_LOCAL_ROOT:./storage/uploads}
+    max-file-size-mb: 25
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:4200}
+  messaging:
+    groups:
+      # retain (default) | revoke — GROUP access once an internship ends.
+      # retain: completed interns keep history/access; only NEW adds need ACTIVE status.
+      # revoke: GROUP access additionally requires current standing (ACTIVE intern
+      #   or staff); ended members lose access but rows/history are preserved.
+      # TODO — STEG VALIDATION REQUIRED: confirm the final value with STEG policy.
+      completed-intern-access: ${GROUPS_COMPLETED_INTERN_ACCESS:retain}
+  notifications:
+    mail:
+      # Resend transactional email only. EMAIL deliveries are created only when true.
+      enabled: ${NOTIFICATIONS_MAIL_ENABLED:false}
+      from: ${NOTIFICATIONS_MAIL_FROM:no-reply@steg.tn}
+    resend:
+      api-key: ${RESEND_API_KEY:}
+      timeout-millis: ${RESEND_TIMEOUT_MILLIS:10000}
+    retry:
+      fixed-delay-millis: ${NOTIFICATIONS_RETRY_DELAY_MILLIS:60000}
+      max-attempts: ${NOTIFICATIONS_RETRY_MAX_ATTEMPTS:5}
+      base-backoff-seconds: ${NOTIFICATIONS_RETRY_BASE_BACKOFF_SECONDS:60}
+      max-backoff-seconds: ${NOTIFICATIONS_RETRY_MAX_BACKOFF_SECONDS:3600}
+  finance:
+    # Deterministic payment policy defaults (requirements: 50 TND / completed
+    # month, max 3 payable months, max 150 TND). Externalized, never magic
+    # numbers in code; changing them alters future calculations only.
+    rate-per-month: ${FINANCE_RATE_PER_MONTH:50.00}
+    max-payable-months: ${FINANCE_MAX_PAYABLE_MONTHS:3}
+    max-amount: ${FINANCE_MAX_AMOUNT:150.00}
+    currency: ${FINANCE_CURRENCY:TND}
+  documents:
+    certificate:
+      template-code: ${CERTIFICATE_TEMPLATE_CODE:STEG-INTERNSHIP-CERTIFICATE}
+      template-version: ${CERTIFICATE_TEMPLATE_VERSION:1}
+    receipt:
+      template-code: ${PAYMENT_RECEIPT_TEMPLATE_CODE:STEG-PAYMENT-RECEIPT}
+      template-version: ${PAYMENT_RECEIPT_TEMPLATE_VERSION:1}
+    # City printed as "Fait à ..." on official documents.
+    # TODO — STEG VALIDATION REQUIRED: confirm the official place of issuance.
+    generation-location: ${DOCUMENTS_GENERATION_LOCATION:Tunis}
+  ai:
+    enabled: ${AI_ENABLED:false}
+    provider: ${AI_PROVIDER:gemini}
+    api-key: ${AI_API_KEY:${GEMINI_API_KEY:}}
+    # No hard-coded default: AI_MODEL wins, then GEMINI_MODEL, then blank
+    # (= "AI unavailable" degraded mode, never blocking).
+    model: ${AI_MODEL:${GEMINI_MODEL:}}
+    base-url: ${AI_BASE_URL:https://generativelanguage.googleapis.com}
+    timeout-ms: ${AI_TIMEOUT_MS:10000}
+    max-output-tokens: ${AI_MAX_OUTPUT_TOKENS:2048}
+    temperature: ${AI_TEMPERATURE:0.2}
+  # Python document-intelligence (FastAPI). Empty base-url/token = disabled (degraded, never blocking).
+  python:
+    base-url: ${PYTHON_AI_SERVICE_BASE_URL:}
+    service-token: ${PYTHON_AI_SERVICE_TOKEN:}
+    timeout-ms: ${PYTHON_AI_TIMEOUT_MS:15000}
+    max-attempts: ${PYTHON_AI_MAX_ATTEMPTS:2}
+    circuit-breaker-threshold: ${PYTHON_AI_CIRCUIT_THRESHOLD:5}
+    max-pages: ${PYTHON_AI_MAX_PAGES:20}
+    max-bytes: ${PYTHON_AI_MAX_BYTES:26214400}

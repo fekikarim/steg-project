@@ -1,0 +1,219 @@
+@import "tailwindcss";
+
+/* Dark mode is class-driven (ThemeProvider toggles `.dark` on <html>). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /* STEG brand blue — primary actions, links, navigation, focus. */
+  --color-brand-50: #eff6fb;
+  --color-brand-100: #d9eaf5;
+  --color-brand-200: #b3d4ea;
+  --color-brand-300: #7fb6da;
+  --color-brand-400: #4a94c6;
+  --color-brand-500: #2374ad;
+  --color-brand-600: #0b61a0;
+  --color-brand-700: #0c4f83;
+  --color-brand-800: #0e4069;
+  --color-brand-900: #0f3657;
+  --color-brand-950: #0a2439;
+
+  /* STEG navy — headings, institutional surfaces, dark-mode base. */
+  --color-navy-100: #d7e3ec;
+  --color-navy-500: #2c5a7c;
+  --color-navy-700: #0e3d5c;
+  --color-navy-800: #0a324d;
+  --color-navy-900: #042843;
+  --color-navy-950: #031e33;
+
+  /* STEG red — alerts, destructive actions, selected emphasis (sparingly). */
+  --color-accent-50: #fdf0f0;
+  --color-accent-100: #f9d7d8;
+  --color-accent-600: #d32325;
+  --color-accent-700: #b02927;
+  --color-accent-800: #8c211f;
+
+  --font-sans: "IBM Plex Sans Arabic", "Segoe UI", Tahoma, Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+:root {
+  --surface-card: #ffffff;
+  --surface-subtle: #f8fafc;
+  --border-subtle: #e2e8f0;
+  --border-strong: #cbd5e1;
+  --shadow-subtle: 0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.04);
+  --shadow-card: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+  --shadow-elevated: 0 12px 24px -4px rgb(0 0 0 / 0.08), 0 4px 8px -2px rgb(0 0 0 / 0.04);
+}
+
+.dark {
+  --surface-card: #072239;
+  --surface-subtle: #031726;
+  --border-subtle: #133959;
+  --border-strong: #1e527d;
+  --shadow-subtle: 0 1px 3px 0 rgb(0 0 0 / 0.4);
+  --shadow-card: 0 4px 12px -2px rgb(0 0 0 / 0.5);
+  --shadow-elevated: 0 16px 32px -4px rgb(0 0 0 / 0.6);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* ==========================================================
+   1. SURFACE & CONTAINER SYSTEM (Institutional Elegance)
+   ========================================================== */
+
+/* Modern frosted header with precise border */
+.frosted-header {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.85);
+}
+
+.dark .frosted-header {
+  background: rgba(3, 30, 51, 0.92);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Clean institutional card */
+.surface-card {
+  background-color: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 1rem;
+  box-shadow: var(--shadow-subtle);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.surface-card:hover {
+  border-color: var(--border-strong);
+}
+
+/* Interactive card with subtle lift */
+.hover-lift {
+  transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.24s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.24s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-elevated);
+}
+
+/* Subtle architectural dot grid (light texture) */
+.bg-dot-pattern {
+  background-image: radial-gradient(circle at 1px 1px, rgba(11, 97, 160, 0.07) 1px, transparent 0);
+  background-size: 24px 24px;
+}
+
+.dark .bg-dot-pattern {
+  background-image: radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.07) 1px, transparent 0);
+  background-size: 24px 24px;
+}
+
+/* Restrained soft ambient accent glow */
+.ambient-glow-brand {
+  background: radial-gradient(circle, rgba(11, 97, 160, 0.08) 0%, rgba(11, 97, 160, 0) 70%);
+}
+
+.dark .ambient-glow-brand {
+  background: radial-gradient(circle, rgba(74, 148, 198, 0.1) 0%, rgba(74, 148, 198, 0) 70%);
+}
+
+/* ==========================================================
+   2. TYPOGRAPHY & EDITORIAL UTILITIES
+   ========================================================== */
+
+.editorial-lead {
+  font-size: 1.0625rem;
+  line-height: 1.7;
+  color: #475569;
+}
+
+.dark .editorial-lead {
+  color: #94a3b8;
+}
+
+/* Institutional Heading with subtle high-contrast gradient */
+.gradient-heading {
+  background: linear-gradient(135deg, #042843 0%, #0b61a0 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.dark .gradient-heading {
+  background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 60%, #7fb6da 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* High-contrast energy gradient for primary keywords */
+.gradient-energy {
+  background: linear-gradient(135deg, #0b61a0 0%, #0284c7 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.dark .gradient-energy {
+  background: linear-gradient(135deg, #38bdf8 0%, #93c5fd 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* ==========================================================
+   3. MOTION & ANIMATION PRIMITIVES
+   ========================================================== */
+
+@keyframes float-subtle {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+.animate-float-subtle {
+  animation: float-subtle 5s ease-in-out infinite;
+}
+
+@keyframes pulse-subtle {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 2.5s ease-in-out infinite;
+}
+
+/* Standardized focus visible styling */
+.focus-ring {
+  outline: none;
+}
+
+.focus-ring:focus-visible {
+  ring-width: 2px;
+  ring-color: #0b61a0;
+  ring-offset-width: 2px;
+}
+
+/* Respect user's motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

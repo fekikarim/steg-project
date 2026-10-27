@@ -1,0 +1,561 @@
+package tn.steg.backend.notification.application;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import tn.steg.backend.common.domain.exception.ResourceNotFoundException;
+import tn.steg.backend.common.domain.model.UserPrincipal;
+import tn.steg.backend.iam.domain.model.User;
+import tn.steg.backend.iam.domain.repository.UserRepository;
+import tn.steg.backend.notification.application.dto.NotificationPayload;
+import tn.steg.backend.notification.application.dto.NotificationResponse;
+import tn.steg.backend.notification.application.port.out.EmailSender;
+import tn.steg.backend.notification.application.port.out.PushNotificationSender;
+import tn.steg.backend.notification.application.port.out.RealtimeNotifier;
+import tn.steg.backend.notification.domain.model.Notification;
+import tn.steg.backend.notification.domain.model.NotificationChannel;
+import tn.steg.backend.notification.domain.model.NotificationDelivery;
+import tn.steg.backend.notification.domain.model.NotificationDeliveryStatus;
+import tn.steg.backend.notification.domain.model.NotificationPriority;
+import tn.steg.backend.notification.domain.model.NotificationType;
+import tn.steg.backend.notification.domain.exception.EmailDeliveryException;
+import tn.steg.backend.audit.application.AuditService;
+import tn.steg.backend.common.application.ApplicationTimeZone;
+import tn.steg.backend.notification.domain.repository.NotificationDeliveryRepository;
+import tn.steg.backend.notification.domain.repository.NotificationRepository;
+
+import jakarta.annotation.PreDestroy;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.EnumSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
+
+/**
+ * Application service for the Notification module (A10) — Resend edition.
+ *
+ * <p>Fan-out model: one {@link Notification} per business fact, one
+ * {@link NotificationDelivery} per recipient per channel. Channel selection:
+ * IN_APP always; EMAIL for HIGH/URGENT priorities when Resend is enabled
+ * (steg.notifications.mail.enabled + steg.notifications.resend.api-key) and
+ * the recipient opted in; PUSH for URGENT only.
+ *
+ * <p>Email goes through Resend REST API (https://api.resend.com/emails) — backend-only,
+ * API key never leaves the server. In-app through the persisted delivery plus Phase A9 STOMP broker.
+ *
+ * <p>Failures are recorded with a reason and retried with bounded exponential
+ * backoff ({@code retryFailedDeliveries}, driven by a {@code @Scheduled} sweep);
+ * rows that exhaust attempts stay FAILED — visible, never silently dropped.
+ * Email failure never rolls back the business transaction (e.g. application remains SUBMITTED).
+ */
+@Slf4j
+@Service
+public class NotificationService {
+
+    private static final int RETRY_BATCH_SIZE = 100;
+
+    /** Role code of the staff surface that acts on administrative alerts. */
+    public static final String ADMIN_ROLE_CODE = "ADMIN";
+
+    /** Title of the "internship ended without its FINAL report" alert. */
+    public static final String FINAL_EVALUATION_TITLE = "Final evaluation required";
+
+    /** Exactly-once key shared by the completion event and the self-healing sweep. */
+    public static final String FINAL_EVALUATION_DEDUPE_PREFIX = "FINAL_EVALUATION_REQUIRED:";
+
+    private final NotificationRepository notificationRepository;
+    private final NotificationDeliveryRepository deliveryRepository;
+    private final UserRepository userRepository;
+    private final EmailSender emailSender;
+    private final PushNotificationSender pushSender;
+    private final RealtimeNotifier realtimeNotifier;
+    private final AuditService auditService;
+    private final ApplicationTimeZone applicationTimeZone;
+
+    @Value("${steg.notifications.mail.enabled:false}")
+    private boolean mailEnabled;
+
+    @Value("${steg.notifications.retry.max-attempts:5}")
+    private int maxAttempts;
+
+    @Value("${steg.notifications.retry.base-backoff-seconds:60}")
+    private long baseBackoffSeconds;
+
+    @Value("${steg.notifications.retry.max-backoff-seconds:3600}")
+    private long maxBackoffSeconds;
+
+    /**
+     * Hard wall-clock budget for one EMAIL send inside a request transaction.
+     * Socket timeouts alone cannot be trusted to bound third-party latency
+     * (stalled TLS/proxy can outlive them), and the send runs BEFORE_COMMIT on
+     * submit — every extra second delays the candidate's HTTP response.
+     * {@code Future.get} is JVM-side and always honored: the request thread
+     * never waits longer than this, no matter how pathological the network.
+     * Failures (including timeouts) mark the delivery FAILED with backoff and
+     * the @Scheduled sweep retries them asynchronously — email never blocks
+     * or rolls back the business transaction.
+     */
+    private static final long EMAIL_SEND_BUDGET_SECONDS = 8;
+
+    private final ExecutorService emailExecutor;
+    private static final AtomicInteger EMAIL_THREAD_SEQ = new AtomicInteger();
+
+    public NotificationService(NotificationRepository notificationRepository,
+                                NotificationDeliveryRepository deliveryRepository,
+                                UserRepository userRepository,
+                                EmailSender emailSender,
+                                PushNotificationSender pushSender,
+                                RealtimeNotifier realtimeNotifier,
+                                AuditService auditService,
+                                ApplicationTimeZone applicationTimeZone) {
+        this.notificationRepository = notificationRepository;
+        this.deliveryRepository = deliveryRepository;
+        this.userRepository = userRepository;
+        this.emailSender = emailSender;
+        this.pushSender = pushSender;
+        this.realtimeNotifier = realtimeNotifier;
+        this.auditService = auditService;
+        this.applicationTimeZone = applicationTimeZone;
+        // Cached daemon pool: tasks complete in ~1-2s when Resend is healthy;
+        // stuck tasks (dead network) hold a thread until the socket dies, but
+        // never the request thread (see EMAIL_SEND_BUDGET_SECONDS).
+        this.emailExecutor = Executors.newCachedThreadPool(r -> {
+            Thread t = new Thread(r, "email-send-" + EMAIL_THREAD_SEQ.incrementAndGet());
+            t.setDaemon(true);
+            return t;
+        });
+    }
+
+    @PreDestroy
+    void shutdownEmailExecutor() {
+        emailExecutor.shutdownNow();
+    }
+
+
+    // -------------------------------------------------------------------------
+    // Fan-out
+    // -------------------------------------------------------------------------
+
+    /**
+     * Persists a notification and immediately attempts every selected channel.
+     * Unknown recipient ids are skipped (logged) so one stale id cannot fail
+     * the whole fan-out.
+     */
+    @Transactional
+    public Notification dispatch(String title, String message, NotificationPriority priority,
+                                 String relatedEntityType, UUID relatedEntityId,
+                                 Collection<UUID> recipientIds, UUID actorId) {
+        return dispatchOnce(null, title, message, priority, relatedEntityType, relatedEntityId,
+                recipientIds, actorId);
+    }
+
+    /**
+     * Typed fan-out (T01/D11): the catalogue key is persisted on the row and
+     * exposed through the REST response and the live STOMP payload so clients
+     * can classify without string-matching titles. Kept as a separate
+     * overload — every existing call site keeps its exact semantics.
+     */
+    @Transactional
+    public Notification dispatch(NotificationType type, String title, String message,
+                                 NotificationPriority priority,
+                                 String relatedEntityType, UUID relatedEntityId,
+                                 Collection<UUID> recipientIds, UUID actorId) {
+        Notification notification = dispatchOnce(null, title, message, priority,
+                relatedEntityType, relatedEntityId, recipientIds, actorId);
+        if (notification.getType() == null) {
+            notification.setType(type);
+            return notificationRepository.save(notification);
+        }
+        return notification;
+    }
+
+    /**
+     * Typed + exactly-once fan-out: used when the fact itself is idempotent
+     * (dedupe key) AND carries a catalogue key (e.g. document rejection per
+     * internship + document kind).
+     */
+    @Transactional
+    public Notification dispatchOnce(NotificationType type, String dedupeKey, String title,
+                                     String message, NotificationPriority priority,
+                                     String relatedEntityType, UUID relatedEntityId,
+                                     Collection<UUID> recipientIds, UUID actorId) {
+        Notification notification = dispatchOnce(dedupeKey, title, message, priority,
+                relatedEntityType, relatedEntityId, recipientIds, actorId);
+        if (notification.getType() == null && type != null) {
+            notification.setType(type);
+            return notificationRepository.save(notification);
+        }
+        return notification;
+    }
+
+    /**
+     * D15 / BR-45 — the one-time welcome notification (ST-NOT-01).
+     *
+     * <p>Created exactly once per account, keyed {@code WELCOME:&lt;userId&gt;},
+     * and only after the FIRST successful password change (or first login for
+     * an account that never needed a forced change) — never before, per the
+     * mandatory D15 order. Concurrent double calls collapse on the DB unique
+     * {@code dedupe_key} through {@link #dispatchOnce}; an idempotency race
+     * between the check and the insert is absorbed because the loser reads the
+     * committed winner within the same transaction boundary of the caller.
+     * Absorb a true unique-violation race defensively: a lost welcome is
+     * cosmetic, a broken password change is not.
+     */
+    @Transactional
+    public Notification dispatchWelcome(UUID recipientUserId) {
+        try {
+            return dispatchOnce(NotificationType.WELCOME,
+                    "WELCOME:" + recipientUserId,
+                    "Bienvenue sur STEG intern",
+                    "Bienvenue sur votre espace de stage STEG. Retrouvez ici vos tâches, "
+                            + "votre journal, vos documents et les messages de votre encadrant.",
+                    NotificationPriority.LOW,
+                    "Internship", null,
+                    List.of(recipientUserId), recipientUserId);
+        } catch (org.springframework.dao.DataIntegrityViolationException race) {
+            log.info("Welcome notification already exists for {} — concurrent creation collapsed",
+                    recipientUserId);
+            return notificationRepository.findByDedupeKey("WELCOME:" + recipientUserId).orElse(null);
+        }
+    }
+
+    /**
+     * Exactly-once dispatch for confirmations that must be sent one time per
+     * business event (e.g. one application-submission email per application).
+     *
+     * <p>If a notification with {@code dedupeKey} already exists (retry, page
+     * refresh, duplicate click, timeout recovery, event reprocessing), the
+     * existing row is returned untouched — no new notification, no new
+     * delivery rows, no second email. Otherwise the notification is created
+     * with the key; the DB unique index ({@code uq_notifications_dedupe_key})
+     * is the backstop against true-concurrent duplicates.
+     */
+    @Transactional
+    public Notification dispatchOnce(String dedupeKey, String title, String message,
+                                     NotificationPriority priority,
+                                     String relatedEntityType, UUID relatedEntityId,
+                                     Collection<UUID> recipientIds, UUID actorId) {
+        if (dedupeKey != null && !dedupeKey.isBlank()) {
+            Optional<Notification> existing = notificationRepository.findByDedupeKey(dedupeKey.strip());
+            if (existing.isPresent()) {
+                log.info("Notification dedupe hit: key={} existingId={} — skipping duplicate fan-out",
+                        dedupeKey, existing.get().getId());
+                return existing.get();
+            }
+        }
+        Notification notification = new Notification(title, message, priority);
+        notification.setRelatedEntityType(relatedEntityType);
+        notification.setRelatedEntityId(relatedEntityId);
+        if (dedupeKey != null && !dedupeKey.isBlank()) {
+            notification.setDedupeKey(dedupeKey.strip());
+        }
+        notification = notificationRepository.save(notification);
+
+        List<NotificationDelivery> deliveries = new ArrayList<>();
+        for (UUID recipientId : new LinkedHashSet<>(recipientIds)) {
+            User recipient = userRepository.findById(recipientId).orElse(null);
+            if (recipient == null) {
+                log.warn("Skipping notification {} for unknown recipient {}", notification.getId(), recipientId);
+                continue;
+            }
+            for (NotificationChannel channel : resolveChannels(priority, mailEnabled,
+                    Boolean.TRUE.equals(recipient.getEmailNotificationsEnabled()))) {
+                NotificationDelivery delivery = new NotificationDelivery(notification, recipient, channel);
+                attempt(delivery, recipient);
+                deliveries.add(delivery);
+            }
+        }
+        log.info("Notification dispatched: id={} priority={} recipients={} actor={}",
+                notification.getId(), priority, deliveries.size(), actorId);
+        for (NotificationDelivery delivery : deliveries) {
+            deliveryRepository.save(delivery);
+        }
+        return notification;
+    }
+
+    /**
+     * Role-scoped fan-out: resolves every active staff user holding
+     * {@code roleCode} and dispatches to them. Used for administrative alerts
+     * that are not tied to a single known recipient (e.g. an internship that
+     * ended without a final evaluation → all administrators).
+     *
+     * <p>Pass a {@code dedupeKey} for exactly-once semantics across event and
+     * sweep paths; the resolution is intentionally cheap (one indexed query)
+     * and an empty recipient set is logged, never thrown.
+     */
+    @Transactional
+    public Notification dispatchToRole(String dedupeKey, String roleCode, String title, String message,
+                                       NotificationPriority priority,
+                                       String relatedEntityType, UUID relatedEntityId,
+                                       UUID actorId) {
+        return dispatchToRole(null, dedupeKey, roleCode, title, message, priority,
+                relatedEntityType, relatedEntityId, actorId);
+    }
+
+    /** Typed variant of {@link #dispatchToRole} (T01/D11 catalogue key). */
+    @Transactional
+    public Notification dispatchToRole(NotificationType type, String dedupeKey, String roleCode,
+                                       String title, String message,
+                                       NotificationPriority priority,
+                                       String relatedEntityType, UUID relatedEntityId,
+                                       UUID actorId) {
+        List<UUID> recipients = userRepository.findDistinctByAssignedRoles_Code(roleCode).stream()
+                .filter(user -> Boolean.TRUE.equals(user.getEnabled()))
+                .map(User::getId)
+                .toList();
+        if (recipients.isEmpty()) {
+            log.warn("No active user holds role {} — notification {} not delivered to anyone", roleCode, title);
+        }
+        return dispatchOnce(type, dedupeKey, title, message, priority, relatedEntityType,
+                relatedEntityId, recipients, actorId);
+    }
+
+    /**
+     * Pure channel-selection rule (unit-tested):
+     * IN_APP always; EMAIL for HIGH/URGENT when Resend is enabled and the user
+     * opted in; PUSH for URGENT only.
+     */
+    static Set<NotificationChannel> resolveChannels(NotificationPriority priority,
+                                                     boolean mailEnabled,
+                                                     boolean emailOptIn) {
+        Set<NotificationChannel> channels = EnumSet.of(NotificationChannel.IN_APP);
+        if ((priority == NotificationPriority.HIGH || priority == NotificationPriority.URGENT)
+                && mailEnabled && emailOptIn) {
+            channels.add(NotificationChannel.EMAIL);
+        }
+        if (priority == NotificationPriority.URGENT) {
+            channels.add(NotificationChannel.PUSH);
+        }
+        return channels;
+    }
+
+    private void attempt(NotificationDelivery delivery, User recipient) {
+        try {
+            switch (delivery.getChannel()) {
+                case IN_APP -> {
+                    delivery.setStatus(NotificationDeliveryStatus.SENT);
+                    delivery.setSentAt(Instant.now());
+                    delivery.setDeliveredAt(Instant.now());
+                    pushBestEffort(delivery, recipient);
+                }
+                case EMAIL -> {
+                    // Stable per-notification key: the initial attempt and every
+                    // sweep retry of this delivery carry the same key, so the
+                    // provider dedupes a retry whose original send actually
+                    // went through but whose response was lost (timeout).
+                    String idempotencyKey = delivery.getNotification() != null
+                            && delivery.getNotification().getId() != null
+                            ? "steg-email-" + delivery.getNotification().getId()
+                            : null;
+                    sendEmailBounded(recipient.getEmail(),
+                            delivery.getNotification().getTitle(),
+                            delivery.getNotification().getMessage(),
+                            idempotencyKey);
+                    delivery.setStatus(NotificationDeliveryStatus.SENT);
+                    delivery.setSentAt(Instant.now());
+                }
+                case PUSH -> {
+                    pushSender.send(recipient.getId(),
+                            delivery.getNotification().getTitle(),
+                            delivery.getNotification().getMessage());
+                    delivery.setStatus(NotificationDeliveryStatus.SENT);
+                    delivery.setSentAt(Instant.now());
+                }
+            }
+        } catch (Exception e) {
+            delivery.setStatus(NotificationDeliveryStatus.FAILED);
+            delivery.setFailureReason(truncate(e.getMessage()));
+            delivery.setAttemptCount(delivery.getAttemptCount() + 1);
+            delivery.setNextRetryAt(Instant.now().plusSeconds(backoffSeconds(delivery.getAttemptCount())));
+            log.warn("Notification delivery failed: notification={} channel={} recipient={} attempt={}: {}",
+                    delivery.getNotification().getId(), delivery.getChannel(),
+                    recipient.getId(), delivery.getAttemptCount(), e.getMessage());
+            if (delivery.getAttemptCount() >= maxAttempts) {
+                // Dead letter stays queryable AND auditable: operators can find
+                // every exhausted delivery through both the table and the log.
+                auditService.log("NOTIFICATION_DEAD_LETTER", "NotificationDelivery", delivery.getId(),
+                        null,
+                        java.util.Map.of("channel", delivery.getChannel().name(),
+                                "recipient", recipient.getId().toString(),
+                                "reason", String.valueOf(delivery.getFailureReason())),
+                        null, null, null, null,
+                        tn.steg.backend.audit.domain.model.AuditSource.SYSTEM);
+            }
+        }
+    }
+
+    /**
+     * EMAIL send with a hard wall-clock budget (see EMAIL_SEND_BUDGET_SECONDS).
+     * The sender itself is stateless and thread-safe (RestClient + ObjectMapper),
+     * so running it off the request thread needs no transaction context.
+     * Timeout/interruption → EmailDeliveryException → caller marks FAILED with
+     * backoff; the sweep retries asynchronously. Never blocks the request past
+     * the budget, never rolls back business state.
+     */
+    private void sendEmailBounded(String to, String subject, String body, String idempotencyKey) {
+        Future<?> future = emailExecutor.submit(() -> emailSender.send(to, subject, body, idempotencyKey));
+        try {
+            future.get(EMAIL_SEND_BUDGET_SECONDS, TimeUnit.SECONDS);
+        } catch (TimeoutException te) {
+            future.cancel(true);
+            throw new EmailDeliveryException(
+                    "Email delivery timed out after " + EMAIL_SEND_BUDGET_SECONDS + "s", te);
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            future.cancel(true);
+            throw new EmailDeliveryException(
+                    "Email delivery interrupted", ie);
+        } catch (java.util.concurrent.ExecutionException ee) {
+            Throwable cause = ee.getCause() != null ? ee.getCause() : ee;
+            if (cause instanceof RuntimeException re) {
+                throw re;
+            }
+            throw new EmailDeliveryException(
+                    "Email delivery failed", cause);
+        }
+    }
+
+    /**
+     * Live WS push is transport nicety only: the persisted IN_APP row is the
+     * authority, so push failures only log (never fail the delivery).
+     */
+    private void pushBestEffort(NotificationDelivery delivery, User recipient) {
+        try {
+            realtimeNotifier.pushToUser(recipient.getEmail(),
+                    NotificationPayload.from(delivery.getNotification()));
+        } catch (Exception e) {
+            log.warn("Realtime notification push failed for recipient {}: {}",
+                    recipient.getId(), e.getMessage());
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Reads (strictly scoped to the caller's own deliveries)
+    // -------------------------------------------------------------------------
+
+    @Transactional(readOnly = true)
+    public Page<NotificationResponse> listMine(UserPrincipal actor, boolean unreadOnly, Pageable pageable) {
+        return listMine(actor, unreadOnly, null, null, pageable);
+    }
+
+    /**
+     * Own IN_APP deliveries with an optional calendar-day date-range filter.
+     * Day bounds resolve in the application time zone (default Africa/Tunis).
+     */
+    @Transactional(readOnly = true)
+    public Page<NotificationResponse> listMine(UserPrincipal actor, boolean unreadOnly,
+                                              LocalDate fromDate, LocalDate toDate, Pageable pageable) {
+        if (fromDate == null && toDate == null) {
+            Page<NotificationDelivery> page = unreadOnly
+                    ? deliveryRepository.findUnreadInAppByRecipientId(actor.getId(), pageable)
+                    : deliveryRepository.findInAppByRecipientId(actor.getId(), pageable);
+            return page.map(delivery -> NotificationResponse.from(delivery.getNotification(), delivery));
+        }
+        Instant from = fromDate != null ? applicationTimeZone.startOfDay(fromDate) : null;
+        Instant toExclusive = toDate != null ? applicationTimeZone.startOfNextDay(toDate) : null;
+        Page<NotificationDelivery> page = unreadOnly
+                ? deliveryRepository.findUnreadInAppByRecipientIdAndDateRange(
+                        actor.getId(), from, toExclusive, pageable)
+                : deliveryRepository.findInAppByRecipientIdAndDateRange(
+                        actor.getId(), from, toExclusive, pageable);
+        return page.map(delivery -> NotificationResponse.from(delivery.getNotification(), delivery));
+    }
+
+    @Transactional(readOnly = true)
+    public long unreadCount(UserPrincipal actor) {
+        return deliveryRepository.countUnreadInAppByRecipientId(actor.getId());
+    }
+
+    @Transactional
+    public NotificationResponse markRead(UUID notificationId, UserPrincipal actor) {
+        NotificationDelivery delivery = deliveryRepository
+                .findInAppByNotificationIdAndRecipientId(notificationId, actor.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Notification not found: " + notificationId));
+        if (delivery.getReadAt() == null) {
+            delivery.setReadAt(Instant.now());
+            delivery.setStatus(NotificationDeliveryStatus.READ);
+            deliveryRepository.save(delivery);
+        }
+        return NotificationResponse.from(delivery.getNotification(), delivery);
+    }
+
+    @Transactional
+    public long markAllRead(UserPrincipal actor) {
+        List<NotificationDelivery> updated = new ArrayList<>();
+        Pageable page = PageRequest.of(0, RETRY_BATCH_SIZE);
+        Page<NotificationDelivery> unread;
+        do {
+            unread = deliveryRepository.findUnreadInAppByRecipientId(actor.getId(), page);
+            for (NotificationDelivery delivery : unread.getContent()) {
+                delivery.setReadAt(Instant.now());
+                delivery.setStatus(NotificationDeliveryStatus.READ);
+                updated.add(delivery);
+            }
+            for (NotificationDelivery delivery : unread.getContent()) {
+                deliveryRepository.save(delivery);
+            }
+        } while (unread.hasNext());
+        return updated.size();
+    }
+
+    // -------------------------------------------------------------------------
+    // Bounded retry (driven by the @Scheduled sweep; callable directly in tests)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Re-attempts FAILED deliveries whose backoff elapsed and which still have
+     * attempts left. Each row is isolated: one poison row cannot abort the batch.
+     * Rows past {@code maxAttempts} stay FAILED (dead-letter, queryable).
+     *
+     * @return number of deliveries that reached SENT in this sweep
+     */
+    @Transactional
+    public int retryFailedDeliveries() {
+        List<NotificationDelivery> batch = deliveryRepository.findRetryable(
+                NotificationDeliveryStatus.FAILED, maxAttempts, Instant.now(),
+                PageRequest.of(0, RETRY_BATCH_SIZE));
+        int recovered = 0;
+        for (NotificationDelivery delivery : batch) {
+            try {
+                attempt(delivery, delivery.getRecipient());
+                deliveryRepository.save(delivery);
+                if (delivery.getStatus() == NotificationDeliveryStatus.SENT) {
+                    recovered++;
+                }
+            } catch (Exception e) {
+                log.error("Retry sweep failed to persist delivery {}: {}", delivery.getId(), e.getMessage());
+            }
+        }
+        if (!batch.isEmpty()) {
+            log.info("Notification retry sweep: batch={} recovered={}", batch.size(), recovered);
+        }
+        return recovered;
+    }
+
+    long backoffSeconds(int attempt) {
+        long backoff = baseBackoffSeconds * (1L << Math.min(attempt - 1, 10));
+        return Math.min(backoff, maxBackoffSeconds);
+    }
+
+    private String truncate(String message) {
+        if (message == null) {
+            return "Unknown delivery failure";
+        }
+        return message.length() > 500 ? message.substring(0, 500) : message;
+    }
+}

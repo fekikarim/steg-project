@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  STEG native launch screen: solid brand navy with the official STEG wordmark
+  (white monochrome, the brand-safe variant for a dark background) centred at
+  220x60 dp. The image is 3.667:1 like the source asset (1200x327), so the
+  `fill` gravity cannot distort it.
+
+  Android 12+ ignores this layer-list and uses the platform SplashScreen API —
+  see values-v31/styles.xml, which declares the same background and icon.
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/steg_navy" />
+    <item
+        android:width="220dp"
+        android:height="60dp"
+        android:gravity="center">
+        <bitmap
+            android:gravity="fill"
+            android:src="@drawable/launch_logo" />
+    </item>
+</layer-list>
