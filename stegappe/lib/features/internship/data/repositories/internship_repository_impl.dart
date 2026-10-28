@@ -114,6 +114,18 @@ class InternshipRepositoryImpl implements InternshipRepository {
   );
 
   @override
+  Future<Paged<InternTask>> listSupervisorTasks({
+    int page = 0,
+    int size = 100,
+    TaskStatus? status,
+  }) async => remote.listSupervisorTasks(
+    await _bearer(),
+    page: page,
+    size: size,
+    status: status,
+  );
+
+  @override
   Future<InternTask> updateTaskStatus(
     String taskId,
     TaskStatus status, {

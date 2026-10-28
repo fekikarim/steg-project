@@ -83,6 +83,23 @@ class InternshipRemoteDataSource {
     },
   );
 
+  Future<Paged<InternTask>> listSupervisorTasks(
+    String? bearer, {
+    int page = 0,
+    int size = 100,
+    TaskStatus? status,
+  }) {
+    final q = pageQuery(page: page, size: size);
+    final api = status == null ? null : taskStatusToApi(status);
+    if (api != null) q['status'] = api;
+    return _client.get(
+      Endpoints.supervisorTasks,
+      bearer: bearer,
+      query: q,
+      decode: (j) => Paged.fromJson(j, taskFromJson),
+    );
+  }
+
   Future<Paged<InternTask>> listTasks(
     String internshipId,
     String? bearer, {

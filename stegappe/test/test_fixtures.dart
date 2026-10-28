@@ -213,6 +213,23 @@ class FakeInternshipRepository implements InternshipRepository {
   }
 
   @override
+  Future<Paged<InternTask>> listSupervisorTasks({
+    int page = 0,
+    int size = 100,
+    TaskStatus? status,
+  }) async {
+    _count('listSupervisorTasks');
+    final all = [
+      for (final t in fixtureTasks(now))
+        t.copyWith(internshipId: 'internship-1'),
+    ];
+    final items = status == null
+        ? all
+        : all.where((t) => t.status == status).toList();
+    return pageOf(items, total: items.length);
+  }
+
+  @override
   Future<Paged<InternTask>> listTasks(
     String internshipId, {
     int page = 0,

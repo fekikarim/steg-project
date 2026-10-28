@@ -31,6 +31,14 @@ abstract class InternshipRepository {
     int size = 50,
     TaskStatus? status,
   });
+
+  /// Tasks across the caller's supervised internships (staff scope enforced
+  /// by the backend). Each task carries its `internshipId`.
+  Future<Paged<InternTask>> listSupervisorTasks({
+    int page = 0,
+    int size = 100,
+    TaskStatus? status,
+  });
   Future<InternTask> updateTaskStatus(
     String taskId,
     TaskStatus status, {

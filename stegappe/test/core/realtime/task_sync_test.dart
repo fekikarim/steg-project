@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:stegappe/core/realtime/realtime_sync.dart';
 import 'package:stegappe/core/realtime/task_sync.dart';
+import 'package:stegappe/features/internship/presentation/providers/supervisor_tasks_providers.dart';
 import 'package:stegappe/features/internship/presentation/providers/workspace_providers.dart';
 import 'package:stegappe/features/messaging/domain/entities/notification_item.dart';
 import 'package:stegappe/features/messaging/presentation/providers/messaging_providers.dart';
@@ -72,6 +73,7 @@ void main() {
         orderedEquals([
           taskListProvider,
           internshipTasksProvider,
+          supervisorTasksProvider,
           supervisedInternsProvider,
           dashboardProvider,
         ]),
@@ -88,7 +90,7 @@ void main() {
 
       sync.invalidate(category);
       sync.invalidate(category);
-      expect(log.length, 8);
+      expect(log.length, 10);
       // Invalidation is idempotent downstream: Riverpod refetches REST.
     });
 

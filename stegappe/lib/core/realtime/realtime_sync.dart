@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/community/presentation/providers/community_providers.dart';
+import '../../features/internship/presentation/providers/supervisor_tasks_providers.dart';
 import '../../features/internship/presentation/providers/workspace_providers.dart';
 import '../../features/messaging/presentation/providers/messaging_providers.dart';
 
@@ -36,6 +37,8 @@ final Map<RealtimeCategory, List<ProviderOrFamily>> kRealtimeTargets = {
   RealtimeCategory.tasks: <ProviderOrFamily>[
     taskListProvider,
     internshipTasksProvider,
+    // Supervisor board: task frames from any intern converge it.
+    supervisorTasksProvider,
     supervisedInternsProvider,
     dashboardProvider,
   ],

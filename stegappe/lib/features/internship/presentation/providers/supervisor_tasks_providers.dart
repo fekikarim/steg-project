@@ -1,6 +1,6 @@
+import 'package:equatable/equatable.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/network/paged.dart';
 import '../../domain/entities/supervisor_tasks.dart';
 import '../../domain/entities/work_items.dart';
 import '../../domain/repositories/internship_repository.dart';
@@ -19,23 +19,62 @@ final selectedSupervisedInternshipProvider = StateProvider<String?>(
   (ref) => null,
 );
 
-/// One student's tasks for the supervisor (staff view: scheduled included).
-/// Throws `StateError('no-internship')` when nothing is selected/linked yet.
-final supervisorTasksProvider = FutureProvider<Paged<InternTask>>((ref) async {
+/// A task together with the supervised intern it belongs to. The backend
+/// task has a single assignee, so the intern is the assignee shown on a card.
+class SupervisedTask extends Equatable {
+  const SupervisedTask({
+    required this.task,
+    required this.internshipId,
+    required this.internName,
+  });
+
+  final InternTask task;
+  final String internshipId;
+  final String internName;
+
+  @override
+  List<Object?> get props => [task, internshipId, internName];
+}
+
+/// Tasks of the supervisor's supervised interns, read in one backend call
+/// (staff scope; scheduled tasks included). [totalElements] is the backend
+/// count, so the screen can say when the first page is not the whole list.
+class SupervisorTaskBoard {
+  const SupervisorTaskBoard({required this.items, required this.totalElements});
+
+  final List<SupervisedTask> items;
+  final int totalElements;
+
+  bool get truncated => totalElements > items.length;
+}
+
+/// The supervisor's tasks, each paired with the intern it belongs to. Throws
+/// `StateError('no-internship')` when the supervisor has no interns.
+final supervisorTasksProvider = FutureProvider<SupervisorTaskBoard>((
+  ref,
+) async {
   final repo = ref.watch(internshipRepositoryProvider);
   final interns = await ref.watch(supervisedInternsProvider.future);
   if (interns.isEmpty) throw StateError('no-internship');
-  final selected = ref.watch(selectedSupervisedInternshipProvider);
-  final id = selected != null && interns.any((i) => i.internshipId == selected)
-      ? selected
-      : interns.first.internshipId;
-  final page = await repo.listTasks(id, size: 50);
-  ref.read(lastSupervisorTasksProvider.notifier).state = page;
-  return page;
+  final page = await repo.listSupervisorTasks(size: 100);
+  final names = {for (final i in interns) i.internshipId: i.internName};
+  final board = SupervisorTaskBoard(
+    items: [
+      for (final task in page.items)
+        SupervisedTask(
+          task: task,
+          internshipId: task.internshipId ?? '',
+          internName: names[task.internshipId] ?? '',
+        ),
+    ],
+    totalElements: page.totalElements,
+  );
+  ref.read(lastSupervisorTasksProvider.notifier).state = board;
+  return board;
 });
 
-/// Last successfully loaded supervisor task page (stale/offline rendering).
-final lastSupervisorTasksProvider = StateProvider<Paged<InternTask>?>(
+/// Last successfully loaded board (stale/offline rendering).
+final lastSupervisorTasksProvider = StateProvider<SupervisorTaskBoard?>(
   (ref) => null,
 );
 

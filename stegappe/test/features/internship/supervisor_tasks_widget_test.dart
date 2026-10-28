@@ -76,14 +76,20 @@ class _SupervisorFake extends FakeInternshipRepository {
   ];
 
   @override
-  Future<Paged<InternTask>> listTasks(
-    String internshipId, {
+  Future<Paged<InternTask>> listSupervisorTasks({
     int page = 0,
-    int size = 50,
+    int size = 100,
     TaskStatus? status,
   }) async {
-    lastStatusFilter = status;
-    final all = [
+    final all = await _reviewTasks();
+    final items = status == null
+        ? all
+        : all.where((t) => t.status == status).toList();
+    return pageOf(items, total: items.length);
+  }
+
+  Future<List<InternTask>> _reviewTasks() async {
+    return [
       const InternTask(
         id: 't-review',
         title: 'Work to review',
@@ -100,7 +106,18 @@ class _SupervisorFake extends FakeInternshipRepository {
         title: 'Plain task',
         status: TaskStatus.todo,
       ),
-    ];
+    ].map((t) => t.copyWith(internshipId: 'internship-1')).toList();
+  }
+
+  @override
+  Future<Paged<InternTask>> listTasks(
+    String internshipId, {
+    int page = 0,
+    int size = 50,
+    TaskStatus? status,
+  }) async {
+    lastStatusFilter = status;
+    final all = await _reviewTasks();
     final items = status == null
         ? all
         : all.where((t) => t.status == status).toList();
@@ -152,7 +169,7 @@ void main() {
       tester,
     ) async {
       await _pump(tester, const SupervisorTasksScreen());
-      expect(find.text('Amira Ben Salah'), findsOneWidget);
+      expect(find.text('Amira Ben Salah'), findsWidgets);
       expect(find.text('Yassine Trabelsi'), findsOneWidget);
       expect(find.text('Work to review'), findsOneWidget);
       expect(find.text('À examiner'), findsOneWidget);
@@ -195,7 +212,13 @@ void main() {
       );
       expect(fake.reviewedTasks, isEmpty);
       // With a reason → denied with the reason stored.
-      await tester.enterText(find.byType(TextField), 'Missing tests');
+      await tester.enterText(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.byType(TextField),
+        ),
+        'Missing tests',
+      );
       await tester.tap(find.text('Refuser').last);
       await tester.pumpAndSettle();
       expect(fake.reviewedTasks.single['comment'], 'Missing tests');
@@ -239,7 +262,7 @@ void main() {
         locale: const Locale('ar'),
         theme: StegTheme.dark(),
       );
-      expect(find.text('مهام المتربصين'), findsOneWidget);
+      expect(find.text('إدارة المهام'), findsOneWidget);
     });
   });
 

@@ -24,6 +24,9 @@ abstract final class Endpoints {
   // even for an ADMIN caller — never the global list).
   static const String supervisedInternships = '/api/internships/supervised';
   static String internshipTasks(String id) => '/api/internships/$id/tasks';
+  // Supervisor cross-student task list (backend scope: own supervised
+  // internships only; one call instead of a per-intern fan-out).
+  static const String supervisorTasks = '/api/internships/tasks';
   static String journalEntries(String id) =>
       '/api/internships/$id/journal/entries';
   // --- T09/B5+B6 journal document (server window + AI PDF generation) ---

@@ -97,6 +97,7 @@ class InternTask extends Equatable {
     this.reviewReason,
     this.reviewedAt,
     this.visibleFrom,
+    this.internshipId,
   });
 
   final String id;
@@ -122,6 +123,10 @@ class InternTask extends Equatable {
   /// immediate). A future instant hides the task from the student until it
   /// passes; staff always sees it. Absolute server instant, never device-local.
   final DateTime? visibleFrom;
+
+  /// `TaskResponse.internshipId` — the internship the task belongs to. Set on
+  /// the supervisor's cross-student list so each card can name its intern.
+  final String? internshipId;
 
   /// BR-11: only an approved task is done. A completion under review is
   /// [awaitsReview], never done.
@@ -177,6 +182,7 @@ class InternTask extends Equatable {
     String? reviewReason,
     DateTime? reviewedAt,
     DateTime? visibleFrom,
+    String? internshipId,
   }) => InternTask(
     id: id,
     title: title ?? this.title,
@@ -189,6 +195,7 @@ class InternTask extends Equatable {
     reviewReason: reviewReason ?? this.reviewReason,
     reviewedAt: reviewedAt ?? this.reviewedAt,
     visibleFrom: visibleFrom ?? this.visibleFrom,
+    internshipId: internshipId ?? this.internshipId,
   );
 
   @override
@@ -204,6 +211,7 @@ class InternTask extends Equatable {
     reviewReason,
     reviewedAt,
     visibleFrom,
+    internshipId,
   ];
 }
 

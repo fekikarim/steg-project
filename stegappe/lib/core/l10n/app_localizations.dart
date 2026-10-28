@@ -3263,7 +3263,81 @@ class AppLocalizations {
       'en': '{count} d ago',
       'ar': 'منذ {count} ي',
     },
+    'tasksManageTitle': {
+      'fr': 'Gestion des tâches',
+      'en': 'Task management',
+      'ar': 'إدارة المهام',
+    },
+    'tasksActiveOne': {
+      'fr': '1 tâche active',
+      'en': '1 active task',
+      'ar': 'مهمة نشطة واحدة',
+    },
+    'tasksActiveMany': {
+      'fr': '{count} tâches actives',
+      'en': '{count} active tasks',
+      'ar': '{count} مهام نشطة',
+    },
+    'tasksFilterAll': {'fr': 'Toutes', 'en': 'All', 'ar': 'الكل'},
+    'tasksFilterReview': {
+      'fr': 'À valider',
+      'en': 'To approve',
+      'ar': 'للمصادقة',
+    },
+    'tasksSearchHint': {
+      'fr': 'Rechercher une tâche ou un stagiaire',
+      'en': 'Search a task or an intern',
+      'ar': 'ابحث عن مهمة أو متربص',
+    },
+    'tasksAllInterns': {
+      'fr': 'Tous les stagiaires',
+      'en': 'All interns',
+      'ar': 'كل المتربصين',
+    },
+    'tasksNoMatch': {
+      'fr': 'Aucune tâche ne correspond à votre recherche.',
+      'en': 'No task matches your search.',
+      'ar': 'لا توجد مهمة تطابق بحثك.',
+    },
+    'tasksPartialLoad': {
+      'fr':
+          'Certaines tâches n’ont pas pu être chargées. Tirez pour réessayer.',
+      'en': 'Some tasks could not be loaded. Pull down to retry.',
+      'ar': 'تعذّر تحميل بعض المهام. اسحب للأسفل لإعادة المحاولة.',
+    },
+    'tasksNoDueDate': {
+      'fr': 'Sans échéance',
+      'en': 'No due date',
+      'ar': 'بدون موعد',
+    },
+    'tasksPickIntern': {
+      'fr': 'Choisir le stagiaire',
+      'en': 'Choose the intern',
+      'ar': 'اختر المتربص',
+    },
+    'tasksDenialReason': {
+      'fr': 'Motif du refus',
+      'en': 'Reason for denial',
+      'ar': 'سبب الرفض',
+    },
   };
+
+  String get tasksManageTitle => _get('tasksManageTitle');
+  String get tasksFilterAll => _get('tasksFilterAll');
+  String get tasksFilterReview => _get('tasksFilterReview');
+  String get tasksSearchHint => _get('tasksSearchHint');
+  String get tasksAllInterns => _get('tasksAllInterns');
+  String get tasksNoMatch => _get('tasksNoMatch');
+  String tasksTruncated(int shown, int total) =>
+      _get('tasksTruncated')
+          .replaceAll('{shown}', '$shown')
+          .replaceAll('{total}', '$total');
+  String get tasksNoDueDate => _get('tasksNoDueDate');
+  String get tasksPickIntern => _get('tasksPickIntern');
+  String get tasksDenialReason => _get('tasksDenialReason');
+  String tasksActiveCount(int count) =>
+      _get(count == 1 ? 'tasksActiveOne' : 'tasksActiveMany')
+          .replaceAll('{count}', '$count');
 
   String homeActiveCount(int count) =>
       _get(count == 1 ? 'homeActiveOne' : 'homeActiveMany')

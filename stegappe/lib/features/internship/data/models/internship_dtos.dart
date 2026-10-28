@@ -61,6 +61,7 @@ InternTask taskFromJson(Map<String, dynamic> json) => InternTask(
   reviewedAt: _date(json['reviewedAt']),
   // T04/D8: absolute server instant (ISO-8601); absent/null = immediate.
   visibleFrom: _date(json['visibleFrom']),
+  internshipId: json['internshipId']?.toString(),
 );
 
 /// Parses one T12/B2 supervised-internship row. Period dates are NOT NULL
