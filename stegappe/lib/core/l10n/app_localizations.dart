@@ -3149,7 +3149,155 @@ class AppLocalizations {
       'en': 'Next week',
       'ar': 'الأسبوع التالي',
     },
+    'homeOverview': {
+      'fr': 'Vue d’ensemble',
+      'en': 'Overview',
+      'ar': 'نظرة عامة',
+    },
+    'homeActiveOne': {
+      'fr': '{count} stagiaire actif',
+      'en': '{count} active intern',
+      'ar': 'متربص نشط واحد',
+    },
+    'homeActiveMany': {
+      'fr': '{count} stagiaires actifs',
+      'en': '{count} active interns',
+      'ar': '{count} متربصين نشطين',
+    },
+    'homeNoActions': {
+      'fr': 'Aucune action en attente aujourd’hui.',
+      'en': 'No pending actions today.',
+      'ar': 'لا توجد إجراءات معلّقة اليوم.',
+    },
+    'homeActionsOne': {
+      'fr': 'Votre équipe requiert 1 action aujourd’hui.',
+      'en': 'Your team needs 1 action today.',
+      'ar': 'يتطلب فريقك إجراءً واحدًا اليوم.',
+    },
+    'homeActionsMany': {
+      'fr': 'Votre équipe requiert {count} actions aujourd’hui.',
+      'en': 'Your team needs {count} actions today.',
+      'ar': 'يتطلب فريقك {count} إجراءً اليوم.',
+    },
+    'homeAverage': {'fr': 'moyenne', 'en': 'average', 'ar': 'المتوسط'},
+    'homeStatAssigned': {
+      'fr': 'Tâches assignées',
+      'en': 'Assigned tasks',
+      'ar': 'المهام المسندة',
+    },
+    'homeStatDone': {'fr': 'Terminées', 'en': 'Completed', 'ar': 'المنجزة'},
+    'homeStatToReview': {
+      'fr': 'À réviser',
+      'en': 'To review',
+      'ar': 'للمراجعة',
+    },
+    'homeStatEvaluations': {
+      'fr': 'Évaluations',
+      'en': 'Evaluations',
+      'ar': 'التقييمات',
+    },
+    'homeDocsOne': {
+      'fr': '1 document à vérifier',
+      'en': '1 document to verify',
+      'ar': 'مستند واحد للتحقق',
+    },
+    'homeDocsMany': {
+      'fr': '{count} documents à vérifier',
+      'en': '{count} documents to verify',
+      'ar': '{count} مستندًا للتحقق',
+    },
+    'homeDocsHint': {
+      'fr': 'Des stagiaires ont envoyé de nouveaux fichiers.',
+      'en': 'Interns have submitted new files.',
+      'ar': 'أرسل متربصون ملفات جديدة.',
+    },
+    'homeNoDocs': {
+      'fr': 'Aucun document en attente.',
+      'en': 'No documents waiting.',
+      'ar': 'لا توجد مستندات قيد الانتظار.',
+    },
+    'homeQaAi': {
+      'fr': 'Analyse IA',
+      'en': 'AI analysis',
+      'ar': 'تحليل بالذكاء الاصطناعي',
+    },
+    'homeFollowUp': {
+      'fr': 'Stagiaires à suivre',
+      'en': 'Interns to follow',
+      'ar': 'متربصون للمتابعة',
+    },
+    'homeTasksLeft': {
+      'fr': '{count} tâches restantes',
+      'en': '{count} tasks left',
+      'ar': 'متبقي {count} مهام',
+    },
+    'homeActionRequired': {
+      'fr': 'Action requise',
+      'en': 'Action required',
+      'ar': 'إجراء مطلوب',
+    },
+    'homeOnTrack': {'fr': 'À jour', 'en': 'On track', 'ar': 'على المسار'},
+    'homeRecentActivity': {
+      'fr': 'Activité récente',
+      'en': 'Recent activity',
+      'ar': 'النشاط الأخير',
+    },
+    'homeNoActivity': {
+      'fr': 'Aucune activité récente.',
+      'en': 'No recent activity.',
+      'ar': 'لا يوجد نشاط حديث.',
+    },
+    'homeTimeJustNow': {'fr': 'À l’instant', 'en': 'Just now', 'ar': 'الآن'},
+    'homeTimeMinutes': {
+      'fr': 'Il y a {count} min',
+      'en': '{count} min ago',
+      'ar': 'منذ {count} د',
+    },
+    'homeTimeHours': {
+      'fr': 'Il y a {count} h',
+      'en': '{count} h ago',
+      'ar': 'منذ {count} س',
+    },
+    'homeTimeDays': {
+      'fr': 'Il y a {count} j',
+      'en': '{count} d ago',
+      'ar': 'منذ {count} ي',
+    },
   };
+
+  String homeActiveCount(int count) =>
+      _get(count == 1 ? 'homeActiveOne' : 'homeActiveMany')
+          .replaceAll('{count}', '$count');
+  String homeActionsSummary(int count) => count == 0
+      ? _get('homeNoActions')
+      : _get(count == 1 ? 'homeActionsOne' : 'homeActionsMany')
+            .replaceAll('{count}', '$count');
+  String homeDocsCount(int count) =>
+      _get(count == 1 ? 'homeDocsOne' : 'homeDocsMany')
+          .replaceAll('{count}', '$count');
+  String homeTasksLeftCount(int count) =>
+      _get('homeTasksLeft').replaceAll('{count}', '$count');
+  String homeTimeMinutesAgo(int count) =>
+      _get('homeTimeMinutes').replaceAll('{count}', '$count');
+  String homeTimeHoursAgo(int count) =>
+      _get('homeTimeHours').replaceAll('{count}', '$count');
+  String get homeOverview => _get('homeOverview');
+  String get homeAverage => _get('homeAverage');
+  String get homeStatAssigned => _get('homeStatAssigned');
+  String get homeStatDone => _get('homeStatDone');
+  String get homeStatToReview => _get('homeStatToReview');
+  String get homeStatEvaluations => _get('homeStatEvaluations');
+  String get homeNoDocs => _get('homeNoDocs');
+  String get homeDocsHint => _get('homeDocsHint');
+  String get homeQaAi => _get('homeQaAi');
+  String get homeFollowUp => _get('homeFollowUp');
+  String get homeActionRequired => _get('homeActionRequired');
+  String get homeOnTrack => _get('homeOnTrack');
+  String get homeRecentActivity => _get('homeRecentActivity');
+  String get homeNoActivity => _get('homeNoActivity');
+  String get homeTimeJustNow => _get('homeTimeJustNow');
+  String homeTimeDaysAgo(int count) =>
+      _get('homeTimeDays').replaceAll('{count}', '$count');
 
   String _get(String key) {
     final table = _values[key];

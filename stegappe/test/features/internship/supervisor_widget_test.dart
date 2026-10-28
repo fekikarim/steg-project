@@ -83,33 +83,24 @@ Future<FakeInternshipRepository> pumpSup(
 
 void main() {
   group('supervisor workspace (acceptance)', () {
-    testWidgets('home shows queues + interns needing attention', (
+    testWidgets('home shows the team overview and interns to follow', (
       tester,
     ) async {
-      // T13: the static headline gave way to the greeting + quick actions;
-      // queues now read the T12 server counts (same assertions, new source).
       await pumpSup(tester, SupervisorHomeScreen(user: _sup, onOpen: null));
 
       expect(find.text('Encadrant'), findsOneWidget);
-      expect(find.text('Journal en attente'), findsWidgets);
-      // T14 added the SU-HOME-02 notify quick action, so the queue sections
-      // start below the fold: scroll them into view before asserting (same
-      // pattern as the intern-file test below; no assertion removed).
-      // The shell's transparent frosted top bar reserves its height inside
-      // the scroll view, so the queues sit a toolbar lower: keep scrolling
-      // until the section header *and* its intern card are both on screen.
+      // The follow-up section sits below the overview, hero and quick
+      // actions: scroll it into view before asserting its rows.
       final scroll = find.byType(CustomScrollView).first;
       for (
         var i = 0;
-        i < 12 &&
-            (find.text('Nécessite votre attention').evaluate().isEmpty ||
-                find.text('Amira Ben Salah').evaluate().isEmpty);
+        i < 12 && find.text('Stagiaires à suivre').evaluate().isEmpty;
         i++
       ) {
         await tester.drag(scroll, const Offset(0, -300));
         await tester.pumpAndSettle();
       }
-      expect(find.text('Nécessite votre attention'), findsOneWidget);
+      expect(find.text('Stagiaires à suivre'), findsOneWidget);
       expect(find.text('Amira Ben Salah'), findsWidgets);
     });
 

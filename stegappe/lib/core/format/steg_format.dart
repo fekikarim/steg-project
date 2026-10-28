@@ -20,6 +20,11 @@ class StegFormat {
     return DateFormat.yMMMd(_intlLocale(locale)).format(toTunis(d));
   }
 
+  /// Long weekday-and-date label for the device clock, e.g.
+  /// "lundi 15 juillet 2024" (display only, never sent anywhere).
+  static String formatLongDate(DateTime now, String locale) =>
+      DateFormat.yMMMMEEEEd(_intlLocale(locale)).format(now);
+
   /// Format ISO 8601 date+time in Africa/Tunis for [locale].
   static String formatDateTime(String? iso, String locale) {
     final d = DateTime.tryParse(iso ?? '');

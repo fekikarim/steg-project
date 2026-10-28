@@ -424,6 +424,9 @@ void main() {
 
   group('T13 supervisor home: greeting, actions, scoped tiles', () {
     testWidgets('header, actions and T12-sourced tiles render', (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(800, 2400);
+      addTearDown(tester.view.resetPhysicalSize);
       final tabs = <AppDestination>[];
       final fake = FakeInternshipRepository()
         ..supervisedOverride = [
@@ -451,19 +454,25 @@ void main() {
       expect(find.text(l10n.qaCalendar), findsOneWidget);
       // SU-HOME-02: the notify-to-prepare quick action is on the home.
       expect(find.text(l10n.notifyPrepareAsk), findsOneWidget);
-      // Tiles sum the scoped rows: journal 2+3, deliverables 0+1.
-      expect(find.text('5'), findsOneWidget);
-      await tester.dragUntilVisible(
-        find.text('Amira Ben Salah'),
-        find.byType(CustomScrollView),
-        const Offset(0, -300),
-      );
-      expect(find.text('Amira Ben Salah'), findsWidgets);
+      // Tiles sum the scoped rows: assigned 4+4, completed 1+1, to review
+      // journal 2+3 plus deliverables 0+1, and the verification alert
+      // counts the single submitted deliverable.
+      expect(find.text(l10n.homeStatAssigned), findsOneWidget);
+      expect(find.text('8'), findsOneWidget);
+      expect(find.text('2'), findsWidgets);
+      expect(find.text('6'), findsOneWidget);
+      expect(find.text(l10n.homeDocsCount(1)), findsOneWidget);
+      // Only interns with pending work are followed on the home; Karim has a
+      // deliverable awaiting review, so he is the one listed.
+      expect(find.text('Karim Gharbi'), findsWidgets);
     });
 
     testWidgets('calendar action opens the Interns tab in calendar view', (
       tester,
     ) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(800, 2400);
+      addTearDown(tester.view.resetPhysicalSize);
       final tabs = <AppDestination>[];
       final l10n = await loadL10n('fr');
       ProviderContainer? held;
@@ -483,6 +492,9 @@ void main() {
     testWidgets('notify-to-prepare opens the scoped list in select mode', (
       tester,
     ) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(800, 2400);
+      addTearDown(tester.view.resetPhysicalSize);
       final tabs = <AppDestination>[];
       final l10n = await loadL10n('fr');
       await pumpHome(
@@ -506,6 +518,9 @@ void main() {
     });
 
     testWidgets('validations action opens the queue tab', (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(800, 2400);
+      addTearDown(tester.view.resetPhysicalSize);
       final tabs = <AppDestination>[];
       final l10n = await loadL10n('fr');
       await pumpHome(
@@ -519,6 +534,9 @@ void main() {
     });
 
     testWidgets('assign a task opens the tasks tab', (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(800, 2400);
+      addTearDown(tester.view.resetPhysicalSize);
       final l10n = await loadL10n('fr');
       final tabs = <AppDestination>[];
       await pumpHome(
@@ -532,6 +550,9 @@ void main() {
     });
 
     testWidgets('error offers retry and recovers', (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(800, 2400);
+      addTearDown(tester.view.resetPhysicalSize);
       final fake = FakeInternshipRepository()..failSupervised = true;
       final l10n = await loadL10n('fr');
       await pumpHome(
@@ -557,6 +578,9 @@ void main() {
     });
 
     testWidgets('empty scope is an empty state, not an error', (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(800, 2400);
+      addTearDown(tester.view.resetPhysicalSize);
       final fake = FakeInternshipRepository()..supervisedOverride = [];
       final l10n = await loadL10n('fr');
       await pumpHome(
