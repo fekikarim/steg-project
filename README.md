@@ -65,6 +65,135 @@ The **STEG Smart Internship & Administrative Workflow Platform** is a full-stack
 
 ---
 
+## 🖼️ Product Visual Tour
+
+The screenshots below provide a guided tour of the platform's main user journeys. Each gallery is horizontally scrollable so that the images remain readable on both desktop and mobile screens. Click any screenshot to open the full-resolution image.
+
+### 1. Public Front Office — Discover and Apply
+
+The public portal is the entry point for candidates. It presents the STEG internship programmes, supports multilingual navigation, and guides applicants through a structured application workflow.
+
+<div style="overflow-x:auto; white-space:nowrap; padding: 8px 0 16px;">
+  <a href="screenshots/front-office/home-page-fr.png" style="display:inline-block; width:360px; margin-right:16px; vertical-align:top; white-space:normal;">
+    <img src="screenshots/front-office/home-page-fr.png" alt="STEG Intern French home page" width="360">
+    <strong>French landing page</strong><br>
+    <sub>Official portal entry point with a clear call to apply.</sub>
+  </a>
+  <a href="screenshots/front-office/internship-types-page.png" style="display:inline-block; width:360px; margin-right:16px; vertical-align:top; white-space:normal;">
+    <img src="screenshots/front-office/internship-types-page.png" alt="STEG internship types page" width="360">
+    <strong>Internship types</strong><br>
+    <sub>Available programmes and their eligibility context.</sub>
+  </a>
+  <a href="screenshots/front-office/intern-apply-step1-candidate-info.png" style="display:inline-block; width:360px; margin-right:16px; vertical-align:top; white-space:normal;">
+    <img src="screenshots/front-office/intern-apply-step1-candidate-info.png" alt="STEG application candidate information step" width="360">
+    <strong>Application wizard</strong><br>
+    <sub>Step 1 collects the candidate's personal information.</sub>
+  </a>
+  <a href="screenshots/front-office/intern-apply-step2-education.png" style="display:inline-block; width:360px; margin-right:16px; vertical-align:top; white-space:normal;">
+    <img src="screenshots/front-office/intern-apply-step2-education.png" alt="STEG application education step" width="360">
+    <strong>Education details</strong><br>
+    <sub>Academic level, field of study, and institution selection.</sub>
+  </a>
+  <a href="screenshots/front-office/ia-validation-document-analyse.png" style="display:inline-block; width:360px; margin-right:16px; vertical-align:top; white-space:normal;">
+    <img src="screenshots/front-office/ia-validation-document-analyse.png" alt="STEG document verification result" width="360">
+    <strong>Document verification</strong><br>
+    <sub>Readable feedback helps the candidate correct a non-compliant document.</sub>
+  </a>
+  <a href="screenshots/front-office/confirmation-application-info-step6.png" style="display:inline-block; width:360px; margin-right:16px; vertical-align:top; white-space:normal;">
+    <img src="screenshots/front-office/confirmation-application-info-step6.png" alt="STEG application confirmation step" width="360">
+    <strong>Final review</strong><br>
+    <sub>Applicants review verified information before submission.</sub>
+  </a>
+</div>
+
+### 2. Back Office — Review, Coordinate, and Validate
+
+The administrative console centralizes candidate processing, internship assignment, supervision, document review, reporting, and certificate management for STEG teams.
+
+<div style="overflow-x:auto; white-space:nowrap; padding: 8px 0 16px;">
+  <a href="screenshots/back-office/admin-dashboard-ar.png" style="display:inline-block; width:520px; margin-right:16px; vertical-align:top; white-space:normal;">
+    <img src="screenshots/back-office/admin-dashboard-ar.png" alt="STEG back office dashboard in Arabic" width="520">
+    <strong>Operational dashboard</strong><br>
+    <sub>At-a-glance indicators for applications, internships, reports, and pending actions.</sub>
+  </a>
+  <a href="screenshots/back-office/admin-applications-page.png" style="display:inline-block; width:520px; margin-right:16px; vertical-align:top; white-space:normal;">
+    <img src="screenshots/back-office/admin-applications-page.png" alt="STEG applications administration page" width="520">
+    <strong>Application review queue</strong><br>
+    <sub>Search, filter, and process candidate applications by status and internship type.</sub>
+  </a>
+  <a href="screenshots/back-office/admin-internships-page.png" style="display:inline-block; width:520px; margin-right:16px; vertical-align:top; white-space:normal;">
+    <img src="screenshots/back-office/admin-internships-page.png" alt="STEG internships administration page" width="520">
+    <strong>Internship lifecycle</strong><br>
+    <sub>Follow validated internships, assignments, periods, and departments.</sub>
+  </a>
+  <a href="screenshots/back-office/admin-supervision-page.png" style="display:inline-block; width:520px; margin-right:16px; vertical-align:top; white-space:normal;">
+    <img src="screenshots/back-office/admin-supervision-page.png" alt="STEG internship supervision page" width="520">
+    <strong>Supervision overview</strong><br>
+    <sub>Monitor tasks, journals, evaluations, and action-required cases.</sub>
+  </a>
+  <a href="screenshots/back-office/admin-ia-validation-document-analyse.png" style="display:inline-block; width:520px; margin-right:16px; vertical-align:top; white-space:normal;">
+    <img src="screenshots/back-office/admin-ia-validation-document-analyse.png" alt="STEG AI document validation in back office" width="520">
+    <strong>Assisted document validation</strong><br>
+    <sub>Document checks expose compliance status and explain the reasons for a result.</sub>
+  </a>
+  <a href="screenshots/back-office/admin-ia-tasks-generator-from-document.png" style="display:inline-block; width:520px; margin-right:16px; vertical-align:top; white-space:normal;">
+    <img src="screenshots/back-office/admin-ia-tasks-generator-from-document.png" alt="STEG AI task generator from a document" width="520">
+    <strong>AI-assisted task drafting</strong><br>
+    <sub>Generate task suggestions from an internship document before human review.</sub>
+  </a>
+  <a href="screenshots/back-office/admin-certif-preview-page.png" style="display:inline-block; width:520px; margin-right:16px; vertical-align:top; white-space:normal;">
+    <img src="screenshots/back-office/admin-certif-preview-page.png" alt="STEG internship certificate preview" width="520">
+    <strong>Certificate preview</strong><br>
+    <sub>Review an official internship certificate before printing or downloading it.</sub>
+  </a>
+</div>
+
+### 3. Mobile Companion — Track the Internship Day by Day
+
+The Flutter companion app connects interns and supervisors throughout the internship: tasks, progress, messages, documents, community, and contextual assistance are available from one mobile workspace.
+
+<div style="overflow-x:auto; white-space:nowrap; padding: 8px 0 16px;">
+  <a href="screenshots/app/stagiaire-home-screen.png" style="display:inline-block; width:220px; margin-right:16px; vertical-align:top; white-space:normal;">
+    <img src="screenshots/app/stagiaire-home-screen.png" alt="STEG Intern mobile student dashboard" width="220">
+    <strong>Intern dashboard</strong><br>
+    <sub>Progress, quick actions, and priority tasks in one view.</sub>
+  </a>
+  <a href="screenshots/app/stagiaire-mes-taches.png" style="display:inline-block; width:220px; margin-right:16px; vertical-align:top; white-space:normal;">
+    <img src="screenshots/app/stagiaire-mes-taches.png" alt="STEG Intern mobile task list" width="220">
+    <strong>Task tracking</strong><br>
+    <sub>Priorities, deadlines, and task status for the intern.</sub>
+  </a>
+  <a href="screenshots/app/stagiaire-ia-chatbot.png" style="display:inline-block; width:220px; margin-right:16px; vertical-align:top; white-space:normal;">
+    <img src="screenshots/app/stagiaire-ia-chatbot.png" alt="STEG Intern mobile AI assistant" width="220">
+    <strong>Internship assistant</strong><br>
+    <sub>Contextual guidance for preparing the internship journal.</sub>
+  </a>
+  <a href="screenshots/app/stagiaire-message-enc-chat.png" style="display:inline-block; width:220px; margin-right:16px; vertical-align:top; white-space:normal;">
+    <img src="screenshots/app/stagiaire-message-enc-chat.png" alt="STEG Intern mobile supervisor conversation" width="220">
+    <strong>Supervisor messaging</strong><br>
+    <sub>Direct communication and document exchange with the supervisor.</sub>
+  </a>
+  <a href="screenshots/app/encadrent-home-screen.png" style="display:inline-block; width:220px; margin-right:16px; vertical-align:top; white-space:normal;">
+    <img src="screenshots/app/encadrent-home-screen.png" alt="STEG supervisor mobile dashboard" width="220">
+    <strong>Supervisor dashboard</strong><br>
+    <sub>Assigned tasks, documents to review, and interns requiring attention.</sub>
+  </a>
+  <a href="screenshots/app/encadrent-taches.png" style="display:inline-block; width:220px; margin-right:16px; vertical-align:top; white-space:normal;">
+    <img src="screenshots/app/encadrent-taches.png" alt="STEG supervisor mobile task management" width="220">
+    <strong>Task management</strong><br>
+    <sub>Assign, analyse, and validate internship tasks from mobile.</sub>
+  </a>
+  <a href="screenshots/app/encadrent-verif-docs-ia-result.png" style="display:inline-block; width:220px; margin-right:16px; vertical-align:top; white-space:normal;">
+    <img src="screenshots/app/encadrent-verif-docs-ia-result.png" alt="STEG supervisor mobile document verification result" width="220">
+    <strong>Verification result</strong><br>
+    <sub>Explainable checks support the supervisor's final decision.</sub>
+  </a>
+</div>
+
+> **Reading the galleries:** the screenshots are representative product views, not a complete feature inventory. See the subsystem documentation below for implementation details and setup instructions.
+
+---
+
 ## 🚀 Quick Start Guide
 
 ### Prerequisites
@@ -127,4 +256,3 @@ Comprehensive platform documentation is available in the [`docs/`](docs/) direct
 
 ## 📄 License & Confidentiality
 Proprietary software developed for the **Société Tunisienne de l'Électricité et du Gaz (STEG)**. All rights reserved.
-
